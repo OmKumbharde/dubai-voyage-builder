@@ -57,6 +57,25 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        // Dubai theme colors
+        dubai: {
+          gold: "hsl(var(--dubai-gold))",
+          navy: "hsl(var(--dubai-navy))",
+          blue: "hsl(var(--dubai-blue))",
+          cream: "hsl(var(--dubai-cream))",
+          sand: "hsl(var(--dubai-sand))",
+        }
+      },
+      backgroundImage: {
+        'gradient-primary': 'var(--gradient-primary)',
+        'gradient-gold': 'var(--gradient-gold)',
+        'gradient-hero': 'var(--gradient-hero)',
+        'gradient-card': 'var(--gradient-card)',
+      },
+      boxShadow: {
+        'elegant': 'var(--shadow-elegant)',
+        'card': 'var(--shadow-card)',
+        'hover': 'var(--shadow-hover)',
       },
       borderRadius: {
         lg: "var(--radius)",
