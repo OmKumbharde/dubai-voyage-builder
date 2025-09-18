@@ -14,7 +14,226 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      hotel_rooms: {
+        Row: {
+          base_rate: number
+          capacity: number
+          created_at: string
+          extra_bed_capacity: number | null
+          extra_bed_rate: number | null
+          hotel_id: string | null
+          id: string
+          room_type: string
+        }
+        Insert: {
+          base_rate: number
+          capacity?: number
+          created_at?: string
+          extra_bed_capacity?: number | null
+          extra_bed_rate?: number | null
+          hotel_id?: string | null
+          id?: string
+          room_type: string
+        }
+        Update: {
+          base_rate?: number
+          capacity?: number
+          created_at?: string
+          extra_bed_capacity?: number | null
+          extra_bed_rate?: number | null
+          hotel_id?: string | null
+          id?: string
+          room_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_rooms_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hotels: {
+        Row: {
+          amenities: string[] | null
+          created_at: string
+          description: string | null
+          id: string
+          images: string[] | null
+          location: string
+          name: string
+          star_rating: number | null
+          updated_at: string
+        }
+        Insert: {
+          amenities?: string[] | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          images?: string[] | null
+          location: string
+          name: string
+          star_rating?: number | null
+          updated_at?: string
+        }
+        Update: {
+          amenities?: string[] | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          images?: string[] | null
+          location?: string
+          name?: string
+          star_rating?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      invoices: {
+        Row: {
+          amount: number
+          created_at: string
+          due_date: string
+          id: string
+          invoice_number: string
+          issue_date: string
+          payment_terms: string | null
+          quote_id: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          due_date: string
+          id?: string
+          invoice_number: string
+          issue_date?: string
+          payment_terms?: string | null
+          quote_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          due_date?: string
+          id?: string
+          invoice_number?: string
+          issue_date?: string
+          payment_terms?: string | null
+          quote_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotes: {
+        Row: {
+          adults: number
+          client_email: string | null
+          client_name: string
+          cnb: number | null
+          created_at: string
+          currency: string | null
+          cwb: number | null
+          formatted_quote: string | null
+          id: string
+          infants: number | null
+          notes: string | null
+          reference_number: string
+          status: string | null
+          total_amount: number
+          travel_dates_from: string
+          travel_dates_to: string
+          updated_at: string
+        }
+        Insert: {
+          adults?: number
+          client_email?: string | null
+          client_name: string
+          cnb?: number | null
+          created_at?: string
+          currency?: string | null
+          cwb?: number | null
+          formatted_quote?: string | null
+          id?: string
+          infants?: number | null
+          notes?: string | null
+          reference_number: string
+          status?: string | null
+          total_amount: number
+          travel_dates_from: string
+          travel_dates_to: string
+          updated_at?: string
+        }
+        Update: {
+          adults?: number
+          client_email?: string | null
+          client_name?: string
+          cnb?: number | null
+          created_at?: string
+          currency?: string | null
+          cwb?: number | null
+          formatted_quote?: string | null
+          id?: string
+          infants?: number | null
+          notes?: string | null
+          reference_number?: string
+          status?: string | null
+          total_amount?: number
+          travel_dates_from?: string
+          travel_dates_to?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tours: {
+        Row: {
+          cost_per_person: number
+          created_at: string
+          description: string | null
+          duration: string | null
+          id: string
+          name: string
+          private_transfer_cost: number | null
+          tour_type: string
+          updated_at: string
+        }
+        Insert: {
+          cost_per_person: number
+          created_at?: string
+          description?: string | null
+          duration?: string | null
+          id?: string
+          name: string
+          private_transfer_cost?: number | null
+          tour_type?: string
+          updated_at?: string
+        }
+        Update: {
+          cost_per_person?: number
+          created_at?: string
+          description?: string | null
+          duration?: string | null
+          id?: string
+          name?: string
+          private_transfer_cost?: number | null
+          tour_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
