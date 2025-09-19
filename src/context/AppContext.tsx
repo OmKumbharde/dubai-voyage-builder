@@ -1,106 +1,43 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
-import { AppState, User, Hotel, Tour, Inclusion, Quote } from '../types';
+import { useSupabaseData, Hotel, Tour, Quote } from '@/hooks/useSupabaseData';
 
-// Demo data for immediate functionality
-const demoUser: User = {
-  id: '1',
-  name: 'Ahmed Al-Rashid',
-  email: 'ahmed@dubaiquote.com',
-  role: 'sales',
-  createdAt: '2024-01-01',
-  updatedAt: '2024-01-01'
-};
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'sales' | 'booking';
+  createdAt: string;
+  updatedAt: string;
+}
 
-const demoHotels: Hotel[] = [
-  {
-    id: '1',
-    name: 'Burj Al Arab Jumeirah',
-    location: 'Jumeirah Beach',
-    description: 'The world\'s most luxurious hotel',
-    images: ['/api/placeholder/400/300'],
-    starRating: 7,
-    amenities: ['Private Beach', 'Spa', 'Butler Service', 'Helicopter Pad'],
-    rooms: [
-      {
-        id: '1-1',
-        type: 'One Bedroom Suite',
-        capacity: 3,
-        extraBedCapacity: 1,
-        baseRate: 2500,
-        extraBedRate: 300
-      },
-      {
-        id: '1-2',
-        type: 'Two Bedroom Suite',
-        capacity: 6,
-        extraBedCapacity: 2,
-        baseRate: 4000,
-        extraBedRate: 400
-      }
-    ],
-    createdAt: '2024-01-01',
-    updatedAt: '2024-01-01'
-  },
-  {
-    id: '2',
-    name: 'Atlantis The Palm',
-    location: 'Palm Jumeirah',
-    description: 'Iconic resort with aquarium and water park',
-    images: ['/api/placeholder/400/300'],
-    starRating: 5,
-    amenities: ['Aquaventure Waterpark', 'Lost Chambers Aquarium', 'Private Beach', 'Spa'],
-    rooms: [
-      {
-        id: '2-1',
-        type: 'Deluxe Room',
-        capacity: 4,
-        extraBedCapacity: 1,
-        baseRate: 800,
-        extraBedRate: 150
-      },
-      {
-        id: '2-2',
-        type: 'Ocean Suite',
-        capacity: 6,
-        extraBedCapacity: 2,
-        baseRate: 1500,
-        extraBedRate: 200
-      }
-    ],
-    createdAt: '2024-01-01',
-    updatedAt: '2024-01-01'
-  }
-];
+export interface Inclusion {
+  id: string;
+  name: string;
+  type: 'visa' | 'transfer' | 'insurance' | 'other';
+  cost: number;
+  description: string;
+  isOptional: boolean;
+}
 
-const demoTours: Tour[] = [
-  {
-    id: '1',
-    name: 'Dubai City Tour',
-    description: 'Explore Dubai\'s iconic landmarks and culture',
-    type: 'group',
-    duration: '8 hours',
-    costPerPerson: 180,
-    transferIncluded: true,
-    images: ['/api/placeholder/400/300'],
-    highlights: ['Burj Khalifa', 'Dubai Mall', 'Gold Souk', 'Spice Souk', 'Dubai Creek'],
-    createdAt: '2024-01-01',
-    updatedAt: '2024-01-01'
-  },
-  {
-    id: '2',
-    name: 'Desert Safari Premium',
-    description: 'Luxury desert experience with BBQ dinner',
-    type: 'private',
-    duration: '6 hours',
-    costPerPerson: 320,
-    transferIncluded: true,
-    images: ['/api/placeholder/400/300'],
-    highlights: ['Dune Bashing', 'Camel Riding', 'Falcon Show', 'BBQ Dinner', 'Traditional Shows'],
-    createdAt: '2024-01-01',
-    updatedAt: '2024-01-01'
-  }
-];
+export interface PaxDetails {
+  adults: number;
+  infants: number;
+  cnb: number; // Child No Bed
+  cwb: number; // Child With Bed
+}
 
+export interface AppState {
+  user: User | null;
+  isAuthenticated: boolean;
+  hotels: Hotel[];
+  tours: Tour[];
+  inclusions: Inclusion[];
+  quotes: Quote[];
+  currentQuote: Quote | null;
+  isLoading: boolean;
+}
+
+// Demo inclusions since we don't have them in Supabase yet
 const demoInclusions: Inclusion[] = [
   {
     id: '1',
@@ -108,90 +45,154 @@ const demoInclusions: Inclusion[] = [
     type: 'visa',
     cost: 100,
     description: '30-day tourist visa for UAE',
-    isOptional: false
+    isOptional: false,
   },
   {
     id: '2',
     name: 'Airport Transfer',
     type: 'transfer',
-    cost: 80,
-    description: 'Round trip airport transfers',
-    isOptional: true
-  }
+    cost: 50,
+    description: 'Round-trip airport transfer',
+    isOptional: true,
+  },
 ];
 
-const initialState: AppState = {
-  user: demoUser,
-  isAuthenticated: true,
-  hotels: demoHotels,
-  tours: demoTours,
-  inclusions: demoInclusions,
-  quotes: [],
-  currentQuote: null
-};
-
-type AppAction = 
+type AppAction =
   | { type: 'SET_USER'; payload: User | null }
+  | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_CURRENT_QUOTE'; payload: Quote | null }
   | { type: 'ADD_QUOTE'; payload: Quote }
   | { type: 'UPDATE_QUOTE'; payload: Quote }
   | { type: 'ADD_HOTEL'; payload: Hotel }
   | { type: 'UPDATE_HOTEL'; payload: Hotel }
-  | { type: 'ADD_TOUR'; payload: Tour }
-  | { type: 'UPDATE_TOUR'; payload: Tour };
+  | { type: 'DELETE_HOTEL'; payload: string };
+
+const initialState: AppState = {
+  user: null,
+  isAuthenticated: false,
+  hotels: [],
+  tours: [],
+  inclusions: demoInclusions,
+  quotes: [],
+  currentQuote: null,
+  isLoading: true,
+};
 
 const appReducer = (state: AppState, action: AppAction): AppState => {
   switch (action.type) {
     case 'SET_USER':
-      return { ...state, user: action.payload, isAuthenticated: !!action.payload };
+      return {
+        ...state,
+        user: action.payload,
+        isAuthenticated: !!action.payload,
+      };
+    case 'SET_LOADING':
+      return {
+        ...state,
+        isLoading: action.payload,
+      };
     case 'SET_CURRENT_QUOTE':
-      return { ...state, currentQuote: action.payload };
+      return {
+        ...state,
+        currentQuote: action.payload,
+      };
     case 'ADD_QUOTE':
-      return { ...state, quotes: [...state.quotes, action.payload] };
+      return {
+        ...state,
+        quotes: [action.payload, ...state.quotes],
+      };
     case 'UPDATE_QUOTE':
-      return { 
-        ...state, 
-        quotes: state.quotes.map(q => q.id === action.payload.id ? action.payload : q),
-        currentQuote: state.currentQuote?.id === action.payload.id ? action.payload : state.currentQuote
+      return {
+        ...state,
+        quotes: state.quotes.map(quote =>
+          quote.id === action.payload.id ? action.payload : quote
+        ),
       };
     case 'ADD_HOTEL':
-      return { ...state, hotels: [...state.hotels, action.payload] };
-    case 'UPDATE_HOTEL':
-      return { 
-        ...state, 
-        hotels: state.hotels.map(h => h.id === action.payload.id ? action.payload : h)
+      return {
+        ...state,
+        hotels: [...state.hotels, action.payload],
       };
-    case 'ADD_TOUR':
-      return { ...state, tours: [...state.tours, action.payload] };
-    case 'UPDATE_TOUR':
-      return { 
-        ...state, 
-        tours: state.tours.map(t => t.id === action.payload.id ? action.payload : t)
+    case 'UPDATE_HOTEL':
+      return {
+        ...state,
+        hotels: state.hotels.map(hotel =>
+          hotel.id === action.payload.id ? action.payload : hotel
+        ),
+      };
+    case 'DELETE_HOTEL':
+      return {
+        ...state,
+        hotels: state.hotels.filter(hotel => hotel.id !== action.payload),
       };
     default:
       return state;
   }
 };
 
-const AppContext = createContext<{
+interface AppContextType {
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
-} | null>(null);
+  // Supabase data operations
+  addQuote: (quote: any) => Promise<Quote>;
+  updateQuote: (id: string, updates: any) => Promise<Quote>;
+  addHotel: (hotel: any) => Promise<Hotel>;
+  updateHotel: (id: string, updates: any) => Promise<Hotel>;
+  deleteHotel: (id: string) => Promise<void>;
+  refetch: () => Promise<void>;
+}
+
+const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
+  
+  // Use Supabase data hook
+  const {
+    hotels,
+    tours,
+    quotes,
+    isLoading,
+    addQuote,
+    updateQuote,
+    addHotel,
+    updateHotel,
+    deleteHotel,
+    refetch
+  } = useSupabaseData();
 
-  return (
-    <AppContext.Provider value={{ state, dispatch }}>
-      {children}
-    </AppContext.Provider>
-  );
+  // Update state when Supabase data changes
+  React.useEffect(() => {
+    dispatch({ type: 'SET_LOADING', payload: isLoading });
+  }, [isLoading]);
+
+  // Create enhanced state with Supabase data
+  const enhancedState: AppState = {
+    ...state,
+    hotels,
+    tours,
+    quotes,
+    isLoading,
+  };
+
+  const value: AppContextType = {
+    state: enhancedState,
+    dispatch,
+    addQuote,
+    updateQuote,
+    addHotel,
+    updateHotel,
+    deleteHotel,
+    refetch,
+  };
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
 
 export const useAppContext = () => {
   const context = useContext(AppContext);
-  if (!context) {
-    throw new Error('useAppContext must be used within AppProvider');
+  if (context === undefined) {
+    throw new Error('useAppContext must be used within an AppProvider');
   }
   return context;
 };
