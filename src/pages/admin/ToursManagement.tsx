@@ -19,7 +19,7 @@ import { Tour } from '../../types';
 import { toast } from '../../hooks/use-toast';
 
 const ToursManagement = () => {
-  const { tours, isLoading } = useSupabaseData();
+  const { tours, addTour, updateTour, deleteTour, isLoading } = useSupabaseData();
   
   const [isCreating, setIsCreating] = useState(false);
   const [editingTour, setEditingTour] = useState<Tour | null>(null);
@@ -30,6 +30,7 @@ const ToursManagement = () => {
     duration: '',
     costPerPerson: 0,
     transferIncluded: true,
+    privateTransferCost: 0,
     highlights: [] as string[]
   });
 
@@ -41,6 +42,7 @@ const ToursManagement = () => {
       duration: '',
       costPerPerson: 0,
       transferIncluded: true,
+      privateTransferCost: 0,
       highlights: []
     });
     setIsCreating(false);
@@ -57,13 +59,27 @@ const ToursManagement = () => {
       return;
     }
 
-    // For now, just show a success message since tours CRUD isn't implemented yet
-    toast({
-      title: editingTour ? "Tour Updated" : "Tour Added",
-      description: `${formData.name} has been ${editingTour ? 'updated' : 'added'} successfully`
-    });
+    try {
+      const tourData = {
+        name: formData.name,
+        description: formData.description,
+        type: formData.type,
+        duration: formData.duration,
+        costPerPerson: formData.costPerPerson,
+        transferIncluded: formData.transferIncluded,
+        highlights: formData.highlights.filter(h => h.trim() !== ''),
+        images: ['/api/placeholder/400/300'] // Default placeholder
+      };
 
-    resetForm();
+      if (editingTour) {
+        await updateTour(editingTour.id, tourData);
+      } else {
+        await addTour(tourData);
+      }
+      resetForm();
+    } catch (error) {
+      console.error('Error saving tour:', error);
+    }
   };
 
   const startEdit = (tour: Tour) => {
@@ -75,9 +91,10 @@ const ToursManagement = () => {
       duration: tour.duration,
       costPerPerson: tour.costPerPerson,
       transferIncluded: tour.transferIncluded,
+      privateTransferCost: 0, // This would need to be stored in database
       highlights: tour.highlights
     });
-    setIsCreating(true);
+    setIsCreating(true);  
   };
 
   const addHighlight = () => {
@@ -177,7 +194,7 @@ const ToursManagement = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'group' | 'private' }))}
                   className="dubai-input"
                 >
-                  <option value="group">Group Tour</option>
+                  <option value="group">Sharing Tour</option>
                   <option value="private">Private Tour</option>
                 </select>
               </div>
@@ -192,16 +209,35 @@ const ToursManagement = () => {
                   className="dubai-input"
                 />
               </div>
-              <div className="flex items-center space-x-2 pt-6">
-                <input
-                  type="checkbox"
-                  id="transferIncluded"
-                  checked={formData.transferIncluded}
-                  onChange={(e) => setFormData(prev => ({ ...prev, transferIncluded: e.target.checked }))}
-                  className="rounded"
-                />
-                <Label htmlFor="transferIncluded">Transfer Included</Label>
-              </div>
+              {formData.type === 'private' && (
+                <div>
+                  <Label htmlFor="privateTransferCost">Private Transfer Cost (AED)</Label>
+                  <Input
+                    id="privateTransferCost"
+                    type="number"
+                    value={formData.privateTransferCost}
+                    onChange={(e) => setFormData(prev => ({ ...prev, privateTransferCost: Number(e.target.value) }))}
+                    placeholder="0"
+                    className="dubai-input"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    This cost will be divided among all passengers
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="transferIncluded"
+                checked={formData.transferIncluded}
+                onChange={(e) => setFormData(prev => ({ ...prev, transferIncluded: e.target.checked }))}
+                className="rounded"
+              />
+              <Label htmlFor="transferIncluded">
+                {formData.type === 'private' ? 'Private Transfer Included' : 'Transfer Included'}
+              </Label>
             </div>
 
             <div>
@@ -266,7 +302,11 @@ const ToursManagement = () => {
                   <Button variant="ghost" size="sm" onClick={() => startEdit(tour)}>
                     <Edit3 className="h-3 w-3" />
                   </Button>
-                  <Button variant="ghost" size="sm">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => deleteTour(tour.id)}
+                  >
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
@@ -284,7 +324,7 @@ const ToursManagement = () => {
                   <span className="text-sm text-muted-foreground">per person</span>
                 </div>
                 <Badge variant={tour.type === 'private' ? 'default' : 'secondary'}>
-                  {tour.type}
+                  {tour.type === 'private' ? 'Private' : 'Sharing'}
                 </Badge>
               </div>
 

@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useSupabaseData } from '../../hooks/useSupabaseData';
 import { Hotel, Room } from '../../types';
-import { toast } from '../../hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const HotelsManagement = () => {
   const { hotels, addHotel, updateHotel, deleteHotel, isLoading } = useSupabaseData();
@@ -69,12 +69,64 @@ const HotelsManagement = () => {
     try {
       if (editingHotel) {
         await updateHotel(editingHotel.id, hotelData);
+        // Update rooms separately
+        await updateHotelRooms(editingHotel.id, formData.rooms);
       } else {
-        await addHotel(hotelData);
+        const newHotel = await addHotel(hotelData);
+        // Add rooms separately
+        await addHotelRooms(newHotel.id, formData.rooms);
       }
       resetForm();
     } catch (error) {
       console.error('Error saving hotel:', error);
+    }
+  };
+
+  const addHotelRooms = async (hotelId: string, rooms: Room[]) => {
+    try {
+      for (const room of rooms) {
+        const roomData = {
+          hotel_id: hotelId,
+          room_type: room.type,
+          capacity: room.capacity,
+          extra_bed_capacity: room.extraBedCapacity,
+          base_rate: room.baseRate,
+          extra_bed_rate: room.extraBedRate
+        };
+        
+        const { error } = await supabase
+          .from('hotel_rooms')
+          .insert([roomData]);
+        
+        if (error) throw error;
+      }
+    } catch (error) {
+      console.error('Error adding hotel rooms:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save hotel rooms",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const updateHotelRooms = async (hotelId: string, rooms: Room[]) => {
+    try {
+      // Delete existing rooms for this hotel
+      await supabase
+        .from('hotel_rooms')
+        .delete()
+        .eq('hotel_id', hotelId);
+
+      // Add new rooms
+      await addHotelRooms(hotelId, rooms);
+    } catch (error) {
+      console.error('Error updating hotel rooms:', error);
+      toast({
+        title: "Error", 
+        description: "Failed to update hotel rooms",
+        variant: "destructive"
+      });
     }
   };
 
