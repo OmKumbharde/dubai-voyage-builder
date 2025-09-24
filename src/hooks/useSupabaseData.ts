@@ -150,7 +150,7 @@ export interface Quote {
 }
 
 // Adapters to convert database types to application types
-const adaptDbHotelToHotel = (dbHotel: DbHotel, rooms: DbHotelRoom[]): Hotel => ({
+const adaptDbHotelToHotel = (dbHotel: DbHotel): Hotel => ({
   id: dbHotel.id,
   name: dbHotel.name,
   location: dbHotel.location,
@@ -158,16 +158,7 @@ const adaptDbHotelToHotel = (dbHotel: DbHotel, rooms: DbHotelRoom[]): Hotel => (
   starRating: dbHotel.star_rating || 5,
   amenities: dbHotel.amenities || [],
   images: dbHotel.images || ['/api/placeholder/400/300'],
-  rooms: rooms
-    .filter(room => room.hotel_id === dbHotel.id)
-    .map(room => ({
-      id: room.id,
-      type: room.room_type,
-      capacity: room.capacity,
-      extraBedCapacity: room.extra_bed_capacity || 0,
-      baseRate: Number(room.base_rate),
-      extraBedRate: Number(room.extra_bed_rate || 0),
-    })),
+  baseRate: 500, // Default base rate, will be managed via hotel_rates table
   createdAt: dbHotel.created_at,
   updatedAt: dbHotel.updated_at,
 });
@@ -239,24 +230,20 @@ export const useSupabaseData = () => {
     
     setIsLoading(true);
     try {
-      const [hotelsRes, roomsRes, toursRes, inclusionsRes, quotesRes] = await Promise.all([
+      const [hotelsRes, toursRes, inclusionsRes, quotesRes] = await Promise.all([
         supabase.from('hotels').select('*').order('name'),
-        supabase.from('hotel_rooms').select('*'),
         supabase.from('tours').select('*').order('name'),
         supabase.from('inclusions').select('*').order('name'),
         supabase.from('quotes').select('*').order('created_at', { ascending: false })
       ]);
 
       if (hotelsRes.error) throw hotelsRes.error;
-      if (roomsRes.error) throw roomsRes.error;
       if (toursRes.error) throw toursRes.error;
       if (inclusionsRes.error) throw inclusionsRes.error;
       if (quotesRes.error) throw quotesRes.error;
 
       // Adapt the data
-      const adaptedHotels = (hotelsRes.data || []).map(hotel => 
-        adaptDbHotelToHotel(hotel, roomsRes.data || [])
-      );
+      const adaptedHotels = (hotelsRes.data || []).map(hotel => adaptDbHotelToHotel(hotel));
       const adaptedTours = (toursRes.data || []).map(adaptDbTourToTour);
       const adaptedInclusions = (inclusionsRes.data || []).map(adaptDbInclusionToInclusion);
       const adaptedQuotes = (quotesRes.data || []).map(adaptDbQuoteToQuote);
@@ -295,7 +282,7 @@ export const useSupabaseData = () => {
 
       if (error) throw error;
       
-      const adaptedHotel = adaptDbHotelToHotel(data, []);
+      const adaptedHotel = adaptDbHotelToHotel(data);
       setHotels(prev => [...prev, adaptedHotel]);
       toast({
         title: "Hotel added",
@@ -331,7 +318,7 @@ export const useSupabaseData = () => {
 
       if (error) throw error;
       
-      const adaptedHotel = adaptDbHotelToHotel(data, []);
+      const adaptedHotel = adaptDbHotelToHotel(data);
       setHotels(prev => prev.map(h => h.id === id ? adaptedHotel : h));
       toast({
         title: "Hotel updated",
@@ -706,7 +693,7 @@ export const useSupabaseData = () => {
         schema: 'public',
         table: 'hotels'
       }, (payload) => {
-        const adaptedHotel = adaptDbHotelToHotel(payload.new as DbHotel, []);
+        const adaptedHotel = adaptDbHotelToHotel(payload.new as DbHotel);
         setHotels(prev => [...prev, adaptedHotel]);
       })
       .on('postgres_changes', {
@@ -714,7 +701,7 @@ export const useSupabaseData = () => {
         schema: 'public',
         table: 'hotels'
       }, (payload) => {
-        const adaptedHotel = adaptDbHotelToHotel(payload.new as DbHotel, []);
+        const adaptedHotel = adaptDbHotelToHotel(payload.new as DbHotel);
         setHotels(prev => prev.map(h => h.id === adaptedHotel.id ? adaptedHotel : h));
       })
       .subscribe();

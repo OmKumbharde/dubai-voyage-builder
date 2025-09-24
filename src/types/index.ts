@@ -15,7 +15,7 @@ export interface Hotel {
   location: string;
   description: string;
   images: string[];
-  rooms: Room[];
+  baseRate: number;
   amenities: string[];
   starRating: number;
   createdAt: string;

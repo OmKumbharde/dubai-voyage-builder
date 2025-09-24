@@ -21,7 +21,6 @@ import { format, addDays, startOfMonth, endOfMonth } from 'date-fns';
 interface HotelRate {
   id: string;
   hotel_id: string;
-  room_type: string;
   date: string;
   rate: number;
   inventory: number;
@@ -100,15 +99,14 @@ const HotelRatesManagement = () => {
     }
   };
 
-  const createRate = async (hotelId: string, roomType: string, date: string) => {
+  const createRate = async (hotelId: string, date: string, rate: number) => {
     try {
       const { data, error } = await supabase
         .from('hotel_rates')
         .insert([{
           hotel_id: hotelId,
-          room_type: roomType,
           date,
-          rate: formData.rate,
+          rate,
           inventory: formData.inventory
         }])
         .select()
@@ -117,7 +115,6 @@ const HotelRatesManagement = () => {
       if (error) throw error;
 
       setRates(prev => [...prev, data]);
-      setFormData({ rate: 0, inventory: 10 });
       
       toast({
         title: "Rate Created",
@@ -137,7 +134,7 @@ const HotelRatesManagement = () => {
     if (!selectedHotel) return;
     
     const selectedHotelData = hotels.find(h => h.id === selectedHotel);
-    if (!selectedHotelData || selectedHotelData.rooms.length === 0) return;
+    if (!selectedHotelData) return;
 
     try {
       const startDate = startOfMonth(selectedDate);
@@ -149,25 +146,22 @@ const HotelRatesManagement = () => {
         const dayof = date.getDay();
         const isWeekend = dayof === 5 || dayof === 6; // Friday or Saturday
 
-        for (const room of selectedHotelData.rooms) {
-          const baseRate = room.baseRate;
-          const weekendMultiplier = isWeekend ? 1.3 : 1;
-          const finalRate = Math.round(baseRate * weekendMultiplier);
+        const baseRate = selectedHotelData.baseRate;
+        const weekendMultiplier = isWeekend ? 1.3 : 1;
+        const finalRate = Math.round(baseRate * weekendMultiplier);
 
-          ratesToCreate.push({
-            hotel_id: selectedHotel,
-            room_type: room.type,
-            date: dateStr,
-            rate: finalRate,
-            inventory: isWeekend ? 8 : 12
-          });
-        }
+        ratesToCreate.push({
+          hotel_id: selectedHotel,
+          date: dateStr,
+          rate: finalRate,
+          inventory: isWeekend ? 8 : 12
+        });
       }
 
       const { error } = await supabase
         .from('hotel_rates')
         .upsert(ratesToCreate, { 
-          onConflict: 'hotel_id,room_type,date',
+          onConflict: 'hotel_id,date',
           ignoreDuplicates: false 
         });
 

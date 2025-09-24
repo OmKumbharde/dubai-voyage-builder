@@ -16,9 +16,8 @@ import {
   X
 } from 'lucide-react';
 import { useSupabaseData } from '../../hooks/useSupabaseData';
-import { Hotel, Room } from '../../types';
+import { Hotel } from '../../types';
 import { toast } from '../../hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
 const HotelsManagement = () => {
   const { hotels, addHotel, updateHotel, deleteHotel, isLoading } = useSupabaseData();
@@ -30,8 +29,8 @@ const HotelsManagement = () => {
     location: '',
     description: '',
     starRating: 5,
-    amenities: [] as string[],
-    rooms: [] as Room[]
+    baseRate: 500,
+    amenities: [] as string[]
   });
 
   const resetForm = () => {
@@ -40,8 +39,8 @@ const HotelsManagement = () => {
       location: '',
       description: '',
       starRating: 5,
-      amenities: [],
-      rooms: []
+      baseRate: 500,
+      amenities: []
     });
     setIsCreating(false);
     setEditingHotel(null);
@@ -62,20 +61,16 @@ const HotelsManagement = () => {
       location: formData.location,
       description: formData.description,
       starRating: formData.starRating,
+      baseRate: formData.baseRate,
       amenities: formData.amenities,
-      images: ['/api/placeholder/400/300'],
-      rooms: formData.rooms
+      images: ['/api/placeholder/400/300']
     };
 
     try {
       if (editingHotel) {
         await updateHotel(editingHotel.id, hotelData);
-        // Update rooms separately
-        await updateHotelRooms(editingHotel.id, formData.rooms);
       } else {
-        const newHotel = await addHotel(hotelData);
-        // Add rooms separately
-        await addHotelRooms(newHotel.id, formData.rooms);
+        await addHotel(hotelData);
       }
       resetForm();
     } catch (error) {
@@ -257,64 +252,19 @@ const HotelsManagement = () => {
                   ))}
                 </select>
               </div>
+              <div>
+                <Label htmlFor="baseRate">Base Rate (AED) *</Label>
+                <Input
+                  id="baseRate"
+                  type="number"
+                  value={formData.baseRate}
+                  onChange={(e) => setFormData(prev => ({ ...prev, baseRate: Number(e.target.value) }))}
+                  placeholder="Enter base rate"
+                  className="dubai-input"
+                />
+              </div>
             </div>
 
-            {/* Rooms Configuration */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <Label>Room Types</Label>
-                <Button variant="outline" size="sm" onClick={addRoom}>
-                  <Plus className="mr-2 h-3 w-3" />
-                  Add Room Type
-                </Button>
-              </div>
-              
-              <div className="space-y-4">
-                {formData.rooms.map((room, index) => (
-                  <Card key={index} className="p-4 border">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <div>
-                        <Label>Room Type</Label>
-                        <Input
-                          value={room.type}
-                          onChange={(e) => updateRoom(index, 'type', e.target.value)}
-                          placeholder="Room type"
-                          className="dubai-input"
-                        />
-                      </div>
-                      <div>
-                        <Label>Capacity</Label>
-                        <Input
-                          type="number"
-                          value={room.capacity}
-                          onChange={(e) => updateRoom(index, 'capacity', Number(e.target.value))}
-                          className="dubai-input"
-                        />
-                      </div>
-                      <div>
-                        <Label>Base Rate (AED)</Label>
-                        <Input
-                          type="number"
-                          value={room.baseRate}
-                          onChange={(e) => updateRoom(index, 'baseRate', Number(e.target.value))}
-                          className="dubai-input"
-                        />
-                      </div>
-                      <div className="flex items-end">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => removeRoom(index)}
-                          className="w-full"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </div>
 
             <div className="flex justify-end space-x-3">
               <Button variant="outline" onClick={resetForm}>
@@ -368,14 +318,9 @@ const HotelsManagement = () => {
                 {hotel.description || 'No description available'}
               </p>
               
-              <div className="space-y-2">
-                <h4 className="font-semibold text-sm">Room Types ({hotel.rooms.length})</h4>
-                {hotel.rooms.map((room, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                    <span className="text-sm">{room.type}</span>
-                    <Badge variant="outline">AED {room.baseRate}</Badge>
-                  </div>
-                ))}
+              <div className="flex items-center justify-between p-3 bg-gradient-to-r from-dubai-gold/10 to-dubai-primary/10 rounded-lg mb-4">
+                <span className="font-semibold text-sm">Base Rate</span>
+                <Badge variant="outline" className="bg-white">AED {hotel.baseRate}</Badge>
               </div>
 
               <div className="mt-4 flex flex-wrap gap-1">
