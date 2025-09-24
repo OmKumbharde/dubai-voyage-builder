@@ -11,11 +11,10 @@ import {
   Users,
   LogOut
 } from 'lucide-react';
-import { useAppContext } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 
 const Sidebar = () => {
-  const { state } = useAppContext();
-  const { user } = state;
+  const { user, signOut } = useAuth();
 
   const navigationItems = [
     { 
@@ -27,6 +26,11 @@ const Sidebar = () => {
       name: 'Quote Tool', 
       href: '/quote', 
       icon: Calculator 
+    },
+    { 
+      name: 'Quote Management', 
+      href: '/quotes', 
+      icon: Settings 
     },
     { 
       name: 'Booking Center', 
@@ -50,16 +54,6 @@ const Sidebar = () => {
       name: 'Tours Management', 
       href: '/admin/tours', 
       icon: MapPin 
-    },
-    { 
-      name: 'Users Management', 
-      href: '/admin/users', 
-      icon: Users 
-    },
-    { 
-      name: 'System Settings', 
-      href: '/admin/settings', 
-      icon: Settings 
     }
   ];
 
@@ -75,17 +69,17 @@ const Sidebar = () => {
 
       {/* User Info */}
       <div className="border-b border-white/10 p-4">
-        <div className="flex items-center space-x-3">
-          <div className="h-10 w-10 rounded-full bg-dubai-gold flex items-center justify-center">
-            <span className="text-sm font-semibold text-dubai-navy">
-              {user?.name?.charAt(0) || 'U'}
-            </span>
+          <div className="flex items-center space-x-3">
+            <div className="h-10 w-10 rounded-full bg-dubai-gold flex items-center justify-center">
+              <span className="text-sm font-semibold text-dubai-navy">
+                {user?.email?.charAt(0).toUpperCase() || 'U'}
+              </span>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-white">{user?.email?.split('@')[0]}</p>
+              <p className="text-xs text-white/70">Team Member</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium text-white">{user?.name}</p>
-            <p className="text-xs text-white/70 capitalize">{user?.role}</p>
-          </div>
-        </div>
       </div>
 
       {/* Navigation */}
@@ -108,30 +102,32 @@ const Sidebar = () => {
           ))}
         </div>
 
-        {user?.role === 'admin' && (
-          <div className="space-y-1 pt-6">
-            <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-3">
-              Administration
-            </h3>
-            {adminItems.map((item) => (
-              <NavLink
-                key={item.name}
-                to={item.href}
-                className={({ isActive }) =>
-                  `dubai-sidebar-item ${isActive ? 'active' : ''} text-white/90 hover:text-white hover:bg-white/10`
-                }
-              >
-                <item.icon className="h-5 w-5" />
-                <span>{item.name}</span>
-              </NavLink>
-            ))}
-          </div>
-        )}
+        {/* Show admin items for all users as per requirements */}
+        <div className="space-y-1 pt-6">
+          <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-3">
+            Management
+          </h3>
+          {adminItems.map((item) => (
+            <NavLink
+              key={item.name}
+              to={item.href}
+              className={({ isActive }) =>
+                `dubai-sidebar-item ${isActive ? 'active' : ''} text-white/90 hover:text-white hover:bg-white/10`
+              }
+            >
+              <item.icon className="h-5 w-5" />
+              <span>{item.name}</span>
+            </NavLink>
+          ))}
+        </div>
       </nav>
 
       {/* Logout */}
       <div className="border-t border-white/10 p-4">
-        <button className="dubai-sidebar-item w-full text-white/90 hover:text-white hover:bg-white/10">
+        <button 
+          onClick={signOut}
+          className="dubai-sidebar-item w-full text-white/90 hover:text-white hover:bg-white/10"
+        >
           <LogOut className="h-5 w-5" />
           <span>Sign Out</span>
         </button>

@@ -9,38 +9,45 @@ import {
   Star
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { useAppContext } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
+import { useSupabaseData } from '../hooks/useSupabaseData';
 import dubaiHero from '../assets/dubai-hero.jpg';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
-  const { state } = useAppContext();
-  const { user, quotes, hotels, tours } = state;
+  const { user } = useAuth();
+  const { hotels, tours, quotes, isLoading } = useSupabaseData();
+  const navigate = useNavigate();
+
+  const totalRevenue = quotes.reduce((sum, quote) => sum + quote.calculations.totalCostAED, 0);
+  const confirmedQuotes = quotes.filter(q => q.status === 'confirmed');
+  const conversionRate = quotes.length > 0 ? ((confirmedQuotes.length / quotes.length) * 100).toFixed(1) : '0';
 
   const stats = [
     {
       title: 'Total Quotes',
-      value: '247',
+      value: quotes.length.toString(),
       change: '+12%',
       icon: FileText,
       color: 'text-blue-600'
     },
     {
       title: 'Revenue (AED)',
-      value: '1,250,000',
+      value: `${totalRevenue.toLocaleString()}`,
       change: '+18%',
       icon: DollarSign,
       color: 'text-green-600'
     },
     {
       title: 'Active Bookings',
-      value: '89',
+      value: confirmedQuotes.length.toString(),
       change: '+5%',
       icon: Calendar,
       color: 'text-purple-600'
     },
     {
       title: 'Conversion Rate',
-      value: '72%',
+      value: `${conversionRate}%`,
       change: '+8%',
       icon: TrendingUp,
       color: 'text-orange-600'
@@ -61,16 +68,22 @@ const Dashboard = () => {
         </div>
         <div className="relative p-8 text-white">
           <h1 className="text-4xl font-bold mb-2">
-            Welcome back, {user?.name}!
+            Welcome back, {user?.email?.split('@')[0]}!
           </h1>
           <p className="text-xl opacity-90">
             Your premium Dubai travel platform dashboard
           </p>
           <div className="mt-6 flex space-x-4">
-            <button className="dubai-button-gold">
+            <button 
+              onClick={() => navigate('/quote')}
+              className="dubai-button-gold"
+            >
               Create New Quote
             </button>
-            <button className="border border-white/30 text-white px-6 py-3 rounded-lg font-semibold transition-smooth hover:bg-white/10">
+            <button 
+              onClick={() => navigate('/analytics')}
+              className="border border-white/30 text-white px-6 py-3 rounded-lg font-semibold transition-smooth hover:bg-white/10"
+            >
               View Analytics
             </button>
           </div>
@@ -108,7 +121,10 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <button className="w-full text-left p-4 rounded-lg border hover:bg-gray-50 transition-smooth">
+            <button 
+              onClick={() => navigate('/quote')}
+              className="w-full text-left p-4 rounded-lg border hover:bg-gray-50 transition-smooth"
+            >
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold">Generate Quote</h3>
@@ -117,7 +133,10 @@ const Dashboard = () => {
                 <FileText className="h-5 w-5 text-dubai-blue" />
               </div>
             </button>
-            <button className="w-full text-left p-4 rounded-lg border hover:bg-gray-50 transition-smooth">
+            <button 
+              onClick={() => navigate('/admin/hotels')}
+              className="w-full text-left p-4 rounded-lg border hover:bg-gray-50 transition-smooth"
+            >
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold">Manage Hotels</h3>
@@ -126,7 +145,10 @@ const Dashboard = () => {
                 <Building2 className="h-5 w-5 text-dubai-blue" />
               </div>
             </button>
-            <button className="w-full text-left p-4 rounded-lg border hover:bg-gray-50 transition-smooth">
+            <button 
+              onClick={() => navigate('/admin/tours')}
+              className="w-full text-left p-4 rounded-lg border hover:bg-gray-50 transition-smooth"
+            >
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold">Tour Packages</h3>
@@ -145,20 +167,30 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {[1, 2, 3, 4].map((_, index) => (
-                <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+              {isLoading ? (
+                <div className="text-center py-4">Loading quotes...</div>
+              ) : quotes.slice(0, 4).map((quote) => (
+                <div key={quote.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
                   <div>
-                    <h4 className="font-semibold">Quote #DXB{2024000 + index}</h4>
+                    <h4 className="font-semibold">Quote #{quote.ticketReference}</h4>
                     <p className="text-sm text-muted-foreground">
-                      Burj Al Arab • 4 nights • 2 adults
+                      {quote.customerName} • {quote.paxDetails.adults} adults
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-dubai-navy">AED 12,500</p>
-                    <p className="text-xs text-green-600">Confirmed</p>
+                    <p className="font-semibold text-dubai-navy">AED {quote.calculations.totalCostAED.toLocaleString()}</p>
+                    <p className={`text-xs capitalize ${
+                      quote.status === 'confirmed' ? 'text-green-600' : 
+                      quote.status === 'draft' ? 'text-yellow-600' : 'text-blue-600'
+                    }`}>
+                      {quote.status}
+                    </p>
                   </div>
                 </div>
               ))}
+              {!isLoading && quotes.length === 0 && (
+                <div className="text-center py-4 text-muted-foreground">No quotes yet</div>
+              )}
             </div>
           </CardContent>
         </Card>

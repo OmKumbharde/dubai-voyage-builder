@@ -12,54 +12,28 @@ import {
   Eye,
   CheckCircle
 } from 'lucide-react';
-import { useAppContext } from '../context/AppContext';
+import { useSupabaseData } from '../hooks/useSupabaseData';
+import { useAuth } from '../context/AuthContext';
 
 const BookingCenter = () => {
-  const { state } = useAppContext();
+  const { quotes, isLoading } = useSupabaseData();
+  const { user } = useAuth();
   const [selectedView, setSelectedView] = useState<'calendar' | 'list'>('list');
 
-  // Demo booking data
-  const bookings = [
-    {
-      id: '1',
-      ticketReference: 'DXB2024001',
-      customerName: 'Sarah Johnson',
-      hotel: state.hotels[0],
-      checkIn: '2024-02-15',
-      checkOut: '2024-02-20',
-      nights: 5,
-      pax: { adults: 2, children: 1 },
-      tours: ['Dubai City Tour', 'Desert Safari'],
-      status: 'confirmed',
-      totalAmount: 15750
-    },
-    {
-      id: '2',
-      ticketReference: 'DXB2024002',
-      customerName: 'Michael Chen',
-      hotel: state.hotels[1],
-      checkIn: '2024-02-18',
-      checkOut: '2024-02-22',
-      nights: 4,
-      pax: { adults: 4, children: 0 },
-      tours: ['Burj Khalifa Tour'],
-      status: 'pending',
-      totalAmount: 12400
-    },
-    {
-      id: '3',
-      ticketReference: 'DXB2024003',
-      customerName: 'Emma Wilson',
-      hotel: state.hotels[0],
-      checkIn: '2024-02-20',
-      checkOut: '2024-02-25',
-      nights: 5,
-      pax: { adults: 2, children: 2 },
-      tours: ['Desert Safari', 'Marina Cruise'],
-      status: 'confirmed',
-      totalAmount: 18900
-    }
-  ];
+  // Transform quotes into bookings for display
+  const bookings = quotes.filter(quote => quote.status === 'confirmed').map(quote => ({
+    id: quote.id,
+    ticketReference: quote.ticketReference,
+    customerName: quote.customerName,
+    hotel: quote.selectedHotel,
+    checkIn: quote.travelDates.startDate,
+    checkOut: quote.travelDates.endDate,
+    nights: Math.ceil((new Date(quote.travelDates.endDate).getTime() - new Date(quote.travelDates.startDate).getTime()) / (1000 * 60 * 60 * 24)),
+    pax: { adults: quote.paxDetails.adults, children: quote.paxDetails.infants + quote.paxDetails.cnb + quote.paxDetails.cwb },
+    tours: quote.selectedTours.map(tour => tour.name),
+    status: 'confirmed',
+    totalAmount: quote.calculations.totalCostAED
+  }));
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -179,95 +153,102 @@ const BookingCenter = () => {
           <CardTitle>Active Bookings</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {bookings.map((booking) => (
-              <div key={booking.id} className="p-6 rounded-lg border bg-gradient-card hover:shadow-card transition-smooth">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 space-y-3">
-                    {/* Header */}
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-semibold text-lg text-foreground">
-                          {booking.customerName}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          Booking #{booking.ticketReference}
-                        </p>
-                      </div>
-                      <Badge className={getStatusColor(booking.status)}>
-                        {booking.status}
-                      </Badge>
-                    </div>
-
-                    {/* Booking Details */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="flex items-center space-x-3">
-                        <Building2 className="h-5 w-5 text-dubai-blue" />
+            <div className="space-y-4">
+              {isLoading ? (
+                <div className="text-center py-4">Loading bookings...</div>
+              ) : bookings.map((booking) => (
+                <div key={booking.id} className="p-6 rounded-lg border bg-gradient-card hover:shadow-card transition-smooth">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 space-y-3">
+                      {/* Header */}
+                      <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-medium">{booking.hotel.name}</p>
-                          <p className="text-sm text-muted-foreground">{booking.hotel.location}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-3">
-                        <Calendar className="h-5 w-5 text-dubai-blue" />
-                        <div>
-                          <p className="font-medium">
-                            {new Date(booking.checkIn).toLocaleDateString()} - {new Date(booking.checkOut).toLocaleDateString()}
-                          </p>
-                          <p className="text-sm text-muted-foreground">{booking.nights} nights</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-3">
-                        <Users className="h-5 w-5 text-dubai-blue" />
-                        <div>
-                          <p className="font-medium">
-                            {booking.pax.adults} Adults
-                            {booking.pax.children > 0 && `, ${booking.pax.children} Children`}
-                          </p>
+                          <h3 className="font-semibold text-lg text-foreground">
+                            {booking.customerName}
+                          </h3>
                           <p className="text-sm text-muted-foreground">
-                            AED {booking.totalAmount.toLocaleString()}
+                            Booking #{booking.ticketReference}
                           </p>
                         </div>
+                        <Badge className={getStatusColor(booking.status)}>
+                          {booking.status}
+                        </Badge>
                       </div>
-                    </div>
 
-                    {/* Tours */}
-                    {booking.tours.length > 0 && (
-                      <div className="flex items-center space-x-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">Tours:</span>
-                        <div className="flex flex-wrap gap-1">
-                          {booking.tours.map((tour, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {tour}
-                            </Badge>
-                          ))}
+                      {/* Booking Details */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="flex items-center space-x-3">
+                          <Building2 className="h-5 w-5 text-dubai-blue" />
+                          <div>
+                            <p className="font-medium">{booking.hotel?.name || 'No hotel selected'}</p>
+                            <p className="text-sm text-muted-foreground">{booking.hotel?.location || ''}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center space-x-3">
+                          <Calendar className="h-5 w-5 text-dubai-blue" />
+                          <div>
+                            <p className="font-medium">
+                              {new Date(booking.checkIn).toLocaleDateString()} - {new Date(booking.checkOut).toLocaleDateString()}
+                            </p>
+                            <p className="text-sm text-muted-foreground">{booking.nights} nights</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center space-x-3">
+                          <Users className="h-5 w-5 text-dubai-blue" />
+                          <div>
+                            <p className="font-medium">
+                              {booking.pax.adults} Adults
+                              {booking.pax.children > 0 && `, ${booking.pax.children} Children`}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              AED {booking.totalAmount.toLocaleString()}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    )}
-                  </div>
 
-                  {/* Actions */}
-                  <div className="flex flex-col space-y-2 ml-4">
-                    <Button size="sm" variant="outline" className="flex items-center">
-                      <Eye className="mr-2 h-3 w-3" />
-                      View Details
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      onClick={() => generateItinerary(booking.id)}
-                      className="dubai-button-gold flex items-center text-sm"
-                    >
-                      <Download className="mr-2 h-3 w-3" />
-                      Itinerary
-                    </Button>
+                      {/* Tours */}
+                      {booking.tours.length > 0 && (
+                        <div className="flex items-center space-x-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Tours:</span>
+                          <div className="flex flex-wrap gap-1">
+                            {booking.tours.map((tour, index) => (
+                              <Badge key={index} variant="outline" className="text-xs">
+                                {tour}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex flex-col space-y-2 ml-4">
+                      <Button size="sm" variant="outline" className="flex items-center">
+                        <Eye className="mr-2 h-3 w-3" />
+                        View Details
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        onClick={() => generateItinerary(booking.id)}
+                        className="dubai-button-gold flex items-center text-sm"
+                      >
+                        <Download className="mr-2 h-3 w-3" />
+                        Itinerary
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+              {!isLoading && bookings.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  No confirmed bookings yet. Confirm some quotes to see them here.
+                </div>
+              )}
+            </div>
         </CardContent>
       </Card>
 
@@ -281,19 +262,29 @@ const BookingCenter = () => {
             <div>
               <h4 className="font-semibold mb-3">Available Tours</h4>
               <div className="space-y-2">
-                {state.tours.map((tour) => (
-                  <div key={tour.id} className="p-3 rounded-lg border hover:bg-gray-50 cursor-pointer transition-smooth">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h5 className="font-medium">{tour.name}</h5>
-                        <p className="text-sm text-muted-foreground">{tour.duration}</p>
+                {isLoading ? (
+                  <div className="text-center py-4">Loading tours...</div>
+                ) : (
+                  <div className="space-y-2">
+                    {bookings.length > 0 && bookings[0] && bookings[0].tours ? (
+                      bookings[0].tours.map((tourName, index) => (
+                        <div key={index} className="p-3 rounded-lg border hover:bg-gray-50 cursor-pointer transition-smooth">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h5 className="font-medium">{tourName}</h5>
+                              <p className="text-sm text-muted-foreground">Available Tour</p>
+                            </div>
+                            <Badge variant="secondary">Tour</Badge>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-4 text-muted-foreground">
+                        No tours available
                       </div>
-                      <Badge variant={tour.type === 'private' ? 'default' : 'secondary'}>
-                        {tour.type}
-                      </Badge>
-                    </div>
+                    )}
                   </div>
-                ))}
+                )}
               </div>
             </div>
 

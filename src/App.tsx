@@ -13,6 +13,8 @@ import QuoteTool from "./pages/QuoteTool";
 import Analytics from "./pages/Analytics";
 import BookingCenter from "./pages/BookingCenter";
 import HotelsManagement from "./pages/admin/HotelsManagement";
+import ToursManagement from "./pages/admin/ToursManagement";
+import QuoteManagement from "./pages/QuoteManagement";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -36,9 +38,11 @@ const App = () => (
               }>
                 <Route index element={<Dashboard />} />
                 <Route path="quote" element={<QuoteTool />} />
+                <Route path="quotes" element={<QuoteManagement />} />
                 <Route path="analytics" element={<Analytics />} />
                 <Route path="booking" element={<BookingCenter />} />
                 <Route path="admin/hotels" element={<HotelsManagement />} />
+                <Route path="admin/tours" element={<ToursManagement />} />
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

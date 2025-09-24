@@ -15,13 +15,12 @@ import {
   Save,
   X
 } from 'lucide-react';
-import { useAppContext } from '../../context/AppContext';
+import { useSupabaseData } from '../../hooks/useSupabaseData';
 import { Hotel, Room } from '../../types';
 import { toast } from '../../hooks/use-toast';
 
 const HotelsManagement = () => {
-  const { state, dispatch } = useAppContext();
-  const { hotels } = state;
+  const { hotels, addHotel, updateHotel, deleteHotel, isLoading } = useSupabaseData();
   
   const [isCreating, setIsCreating] = useState(false);
   const [editingHotel, setEditingHotel] = useState<Hotel | null>(null);
@@ -47,7 +46,7 @@ const HotelsManagement = () => {
     setEditingHotel(null);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.name || !formData.location) {
       toast({
         title: "Missing Information",
@@ -57,34 +56,26 @@ const HotelsManagement = () => {
       return;
     }
 
-    const hotelData: Hotel = {
-      id: editingHotel?.id || Date.now().toString(),
+    const hotelData = {
       name: formData.name,
       location: formData.location,
       description: formData.description,
       starRating: formData.starRating,
       amenities: formData.amenities,
-      rooms: formData.rooms,
       images: ['/api/placeholder/400/300'],
-      createdAt: editingHotel?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      rooms: formData.rooms
     };
 
-    if (editingHotel) {
-      dispatch({ type: 'UPDATE_HOTEL', payload: hotelData });
-      toast({
-        title: "Hotel Updated",
-        description: `${hotelData.name} has been updated successfully`
-      });
-    } else {
-      dispatch({ type: 'ADD_HOTEL', payload: hotelData });
-      toast({
-        title: "Hotel Added",
-        description: `${hotelData.name} has been added successfully`
-      });
+    try {
+      if (editingHotel) {
+        await updateHotel(editingHotel.id, hotelData);
+      } else {
+        await addHotel(hotelData);
+      }
+      resetForm();
+    } catch (error) {
+      console.error('Error saving hotel:', error);
     }
-
-    resetForm();
   };
 
   const startEdit = (hotel: Hotel) => {
@@ -309,7 +300,11 @@ const HotelsManagement = () => {
                   <Button variant="ghost" size="sm" onClick={() => startEdit(hotel)}>
                     <Edit3 className="h-3 w-3" />
                   </Button>
-                  <Button variant="ghost" size="sm">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => deleteHotel(hotel.id)}
+                  >
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
