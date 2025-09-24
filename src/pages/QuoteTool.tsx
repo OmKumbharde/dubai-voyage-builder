@@ -37,27 +37,24 @@ const QuoteTool = () => {
     cwb: 0
   });
   const [selectedHotelId, setSelectedHotelId] = useState('');
-  const [selectedRoomId, setSelectedRoomId] = useState('');
   const [selectedTourIds, setSelectedTourIds] = useState<string[]>([]);
   const [selectedInclusionIds, setSelectedInclusionIds] = useState<string[]>([]);
 
   const selectedHotel = hotels.find(h => h.id === selectedHotelId);
-  const selectedRoom = selectedHotel?.rooms.find(r => r.id === selectedRoomId);
   const selectedTours = tours.filter(t => selectedTourIds.includes(t.id));
   const selectedInclusions = inclusions.filter(i => selectedInclusionIds.includes(i.id));
 
   const calculateQuote = () => {
-    if (!selectedHotel || !selectedRoom || !travelDates.startDate || !travelDates.endDate) {
+    if (!selectedHotel || !travelDates.startDate || !travelDates.endDate) {
       return null;
     }
 
     const nights = Math.ceil((new Date(travelDates.endDate).getTime() - new Date(travelDates.startDate).getTime()) / (1000 * 60 * 60 * 24));
     const totalPax = paxDetails.adults + paxDetails.cwb;
-    const roomsNeeded = Math.ceil(totalPax / selectedRoom.capacity);
-    const extraBedsNeeded = Math.max(0, totalPax - (roomsNeeded * selectedRoom.capacity));
-
-    // Hotel costs
-    const hotelCost = (roomsNeeded * selectedRoom.baseRate * nights) + (extraBedsNeeded * selectedRoom.extraBedRate * nights);
+    const roomsNeeded = Math.ceil(totalPax / 2); // Assuming standard room capacity of 2
+    
+    // Hotel costs - using hotel base rate
+    const hotelCost = roomsNeeded * selectedHotel.baseRate * nights;
 
     // Tours costs
     const toursCost = selectedTours.reduce((total, tour) => {
@@ -83,8 +80,7 @@ const QuoteTool = () => {
       totalCostUSD,
       exchangeRate,
       nights,
-      roomsNeeded,
-      extraBedsNeeded
+      roomsNeeded
     };
   };
 
@@ -114,7 +110,7 @@ const QuoteTool = () => {
   };
 
   const saveQuote = () => {
-    if (!selectedHotel || !selectedRoom || !calculations || !customerName) {
+    if (!selectedHotel || !calculations || !customerName) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields",
@@ -131,7 +127,6 @@ const QuoteTool = () => {
       travelDates,
       paxDetails,
       selectedHotel,
-      selectedRoom,
       selectedTours,
       selectedInclusions,
       calculations,
@@ -311,25 +306,17 @@ const QuoteTool = () => {
               </div>
 
               {selectedHotel && (
-                <div>
-                  <Label htmlFor="room">Select Room Type</Label>
-                  <Select value={selectedRoomId} onValueChange={setSelectedRoomId}>
-                    <SelectTrigger className="dubai-input">
-                      <SelectValue placeholder="Choose a room type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {selectedHotel.rooms.map((room) => (
-                        <SelectItem key={room.id} value={room.id}>
-                          <div className="flex items-center justify-between w-full">
-                            <span>{room.type}</span>
-                            <span className="text-sm text-muted-foreground">
-                              AED {room.baseRate}/night
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="p-4 bg-muted/30 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{selectedHotel.name}</p>
+                      <p className="text-sm text-muted-foreground">{selectedHotel.location}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold">AED {selectedHotel.baseRate}/night</p>
+                      <p className="text-sm text-muted-foreground">Base Rate</p>
+                    </div>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -416,7 +403,6 @@ const QuoteTool = () => {
 
                   <div className="text-xs text-muted-foreground space-y-1">
                     <p>• Rooms needed: {calculations.roomsNeeded}</p>
-                    <p>• Extra beds: {calculations.extraBedsNeeded}</p>
                     <p>• Exchange rate: 1 USD = {calculations.exchangeRate} AED</p>
                   </div>
                 </>

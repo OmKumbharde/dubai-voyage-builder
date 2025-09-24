@@ -79,7 +79,6 @@ export interface Quote {
   };
   paxDetails: PaxDetails;
   selectedHotel: Hotel;
-  selectedRoom: Room;
   selectedTours: Tour[];
   selectedInclusions: Inclusion[];
   calculations: {

@@ -91,7 +91,7 @@ export interface Hotel {
   starRating: number;
   amenities: string[];
   images: string[];
-  rooms: Room[];
+  baseRate: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -136,7 +136,6 @@ export interface Quote {
     cwb: number;
   };
   selectedHotel: Hotel | null;
-  selectedRoom: Room | null;
   selectedTours: Tour[];
   calculations: {
     totalCostAED: number;
@@ -203,7 +202,6 @@ const adaptDbQuoteToQuote = (dbQuote: DbQuote): Quote => ({
     cwb: dbQuote.cwb || 0,
   },
   selectedHotel: null, // Will be populated separately if needed
-  selectedRoom: null, // Will be populated separately if needed
   selectedTours: [], // Will be populated separately if needed
   calculations: {
     totalCostAED: Number(dbQuote.total_amount),

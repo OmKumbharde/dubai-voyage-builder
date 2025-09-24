@@ -4,14 +4,11 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
-import { Calendar } from '../../components/ui/calendar';
 import { 
   Building2, 
   Calendar as CalendarIcon,
   Save,
-  Plus,
-  Edit3,
-  Trash2
+  Plus
 } from 'lucide-react';
 import { useSupabaseData } from '../../hooks/useSupabaseData';
 import { supabase } from '@/integrations/supabase/client';
@@ -206,7 +203,7 @@ const HotelRatesManagement = () => {
             Hotel Rates Management
           </h1>
           <p className="text-muted-foreground mt-2">
-            Manage daily rates and inventory for hotel rooms
+            Manage daily rates and inventory for hotels
           </p>
         </div>
       </div>
@@ -271,89 +268,81 @@ const HotelRatesManagement = () => {
               <div className="text-center py-8">Loading rates...</div>
             ) : (
               <div className="space-y-6">
-                {selectedHotelData.rooms.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No room types found for this hotel. Please add rooms first.
-                  </div>
-                ) : (
-                  <div className="grid gap-6">
-                    {selectedHotelData.rooms.map(room => (
-                      <div key={room.id} className="border rounded-lg p-6">
-                        <h3 className="text-lg font-semibold mb-4 flex items-center justify-between">
-                          <span>{room.type}</span>
-                          <Badge variant="outline">
-                            Base Rate: AED {room.baseRate}
-                          </Badge>
-                        </h3>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                          {Array.from(
-                            { length: new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate() },
-                            (_, i) => {
-                              const date = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), i + 1);
-                              const dateStr = format(date, 'yyyy-MM-dd');
-                              const dayRates = groupedRates[dateStr]?.filter(r => r.room_type === room.type) || [];
-                              const rate = dayRates[0];
+                <div className="grid gap-6">
+                  <div className="border rounded-lg p-6">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center justify-between">
+                      <span>Hotel Rates</span>
+                      <Badge variant="outline">
+                        Base Rate: AED {selectedHotelData.baseRate}
+                      </Badge>
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {Array.from(
+                        { length: new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate() },
+                        (_, i) => {
+                          const date = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), i + 1);
+                          const dateStr = format(date, 'yyyy-MM-dd');
+                          const dayRates = groupedRates[dateStr] || [];
+                          const rate = dayRates[0];
+                          
+                          return (
+                            <div key={dateStr} className="border rounded p-3 space-y-2">
+                              <div className="text-sm font-medium">
+                                {format(date, 'MMM d')}
+                                <span className="text-xs text-muted-foreground ml-1">
+                                  ({format(date, 'EEE')})
+                                </span>
+                              </div>
                               
-                              return (
-                                <div key={dateStr} className="border rounded p-3 space-y-2">
-                                  <div className="text-sm font-medium">
-                                    {format(date, 'MMM d')}
-                                    <span className="text-xs text-muted-foreground ml-1">
-                                      ({format(date, 'EEE')})
-                                    </span>
+                              {rate ? (
+                                <div className="space-y-2">
+                                  <div>
+                                    <Input
+                                      type="number"
+                                      value={rate.rate}
+                                      onChange={(e) => updateRate(rate.id, { rate: Number(e.target.value) })}
+                                      className="text-xs h-8"
+                                      placeholder="Rate"
+                                    />
                                   </div>
-                                  
-                                  {rate ? (
-                                    <div className="space-y-2">
-                                      <div>
-                                        <Input
-                                          type="number"
-                                          value={rate.rate}
-                                          onChange={(e) => updateRate(rate.id, { rate: Number(e.target.value) })}
-                                          className="text-xs h-8"
-                                          placeholder="Rate"
-                                        />
-                                      </div>
-                                      <div>
-                                        <Input
-                                          type="number"
-                                          value={rate.inventory}
-                                          onChange={(e) => updateRate(rate.id, { inventory: Number(e.target.value) })}
-                                          className="text-xs h-8"
-                                          placeholder="Inventory"
-                                        />
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <div className="space-y-2">
-                                      <Input
-                                        type="number"
-                                        placeholder="Rate"
-                                        className="text-xs h-8"
-                                        onKeyPress={(e) => {
-                                          if (e.key === 'Enter') {
-                                            const rate = Number((e.target as HTMLInputElement).value);
-                                            if (rate > 0) {
-                                              createRate(selectedHotel, room.type, dateStr);
-                                            }
-                                          }
-                                        }}
-                                      />
-                                      <div className="text-xs text-muted-foreground">
-                                        Press Enter to save
-                                      </div>
-                                    </div>
-                                  )}
+                                  <div>
+                                    <Input
+                                      type="number"
+                                      value={rate.inventory}
+                                      onChange={(e) => updateRate(rate.id, { inventory: Number(e.target.value) })}
+                                      className="text-xs h-8"
+                                      placeholder="Inventory"
+                                    />
+                                  </div>
                                 </div>
-                              );
-                            }
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                              ) : (
+                                <div className="space-y-2">
+                                  <Input
+                                    type="number"
+                                    placeholder="Rate"
+                                    className="text-xs h-8"
+                                    onKeyPress={(e) => {
+                                      if (e.key === 'Enter') {
+                                        const rate = Number((e.target as HTMLInputElement).value);
+                                        if (rate > 0) {
+                                          createRate(selectedHotel, dateStr, rate);
+                                        }
+                                      }
+                                    }}
+                                  />
+                                  <div className="text-xs text-muted-foreground">
+                                    Press Enter to save
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }
+                      )}
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             )}
           </CardContent>
