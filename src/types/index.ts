@@ -16,6 +16,7 @@ export interface Hotel {
   description: string;
   images: string[];
   baseRate: number;
+  extraBedRate: number;
   amenities: string[];
   starRating: number;
   createdAt: string;

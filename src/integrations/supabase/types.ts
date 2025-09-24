@@ -58,6 +58,7 @@ export type Database = {
           base_rate: number | null
           created_at: string
           description: string | null
+          extra_bed_rate: number | null
           id: string
           images: string[] | null
           location: string
@@ -70,6 +71,7 @@ export type Database = {
           base_rate?: number | null
           created_at?: string
           description?: string | null
+          extra_bed_rate?: number | null
           id?: string
           images?: string[] | null
           location: string
@@ -82,6 +84,7 @@ export type Database = {
           base_rate?: number | null
           created_at?: string
           description?: string | null
+          extra_bed_rate?: number | null
           id?: string
           images?: string[] | null
           location?: string

@@ -28,6 +28,7 @@ const HotelsManagement = () => {
     description: '',
     starRating: 5,
     baseRate: 0,
+    extraBedRate: 100,
     amenities: [] as string[]
   });
   const [newAmenity, setNewAmenity] = useState('');
@@ -50,6 +51,7 @@ const HotelsManagement = () => {
         description: '',
         starRating: 5,
         baseRate: 0,
+        extraBedRate: 100,
         amenities: []
       });
     } catch (error) {
@@ -65,6 +67,7 @@ const HotelsManagement = () => {
       description: hotel.description,
       starRating: hotel.starRating,
       baseRate: hotel.baseRate,
+      extraBedRate: hotel.extraBedRate,
       amenities: hotel.amenities || []
     });
   };
@@ -77,6 +80,7 @@ const HotelsManagement = () => {
       description: '',
       starRating: 5,
       baseRate: 0,
+      extraBedRate: 100,
       amenities: []
     });
   };
@@ -169,7 +173,7 @@ const HotelsManagement = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <Label htmlFor="starRating">Star Rating</Label>
                 <select
@@ -191,6 +195,17 @@ const HotelsManagement = () => {
                   value={formData.baseRate}
                   onChange={(e) => setFormData(prev => ({ ...prev, baseRate: Number(e.target.value) }))}
                   placeholder="Enter base rate"
+                  className="dubai-input"
+                />
+              </div>
+              <div>
+                <Label htmlFor="extraBedRate">Extra Bed Rate (AED per night)</Label>
+                <Input
+                  id="extraBedRate"
+                  type="number"
+                  value={formData.extraBedRate}
+                  onChange={(e) => setFormData(prev => ({ ...prev, extraBedRate: Number(e.target.value) }))}
+                  placeholder="Enter extra bed rate"
                   className="dubai-input"
                 />
               </div>
@@ -297,11 +312,19 @@ const HotelsManagement = () => {
                 {hotel.description}
               </p>
               
-              <div className="flex items-center justify-between">
-                <span className="text-lg font-semibold text-dubai-navy">
-                  AED {hotel.baseRate}/night
-                </span>
-                <Badge variant="outline">Base Rate</Badge>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-lg font-semibold text-dubai-navy">
+                    AED {hotel.baseRate}/night
+                  </span>
+                  <Badge variant="outline">Base Rate</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Extra Bed: AED {hotel.extraBedRate}/night
+                  </span>
+                  <Badge variant="secondary" className="text-xs">Extra Bed</Badge>
+                </div>
               </div>
 
               {hotel.amenities && hotel.amenities.length > 0 && (
