@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useSupabaseData } from '../../hooks/useSupabaseData';
 import { Hotel, Room } from '../../types';
+import { toast } from '../../hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 const HotelsManagement = () => {

@@ -14,8 +14,7 @@ import {
   Clock,
   DollarSign
 } from 'lucide-react';
-import { useSupabaseData } from '../../hooks/useSupabaseData';
-import { Tour } from '../../types';
+import { useSupabaseData, Tour } from '../../hooks/useSupabaseData';
 import { toast } from '../../hooks/use-toast';
 
 const ToursManagement = () => {
@@ -67,6 +66,7 @@ const ToursManagement = () => {
         duration: formData.duration,
         costPerPerson: formData.costPerPerson,
         transferIncluded: formData.transferIncluded,
+        privateTransferCost: formData.privateTransferCost,
         highlights: formData.highlights.filter(h => h.trim() !== ''),
         images: ['/api/placeholder/400/300'] // Default placeholder
       };
@@ -91,7 +91,7 @@ const ToursManagement = () => {
       duration: tour.duration,
       costPerPerson: tour.costPerPerson,
       transferIncluded: tour.transferIncluded,
-      privateTransferCost: 0, // This would need to be stored in database
+      privateTransferCost: tour.privateTransferCost || 0,
       highlights: tour.highlights
     });
     setIsCreating(true);  
@@ -327,6 +327,18 @@ const ToursManagement = () => {
                   {tour.type === 'private' ? 'Private' : 'Sharing'}
                 </Badge>
               </div>
+
+              {tour.type === 'private' && tour.privateTransferCost && tour.privateTransferCost > 0 && (
+                <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center text-sm text-blue-800">
+                    <DollarSign className="h-3 w-3 mr-1" />
+                    <span className="font-medium">Private Transfer: AED {tour.privateTransferCost}</span>
+                  </div>
+                  <p className="text-xs text-blue-600 mt-1">
+                    (Split among all passengers)
+                  </p>
+                </div>
+              )}
 
               {tour.transferIncluded && (
                 <Badge variant="outline" className="text-xs">

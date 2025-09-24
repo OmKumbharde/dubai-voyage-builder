@@ -35,6 +35,7 @@ export interface DbTour {
   duration: string | null;
   cost_per_person: number;
   transfer_included: boolean;
+  private_transfer_cost: number | null;
   highlights: string[] | null;
   images: string[] | null;
   created_at: string;
@@ -103,6 +104,7 @@ export interface Tour {
   duration: string;
   costPerPerson: number;
   transferIncluded: boolean;
+  privateTransferCost?: number;
   images: string[];
   highlights: string[];
   createdAt: string;
@@ -178,6 +180,7 @@ const adaptDbTourToTour = (dbTour: DbTour): Tour => ({
   duration: dbTour.duration || '',
   costPerPerson: Number(dbTour.cost_per_person),
   transferIncluded: Boolean(dbTour.transfer_included),
+  privateTransferCost: dbTour.private_transfer_cost ? Number(dbTour.private_transfer_cost) : undefined,
   images: dbTour.images || ['/api/placeholder/400/300'],
   highlights: dbTour.highlights || [],
   createdAt: dbTour.created_at,
@@ -381,6 +384,7 @@ export const useSupabaseData = () => {
         duration: tour.duration,
         cost_per_person: tour.costPerPerson,
         transfer_included: tour.transferIncluded,
+        private_transfer_cost: tour.privateTransferCost || 0,
         highlights: tour.highlights,
         images: tour.images
       };
@@ -423,6 +427,7 @@ export const useSupabaseData = () => {
       if (updates.duration) updateData.duration = updates.duration;
       if (updates.costPerPerson !== undefined) updateData.cost_per_person = updates.costPerPerson;
       if (updates.transferIncluded !== undefined) updateData.transfer_included = updates.transferIncluded;
+      if (updates.privateTransferCost !== undefined) updateData.private_transfer_cost = updates.privateTransferCost;
       if (updates.highlights) updateData.highlights = updates.highlights;
       if (updates.images) updateData.images = updates.images;
 
