@@ -105,7 +105,7 @@ const HotelRatesManagement = () => {
           date,
           rate,
           inventory: formData.inventory
-        }])
+        } as any])
         .select()
         .single();
 
@@ -157,7 +157,7 @@ const HotelRatesManagement = () => {
 
       const { error } = await supabase
         .from('hotel_rates')
-        .upsert(ratesToCreate, { 
+        .upsert(ratesToCreate as any, { 
           onConflict: 'hotel_id,date',
           ignoreDuplicates: false 
         });

@@ -18,6 +18,7 @@ import {
 import { useSupabaseData } from '../../hooks/useSupabaseData';
 import { toast } from '../../hooks/use-toast';
 
+// Hotel Management Component - Simplified without room types
 const HotelsManagement = () => {
   const { hotels, isLoading, addHotel, updateHotel, deleteHotel } = useSupabaseData();
   const [editingId, setEditingId] = useState<string | null>(null);
