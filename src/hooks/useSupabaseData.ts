@@ -10,6 +10,7 @@ export interface DbHotel {
   location: string;
   description: string | null;
   star_rating: number | null;
+  base_rate: number | null;
   amenities: string[] | null;
   images: string[] | null;
   created_at: string;
@@ -157,7 +158,7 @@ const adaptDbHotelToHotel = (dbHotel: DbHotel): Hotel => ({
   starRating: dbHotel.star_rating || 5,
   amenities: dbHotel.amenities || [],
   images: dbHotel.images || ['/api/placeholder/400/300'],
-  baseRate: 500, // Default base rate, will be managed via hotel_rates table
+  baseRate: Number(dbHotel.base_rate) || 500,
   createdAt: dbHotel.created_at,
   updatedAt: dbHotel.updated_at,
 });
@@ -272,6 +273,7 @@ export const useSupabaseData = () => {
           location: hotel.location,
           description: hotel.description,
           star_rating: hotel.starRating,
+          base_rate: hotel.baseRate,
           amenities: hotel.amenities,
           images: hotel.images,
         }])
@@ -307,6 +309,7 @@ export const useSupabaseData = () => {
           location: updates.location,
           description: updates.description,
           star_rating: updates.starRating,
+          base_rate: updates.baseRate,
           amenities: updates.amenities,
           images: updates.images,
         })
