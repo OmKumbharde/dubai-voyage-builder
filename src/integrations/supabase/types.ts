@@ -22,7 +22,6 @@ export type Database = {
           id: string
           inventory: number | null
           rate: number
-          room_type: string
           updated_at: string
         }
         Insert: {
@@ -32,7 +31,6 @@ export type Database = {
           id?: string
           inventory?: number | null
           rate?: number
-          room_type: string
           updated_at?: string
         }
         Update: {
@@ -42,53 +40,11 @@ export type Database = {
           id?: string
           inventory?: number | null
           rate?: number
-          room_type?: string
           updated_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "hotel_rates_hotel_id_fkey"
-            columns: ["hotel_id"]
-            isOneToOne: false
-            referencedRelation: "hotels"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      hotel_rooms: {
-        Row: {
-          base_rate: number
-          capacity: number
-          created_at: string
-          extra_bed_capacity: number | null
-          extra_bed_rate: number | null
-          hotel_id: string | null
-          id: string
-          room_type: string
-        }
-        Insert: {
-          base_rate: number
-          capacity?: number
-          created_at?: string
-          extra_bed_capacity?: number | null
-          extra_bed_rate?: number | null
-          hotel_id?: string | null
-          id?: string
-          room_type: string
-        }
-        Update: {
-          base_rate?: number
-          capacity?: number
-          created_at?: string
-          extra_bed_capacity?: number | null
-          extra_bed_rate?: number | null
-          hotel_id?: string | null
-          id?: string
-          room_type?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "hotel_rooms_hotel_id_fkey"
             columns: ["hotel_id"]
             isOneToOne: false
             referencedRelation: "hotels"
