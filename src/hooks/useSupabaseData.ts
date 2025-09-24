@@ -272,6 +272,7 @@ export const useSupabaseData = () => {
           location: hotel.location,
           description: hotel.description,
           star_rating: hotel.starRating,
+          base_rate: hotel.baseRate,
           amenities: hotel.amenities,
           images: hotel.images,
         }])
@@ -307,6 +308,7 @@ export const useSupabaseData = () => {
           location: updates.location,
           description: updates.description,
           star_rating: updates.starRating,
+          base_rate: updates.baseRate,
           amenities: updates.amenities,
           images: updates.images,
         })
