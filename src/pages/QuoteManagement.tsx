@@ -4,6 +4,8 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { useNavigate } from 'react-router-dom';
+import jsPDF from 'jspdf';
 import { 
   FileText, 
   Search, 
@@ -26,6 +28,7 @@ import { Quote } from '../hooks/useSupabaseData';
 import { toast } from '../hooks/use-toast';
 
 const QuoteManagement = () => {
+  const navigate = useNavigate();
   const { quotes, updateQuote, isLoading } = useSupabaseData();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -51,18 +54,146 @@ const QuoteManagement = () => {
   };
 
   const generateInvoice = (quote: Quote) => {
-    // In a real implementation, this would generate an invoice
-    toast({
-      title: "Invoice Generated",
-      description: `Invoice generated for quote ${quote.ticketReference}`
-    });
+    try {
+      const pdf = new jsPDF();
+      
+      // Header
+      pdf.setFontSize(20);
+      pdf.text('INVOICE', 20, 30);
+      
+      // Company details
+      pdf.setFontSize(12);
+      pdf.text('Dubai Travel Company', 20, 50);
+      pdf.text('123 Business District, Dubai, UAE', 20, 60);
+      pdf.text('Phone: +971 4 123 4567', 20, 70);
+      pdf.text('Email: info@dubaitravel.com', 20, 80);
+      
+      // Invoice details
+      pdf.text(`Invoice #: INV-${quote.ticketReference}`, 120, 50);
+      pdf.text(`Date: ${new Date().toLocaleDateString()}`, 120, 60);
+      
+      // Customer details
+      pdf.setFontSize(14);
+      pdf.text('Bill To:', 20, 110);
+      pdf.setFontSize(12);
+      pdf.text(quote.customerName, 20, 125);
+      if (quote.customerEmail) {
+        pdf.text(quote.customerEmail, 20, 135);
+      }
+      
+      // Quote details
+      pdf.setFontSize(14);
+      pdf.text('Quote Details:', 20, 165);
+      pdf.setFontSize(12);
+      pdf.text(`Quote Reference: ${quote.ticketReference}`, 20, 180);
+      pdf.text(`Travel Dates: ${new Date(quote.travelDates.startDate).toLocaleDateString()} - ${new Date(quote.travelDates.endDate).toLocaleDateString()}`, 20, 190);
+      pdf.text(`Passengers: ${quote.paxDetails.adults} Adults`, 20, 200);
+      
+      if (quote.selectedHotel) {
+        pdf.text(`Hotel: ${quote.selectedHotel.name}`, 20, 210);
+      }
+      
+      // Total amount
+      pdf.setFontSize(16);
+      pdf.text(`Total Amount: AED ${quote.calculations.totalCostAED.toLocaleString()}`, 20, 240);
+      pdf.text(`(USD $${quote.calculations.totalCostUSD.toLocaleString()})`, 20, 255);
+      
+      // Save the PDF
+      pdf.save(`invoice-${quote.ticketReference}.pdf`);
+      
+      toast({
+        title: "Invoice Generated",
+        description: `Invoice PDF downloaded for quote ${quote.ticketReference}`
+      });
+    } catch (error) {
+      console.error('Error generating invoice:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate invoice PDF",
+        variant: "destructive"
+      });
+    }
   };
 
   const generateItinerary = (quote: Quote) => {
-    toast({
-      title: "Itinerary Generated",
-      description: `Itinerary link generated for quote ${quote.ticketReference}`
-    });
+    try {
+      const pdf = new jsPDF();
+      
+      // Header
+      pdf.setFontSize(20);
+      pdf.text('TRAVEL ITINERARY', 20, 30);
+      
+      // Customer details
+      pdf.setFontSize(14);
+      pdf.text(`Customer: ${quote.customerName}`, 20, 50);
+      pdf.text(`Quote Reference: ${quote.ticketReference}`, 20, 65);
+      pdf.text(`Travel Dates: ${new Date(quote.travelDates.startDate).toLocaleDateString()} - ${new Date(quote.travelDates.endDate).toLocaleDateString()}`, 20, 80);
+      
+      let yPos = 110;
+      
+      // Hotel information
+      if (quote.selectedHotel) {
+        pdf.setFontSize(16);
+        pdf.text('ACCOMMODATION', 20, yPos);
+        yPos += 15;
+        pdf.setFontSize(12);
+        pdf.text(`Hotel: ${quote.selectedHotel.name}`, 20, yPos);
+        yPos += 10;
+        pdf.text(`Location: ${quote.selectedHotel.location}`, 20, yPos);
+        yPos += 10;
+        pdf.text(`Rating: ${quote.selectedHotel.starRating} Stars`, 20, yPos);
+        yPos += 20;
+      }
+      
+      // Tours information
+      if (quote.selectedTours.length > 0) {
+        pdf.setFontSize(16);
+        pdf.text('TOURS & ACTIVITIES', 20, yPos);
+        yPos += 15;
+        
+        quote.selectedTours.forEach((tour) => {
+          pdf.setFontSize(12);
+          pdf.text(`• ${tour.name}`, 20, yPos);
+          yPos += 10;
+          pdf.text(`  Duration: ${tour.duration}`, 25, yPos);
+          yPos += 10;
+          pdf.text(`  Type: ${tour.type.charAt(0).toUpperCase() + tour.type.slice(1)}`, 25, yPos);
+          yPos += 15;
+        });
+      }
+      
+      // Contact information
+      yPos += 20;
+      pdf.setFontSize(14);
+      pdf.text('CONTACT INFORMATION', 20, yPos);
+      yPos += 15;
+      pdf.setFontSize(12);
+      pdf.text('Dubai Travel Company', 20, yPos);
+      yPos += 10;
+      pdf.text('Phone: +971 4 123 4567', 20, yPos);
+      yPos += 10;
+      pdf.text('Email: info@dubaitravel.com', 20, yPos);
+      
+      // Save the PDF
+      pdf.save(`itinerary-${quote.ticketReference}.pdf`);
+      
+      toast({
+        title: "Itinerary Generated",
+        description: `Itinerary PDF downloaded for quote ${quote.ticketReference}`
+      });
+    } catch (error) {
+      console.error('Error generating itinerary:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate itinerary PDF",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const editQuote = (quote: Quote) => {
+    // Navigate to quote tool with the quote data
+    navigate('/quote-tool', { state: { editQuote: quote } });
   };
 
   const getStatusColor = (status: string) => {
@@ -288,7 +419,7 @@ const QuoteManagement = () => {
                           <Eye className="mr-2 h-3 w-3" />
                           View
                         </Button>
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" onClick={() => editQuote(quote)}>
                           <Edit3 className="mr-2 h-3 w-3" />
                           Edit
                         </Button>
