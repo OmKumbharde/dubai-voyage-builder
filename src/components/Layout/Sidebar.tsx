@@ -9,7 +9,8 @@ import {
   Building2, 
   MapPin, 
   Users,
-  LogOut
+  LogOut,
+  Plane
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -54,6 +55,16 @@ const Sidebar = () => {
       name: 'Tours Management', 
       href: '/admin/tours', 
       icon: MapPin 
+    },
+    { 
+      name: 'Inclusions Management', 
+      href: '/admin/inclusions', 
+      icon: Plane 
+    },
+    { 
+      name: 'Hotel Rates', 
+      href: '/admin/hotel-rates', 
+      icon: Calendar 
     }
   ];
 

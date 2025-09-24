@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
-import { useSupabaseData, Hotel, Tour, Quote } from '@/hooks/useSupabaseData';
+import { useSupabaseData, Hotel, Tour, Quote, Inclusion } from '@/hooks/useSupabaseData';
 
 export interface User {
   id: string;
@@ -8,15 +8,6 @@ export interface User {
   role: 'admin' | 'sales' | 'booking';
   createdAt: string;
   updatedAt: string;
-}
-
-export interface Inclusion {
-  id: string;
-  name: string;
-  type: 'visa' | 'transfer' | 'insurance' | 'other';
-  cost: number;
-  description: string;
-  isOptional: boolean;
 }
 
 export interface PaxDetails {
@@ -37,26 +28,6 @@ export interface AppState {
   isLoading: boolean;
 }
 
-// Demo inclusions since we don't have them in Supabase yet
-const demoInclusions: Inclusion[] = [
-  {
-    id: '1',
-    name: 'UAE Tourist Visa',
-    type: 'visa',
-    cost: 100,
-    description: '30-day tourist visa for UAE',
-    isOptional: false,
-  },
-  {
-    id: '2',
-    name: 'Airport Transfer',
-    type: 'transfer',
-    cost: 50,
-    description: 'Round-trip airport transfer',
-    isOptional: true,
-  },
-];
-
 type AppAction =
   | { type: 'SET_USER'; payload: User | null }
   | { type: 'SET_LOADING'; payload: boolean }
@@ -72,7 +43,7 @@ const initialState: AppState = {
   isAuthenticated: false,
   hotels: [],
   tours: [],
-  inclusions: demoInclusions,
+  inclusions: [],
   quotes: [],
   currentQuote: null,
   isLoading: true,
@@ -151,6 +122,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const {
     hotels,
     tours,
+    inclusions,
     quotes,
     isLoading,
     addQuote,
@@ -158,6 +130,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     addHotel,
     updateHotel,
     deleteHotel,
+    addTour,
+    updateTour,
+    deleteTour,
+    addInclusion,
+    updateInclusion,
+    deleteInclusion,
     refetch
   } = useSupabaseData();
 
@@ -171,6 +149,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     ...state,
     hotels,
     tours,
+    inclusions,
     quotes,
     isLoading,
   };
