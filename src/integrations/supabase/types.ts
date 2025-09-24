@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      hotel_rates: {
+        Row: {
+          created_at: string
+          date: string
+          hotel_id: string | null
+          id: string
+          inventory: number | null
+          rate: number
+          room_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          hotel_id?: string | null
+          id?: string
+          inventory?: number | null
+          rate?: number
+          room_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          hotel_id?: string | null
+          id?: string
+          inventory?: number | null
+          rate?: number
+          room_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_rates_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hotel_rooms: {
         Row: {
           base_rate: number
@@ -87,6 +128,39 @@ export type Database = {
           location?: string
           name?: string
           star_rating?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      inclusions: {
+        Row: {
+          cost: number
+          created_at: string
+          description: string | null
+          id: string
+          is_optional: boolean | null
+          name: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          cost?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_optional?: boolean | null
+          name: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          cost?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_optional?: boolean | null
+          name?: string
+          type?: string
           updated_at?: string
         }
         Relationships: []
@@ -228,10 +302,13 @@ export type Database = {
           created_at: string
           description: string | null
           duration: string | null
+          highlights: string[] | null
           id: string
+          images: string[] | null
           name: string
           private_transfer_cost: number | null
-          tour_type: string
+          transfer_included: boolean | null
+          type: string
           updated_at: string
         }
         Insert: {
@@ -239,10 +316,13 @@ export type Database = {
           created_at?: string
           description?: string | null
           duration?: string | null
+          highlights?: string[] | null
           id?: string
+          images?: string[] | null
           name: string
           private_transfer_cost?: number | null
-          tour_type?: string
+          transfer_included?: boolean | null
+          type?: string
           updated_at?: string
         }
         Update: {
@@ -250,10 +330,13 @@ export type Database = {
           created_at?: string
           description?: string | null
           duration?: string | null
+          highlights?: string[] | null
           id?: string
+          images?: string[] | null
           name?: string
           private_transfer_cost?: number | null
-          tour_type?: string
+          transfer_included?: boolean | null
+          type?: string
           updated_at?: string
         }
         Relationships: []
