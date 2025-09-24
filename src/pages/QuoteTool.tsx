@@ -17,11 +17,13 @@ import {
   Save
 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
+import { useSupabaseData } from '../hooks/useSupabaseData';
 import { PaxDetails, Quote } from '../types';
 import { toast } from '../hooks/use-toast';
 
 const QuoteTool = () => {
   const { state, dispatch } = useAppContext();
+  const { addQuote } = useSupabaseData();
   const { hotels, tours, inclusions } = state;
 
   const [customerName, setCustomerName] = useState('');
@@ -109,7 +111,7 @@ const QuoteTool = () => {
     );
   };
 
-  const saveQuote = () => {
+  const saveQuote = async () => {
     if (!selectedHotel || !calculations || !customerName) {
       toast({
         title: "Missing Information",
@@ -119,30 +121,36 @@ const QuoteTool = () => {
       return;
     }
 
-    const quote: Quote = {
-      id: Date.now().toString(),
-      ticketReference: `DXB${Date.now()}`,
-      customerName,
-      customerEmail: customerEmail || undefined,
-      travelDates,
-      paxDetails,
-      selectedHotel,
-      selectedTours,
-      selectedInclusions,
-      calculations,
-      status: 'draft',
-      createdBy: state.user?.id || '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+    try {
+      const quoteData = {
+        customerName,
+        customerEmail: customerEmail || undefined,
+        travelDates,
+        paxDetails,
+        selectedHotel,
+        selectedTours,
+        calculations,
+        status: 'draft' as const,
+        createdBy: state.user?.id || ''
+      };
 
-    dispatch({ type: 'ADD_QUOTE', payload: quote });
-    dispatch({ type: 'SET_CURRENT_QUOTE', payload: quote });
+      const savedQuote = await addQuote(quoteData);
+      
+      dispatch({ type: 'ADD_QUOTE', payload: savedQuote });
+      dispatch({ type: 'SET_CURRENT_QUOTE', payload: savedQuote });
 
-    toast({
-      title: "Quote Saved",
-      description: `Quote ${quote.ticketReference} has been saved successfully`,
-    });
+      toast({
+        title: "Quote Saved",
+        description: `Quote ${savedQuote.ticketReference} has been saved successfully`,
+      });
+    } catch (error) {
+      console.error('Error saving quote:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save quote. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
