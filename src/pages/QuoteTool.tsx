@@ -1,36 +1,31 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
-import { Badge } from '../components/ui/badge';
-import { Separator } from '../components/ui/separator';
+import { toast } from '../hooks/use-toast';
 import { 
-  CalendarIcon, 
-  Users, 
-  Building2, 
-  MapPin, 
+  Calculator, 
   Copy, 
   Download, 
-  Save,
-  Calculator,
-  Search,
-  Plus,
-  Minus
+  Save, 
+  Plus, 
+  Minus, 
+  Search, 
+  MapPin 
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { useSupabaseData } from '../hooks/useSupabaseData';
-import { toast } from '../hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
 import html2pdf from 'html2pdf.js';
+import { useSupabaseData } from '../hooks/useSupabaseData';
 
 const QuoteTool = () => {
-  const { hotels, tours, inclusions, addQuote } = useSupabaseData();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { hotels, tours, inclusions, addQuote, updateQuote } = useSupabaseData();
 
-  // Form state
+  // State for form data
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [checkInDate, setCheckInDate] = useState('');
@@ -39,10 +34,9 @@ const QuoteTool = () => {
   const [infants, setInfants] = useState(0);
   const [cnb, setCnb] = useState(0);
   const [cwb, setCwb] = useState(0);
-  const [occupancyType, setOccupancyType] = useState('DBL');
-  const [accomType, setAccomType] = useState('hotel');
+  const [occupancyTypes] = useState(['SGL', 'DBL', 'TPL']);
   
-  // Selected items
+  // Selection states
   const [selectedHotel, setSelectedHotel] = useState<any>(null);
   const [selectedTours, setSelectedTours] = useState<any[]>([]);
   const [selectedInclusions, setSelectedInclusions] = useState<any[]>([]);
@@ -51,8 +45,27 @@ const QuoteTool = () => {
   const [hotelSearch, setHotelSearch] = useState('');
   const [tourSearch, setTourSearch] = useState('');
   
-  // Generated quote
+  // Generated quote and editing
   const [generatedQuote, setGeneratedQuote] = useState<any>(null);
+  const [editingQuote, setEditingQuote] = useState<any>(null);
+
+  // Effects for editing
+  useEffect(() => {
+    if (location.state?.editQuote) {
+      const quote = location.state.editQuote;
+      setEditingQuote(quote);
+      setCustomerName(quote.client_name || '');
+      setCustomerEmail(quote.client_email || '');
+      setCheckInDate(quote.travel_dates_from || '');
+      setCheckOutDate(quote.travel_dates_to || '');
+      setAdults(quote.adults || 2);
+      setInfants(quote.infants || 0);
+      setCnb(quote.cnb || 0);
+      setCwb(quote.cwb || 0);
+      // Clear the location state to prevent re-loading on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   // Filter functions
   const filteredHotels = hotels.filter(hotel => 
@@ -61,30 +74,21 @@ const QuoteTool = () => {
   );
 
   const filteredTours = tours.filter(tour => 
-    tour.name.toLowerCase().includes(tourSearch.toLowerCase())
+    tour.name.toLowerCase().includes(tourSearch.toLowerCase()) && 
+    !selectedTours.find(selected => selected.id === tour.id)
   );
 
-  // Calculate nights
-  const calculateNights = () => {
-    if (!checkInDate || !checkOutDate) return 0;
-    const start = new Date(checkInDate);
-    const end = new Date(checkOutDate);
-    return Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-  };
-
-  // Calculate total pax
   const totalPax = adults + cnb + cwb;
 
-  // Add tour function
+  // Tour management functions
   const addTour = (tour: any) => {
     if (!selectedTours.find(t => t.id === tour.id)) {
       setSelectedTours([...selectedTours, tour]);
     }
   };
 
-  // Remove tour function
   const removeTour = (tourId: string) => {
-    setSelectedTours(selectedTours.filter(t => t.id !== tourId));
+    setSelectedTours(selectedTours.filter(tour => tour.id !== tourId));
   };
 
   // Toggle inclusion function
@@ -96,7 +100,7 @@ const QuoteTool = () => {
     }
   };
 
-  // Calculate quote function (using the exact logic from original App.js)
+  // Calculate quote function with multiple occupancy options
   const calculateQuote = () => {
     if (!selectedHotel || !checkInDate || !checkOutDate) {
       toast({
@@ -107,7 +111,7 @@ const QuoteTool = () => {
       return;
     }
 
-    const nights = calculateNights();
+    const nights = Math.ceil((new Date(checkOutDate).getTime() - new Date(checkInDate).getTime()) / (1000 * 3600 * 24));
     if (nights <= 0) {
       toast({
         title: "Invalid Dates",
@@ -117,44 +121,52 @@ const QuoteTool = () => {
       return;
     }
 
-    // Hotel calculation logic from original App.js
-    let hotelRate = selectedHotel.baseRate;
-    let extraBedRate = selectedHotel.extraBedRate || 0;
-    
-    // Occupancy type logic
-    let roomsNeeded = 1;
-    let extraBeds = 0;
-
-    if (occupancyType === 'SGL') {
-      roomsNeeded = adults;
-    } else if (occupancyType === 'DBL') {
-      roomsNeeded = Math.ceil(adults / 2);
-    } else if (occupancyType === 'TPL') {
-      roomsNeeded = Math.ceil(adults / 3);
-    } else if (occupancyType === 'QUAD') {
-      roomsNeeded = Math.ceil(adults / 4);
-    }
-
-    // Add extra beds for children with bed
-    extraBeds = cwb;
-
-    const hotelCost = (roomsNeeded * hotelRate * nights) + (extraBeds * extraBedRate * nights);
-
-    // Tours calculation
-    const toursCost = selectedTours.reduce((total, tour) => {
-      return total + (tour.costPerPerson * totalPax);
-    }, 0);
-
-    // Inclusions calculation
-    const inclusionsCost = selectedInclusions.reduce((total, inclusion) => {
-      return total + (inclusion.cost * totalPax);
-    }, 0);
-
-    const totalCostAED = hotelCost + toursCost + inclusionsCost;
     const exchangeRate = 3.67;
-    const totalCostUSD = totalCostAED / exchangeRate;
+    
+    // Calculate for each occupancy type
+    const occupancyOptions = occupancyTypes.map(occupancyType => {
+      let roomsNeeded = 1;
+      let extraBeds = 0;
+      let hotelRate = selectedHotel.baseRate || 0;
+      let extraBedRate = selectedHotel.extraBedRate || 0;
 
-    // Generate formatted quote text (matching original App.js format)
+      // Calculate rooms and extra beds based on occupancy type
+      if (occupancyType === 'SGL') {
+        roomsNeeded = adults;
+        extraBeds = cnb > 0 || cwb > 0 ? Math.ceil((cnb + cwb) / 1) : 0;
+      } else if (occupancyType === 'DBL') {
+        roomsNeeded = Math.ceil(adults / 2);
+        extraBeds = cnb > 0 || cwb > 0 ? Math.ceil((cnb + cwb) / 2) : 0;
+      } else if (occupancyType === 'TPL') {
+        roomsNeeded = Math.ceil(adults / 3);
+        extraBeds = cnb > 0 || cwb > 0 ? Math.ceil((cnb + cwb) / 2) : 0;
+      }
+
+      const hotelCost = (roomsNeeded * hotelRate + extraBeds * extraBedRate) * nights;
+      
+      // Tours and inclusions cost (same for all occupancy types)
+      const toursCost = selectedTours.reduce((total, tour) => total + (tour.costPerPerson * totalPax), 0);
+      const inclusionsCost = selectedInclusions.reduce((total, inclusion) => total + (inclusion.cost * totalPax), 0);
+      
+      const totalCostAED = hotelCost + toursCost + inclusionsCost;
+      const totalCostUSD = totalCostAED / exchangeRate;
+      const perPersonAED = totalCostAED / totalPax;
+      const perPersonUSD = totalCostUSD / totalPax;
+
+      return {
+        occupancyType,
+        roomsNeeded,
+        extraBeds,
+        hotelCost,
+        toursCost,
+        inclusionsCost,
+        totalCostAED,
+        totalCostUSD,
+        perPersonAED,
+        perPersonUSD
+      };
+    });
+
     const quote = {
       customerName,
       customerEmail,
@@ -162,29 +174,21 @@ const QuoteTool = () => {
       checkOutDate,
       nights,
       paxDetails: { adults, infants, cnb, cwb },
-      occupancyType,
       selectedHotel,
       selectedTours,
       selectedInclusions,
-      calculations: {
-        hotelCost,
-        toursCost,
-        inclusionsCost,
-        totalCostAED,
-        totalCostUSD,
-        exchangeRate,
-        roomsNeeded,
-        extraBeds
-      }
+      occupancyOptions,
+      exchangeRate,
+      totalPax
     };
 
     setGeneratedQuote(quote);
     generateQuoteText(quote);
   };
 
-  // Generate quote text function
+  // Generate quote text function with table format
   const generateQuoteText = (quote: any) => {
-    const { calculations, paxDetails, nights } = quote;
+    const { occupancyOptions, paxDetails, nights, totalPax } = quote;
     
     let quoteText = `DUBAI TOUR PACKAGE QUOTE\n\n`;
     quoteText += `Customer: ${customerName}\n`;
@@ -199,31 +203,57 @@ const QuoteTool = () => {
     // Hotel details
     quoteText += `ACCOMMODATION:\n`;
     quoteText += `${selectedHotel.name} - ${selectedHotel.location}\n`;
-    quoteText += `${occupancyType} occupancy (${calculations.roomsNeeded} room${calculations.roomsNeeded > 1 ? 's' : ''}`;
-    if (calculations.extraBeds > 0) quoteText += ` + ${calculations.extraBeds} extra bed${calculations.extraBeds > 1 ? 's' : ''}`;
-    quoteText += `)\n`;
-    quoteText += `Cost: AED ${calculations.hotelCost.toLocaleString()}\n\n`;
+    const baseRate = selectedHotel.baseRate || 0;
+    const extraBedRate = selectedHotel.extraBedRate || 0;
+    quoteText += `Base Rate: AED ${baseRate}/night per room\n`;
+    if (extraBedRate > 0) {
+      quoteText += `Extra Bed Rate: AED ${extraBedRate}/night\n`;
+    }
+    quoteText += `\n`;
+
+    // Pricing table header
+    quoteText += `PRICING TABLE:\n`;
+    quoteText += `${'Occupancy'.padEnd(12)} ${'Rooms'.padEnd(8)} ${'Extra Beds'.padEnd(12)} ${'Hotel Cost'.padEnd(15)} ${'Total AED'.padEnd(15)} ${'Total USD'.padEnd(15)} ${'Per Person USD'.padEnd(15)}\n`;
+    quoteText += `${'-'.repeat(110)}\n`;
+
+    // Pricing table rows
+    occupancyOptions.forEach((option: any) => {
+      const occupancy = option.occupancyType.padEnd(12);
+      const rooms = option.roomsNeeded.toString().padEnd(8);
+      const extraBeds = option.extraBeds.toString().padEnd(12);
+      const hotelCost = `AED ${option.hotelCost.toLocaleString()}`.padEnd(15);
+      const totalAED = `AED ${option.totalCostAED.toLocaleString()}`.padEnd(15);
+      const totalUSD = `USD ${Math.round(option.totalCostUSD).toLocaleString()}`.padEnd(15);
+      const perPersonUSD = `USD ${Math.round(option.perPersonUSD)}`.padEnd(15);
+      
+      quoteText += `${occupancy} ${rooms} ${extraBeds} ${hotelCost} ${totalAED} ${totalUSD} ${perPersonUSD}\n`;
+    });
+    quoteText += `\n`;
 
     // Tours
     if (selectedTours.length > 0) {
       quoteText += `TOURS & ACTIVITIES:\n`;
       selectedTours.forEach(tour => {
-        quoteText += `• ${tour.name} - AED ${(tour.costPerPerson * (adults + cnb + cwb)).toLocaleString()}\n`;
+        const costPerPerson = tour.costPerPerson || 0;
+        const tourTotal = costPerPerson * totalPax;
+        quoteText += `• ${tour.name}\n`;
+        quoteText += `  AED ${costPerPerson}/person × ${totalPax} pax = AED ${tourTotal.toLocaleString()}\n`;
       });
-      quoteText += `Total Tours Cost: AED ${calculations.toursCost.toLocaleString()}\n\n`;
+      quoteText += `\n`;
     }
 
     // Inclusions
     if (selectedInclusions.length > 0) {
       quoteText += `ADDITIONAL SERVICES:\n`;
       selectedInclusions.forEach(inclusion => {
-        quoteText += `• ${inclusion.name} - AED ${(inclusion.cost * (adults + cnb + cwb)).toLocaleString()}\n`;
+        const inclusionTotal = inclusion.cost * totalPax;
+        quoteText += `• ${inclusion.name}\n`;
+        quoteText += `  AED ${inclusion.cost}/person × ${totalPax} pax = AED ${inclusionTotal.toLocaleString()}\n`;
       });
-      quoteText += `Total Services Cost: AED ${calculations.inclusionsCost.toLocaleString()}\n\n`;
+      quoteText += `\n`;
     }
 
-    quoteText += `TOTAL PACKAGE COST:\n`;
-    quoteText += `AED ${calculations.totalCostAED.toLocaleString()} (USD ${calculations.totalCostUSD.toLocaleString()})\n\n`;
+    quoteText += `Exchange Rate: 1 USD = ${quote.exchangeRate} AED\n`;
     quoteText += `Note: All prices are subject to availability and confirmation.\n`;
 
     quote.formattedText = quoteText;
@@ -240,15 +270,17 @@ const QuoteTool = () => {
 
   // Copy breakdown
   const copyBreakdown = () => {
-    if (!generatedQuote) return;
+    if (!generatedQuote || !generatedQuote.occupancyOptions) return;
     
-    const { calculations } = generatedQuote;
-    let breakdown = `COST BREAKDOWN:\n\n`;
-    breakdown += `Hotel Cost: AED ${calculations.hotelCost.toLocaleString()}\n`;
-    breakdown += `Tours Cost: AED ${calculations.toursCost.toLocaleString()}\n`;
-    breakdown += `Services Cost: AED ${calculations.inclusionsCost.toLocaleString()}\n`;
-    breakdown += `Total: AED ${calculations.totalCostAED.toLocaleString()}\n`;
-    breakdown += `USD Equivalent: USD ${calculations.totalCostUSD.toLocaleString()}`;
+    let breakdown = `COST BREAKDOWN (DBL Occupancy):\n\n`;
+    const dblOption = generatedQuote.occupancyOptions.find((opt: any) => opt.occupancyType === 'DBL') || generatedQuote.occupancyOptions[0];
+    if (dblOption) {
+      breakdown += `Hotel Cost: AED ${dblOption.hotelCost.toLocaleString()}\n`;
+      breakdown += `Tours Cost: AED ${dblOption.toursCost.toLocaleString()}\n`;
+      breakdown += `Services Cost: AED ${dblOption.inclusionsCost.toLocaleString()}\n`;
+      breakdown += `Total: AED ${dblOption.totalCostAED.toLocaleString()}\n`;
+      breakdown += `USD Equivalent: USD ${Math.round(dblOption.totalCostUSD).toLocaleString()}`;
+    }
 
     navigator.clipboard.writeText(breakdown);
     toast({ title: "Copied!", description: "Breakdown copied to clipboard" });
@@ -289,33 +321,42 @@ const QuoteTool = () => {
     }
 
     try {
+      const dblOption = generatedQuote.occupancyOptions.find((opt: any) => opt.occupancyType === 'DBL') || generatedQuote.occupancyOptions[0];
       const quoteData = {
-        ticketReference: `QT-${Date.now()}`,
+        ticketReference: editingQuote?.reference_number || `QT-${Date.now()}`,
         customerName,
         customerEmail,
         travelDates: {
           startDate: checkInDate,
           endDate: checkOutDate
         },
-        paxDetails: {
-          adults,
-          infants,
-          cnb,
-          cwb
-        },
+        paxDetails: { adults, infants, cnb, cwb },
         selectedHotel,
         selectedTours,
-        calculations: generatedQuote.calculations,
+        calculations: {
+          totalCostAED: dblOption ? dblOption.totalCostAED : 0,
+          totalCostUSD: dblOption ? dblOption.totalCostUSD : 0,
+          hotelCost: dblOption ? dblOption.hotelCost : 0,
+          toursCost: dblOption ? dblOption.toursCost : 0,
+          inclusionsCost: dblOption ? dblOption.inclusionsCost : 0
+        },
         status: 'draft' as const,
         createdBy: 'system'
       };
 
-      await addQuote(quoteData);
-      
-      toast({
-        title: "Quote Saved",
-        description: "Quote has been saved successfully"
-      });
+      if (editingQuote) {
+        await updateQuote(editingQuote.id, quoteData);
+        toast({
+          title: "Quote Updated",
+          description: "Quote has been updated successfully"
+        });
+      } else {
+        await addQuote(quoteData);
+        toast({
+          title: "Quote Saved",
+          description: "Quote has been saved successfully"
+        });
+      }
 
       // Navigate to quotes management
       navigate('/quotes');
@@ -331,8 +372,12 @@ const QuoteTool = () => {
   return (
     <div className="p-8 space-y-8">
       <div className="text-center">
-        <h1 className="text-4xl font-bold text-foreground mb-2">Quote Generator</h1>
-        <p className="text-muted-foreground">Create professional tour package quotes</p>
+        <h1 className="text-4xl font-bold text-foreground mb-2">
+          {editingQuote ? 'Edit Quote' : 'Quote Generator'}
+        </h1>
+        <p className="text-muted-foreground">
+          {editingQuote ? 'Modify existing quote details' : 'Create professional tour package quotes'}
+        </p>
       </div>
 
       {/* Input Form */}
@@ -485,20 +530,14 @@ const QuoteTool = () => {
             </div>
           </div>
 
-          {/* Occupancy Type */}
-          <div>
-            <Label>Occupancy Type</Label>
-            <Select value={occupancyType} onValueChange={setOccupancyType}>
-              <SelectTrigger className="dubai-input">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="SGL">Single (SGL)</SelectItem>
-                <SelectItem value="DBL">Double (DBL)</SelectItem>
-                <SelectItem value="TPL">Triple (TPL)</SelectItem>
-                <SelectItem value="QUAD">Quad (QUAD)</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* Note about multiple occupancy */}
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <p className="text-sm text-blue-800 font-medium">
+              📋 Multiple Occupancy Options
+            </p>
+            <p className="text-xs text-blue-600 mt-1">
+              The quote will show pricing for Single (SGL), Double (DBL), and Triple (TPL) occupancy options with USD per person rates.
+            </p>
           </div>
 
           {/* Hotel Selection */}
@@ -677,7 +716,7 @@ const QuoteTool = () => {
                 </Button>
                 <Button onClick={saveQuote} className="dubai-button-primary">
                   <Save className="h-4 w-4 mr-2" />
-                  Save Quote
+                  {editingQuote ? 'Update Quote' : 'Save Quote'}
                 </Button>
               </div>
             </CardTitle>
@@ -689,34 +728,39 @@ const QuoteTool = () => {
               </pre>
             </div>
             
-            {/* Cost Summary */}
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">
-                  AED {generatedQuote.calculations.hotelCost.toLocaleString()}
-                </div>
-                <div className="text-sm text-muted-foreground">Hotel Cost</div>
-              </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">
-                  AED {generatedQuote.calculations.toursCost.toLocaleString()}
-                </div>
-                <div className="text-sm text-muted-foreground">Tours Cost</div>
-              </div>
-              <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">
-                  AED {generatedQuote.calculations.inclusionsCost.toLocaleString()}
-                </div>
-                <div className="text-sm text-muted-foreground">Services Cost</div>
-              </div>
-              <div className="text-center p-4 bg-orange-50 rounded-lg">
-                <div className="text-2xl font-bold text-orange-600">
-                  AED {generatedQuote.calculations.totalCostAED.toLocaleString()}
-                </div>
-                <div className="text-sm text-muted-foreground">Total Cost</div>
-                <div className="text-xs text-muted-foreground">
-                  USD {generatedQuote.calculations.totalCostUSD.toLocaleString()}
-                </div>
+            {/* Occupancy Options Table */}
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold mb-4">Pricing Breakdown by Occupancy</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-gray-300">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="border border-gray-300 px-4 py-2 text-left">Occupancy</th>
+                      <th className="border border-gray-300 px-4 py-2 text-center">Rooms</th>
+                      <th className="border border-gray-300 px-4 py-2 text-center">Extra Beds</th>
+                      <th className="border border-gray-300 px-4 py-2 text-right">Hotel Cost</th>
+                      <th className="border border-gray-300 px-4 py-2 text-right">Total AED</th>
+                      <th className="border border-gray-300 px-4 py-2 text-right">Total USD</th>
+                      <th className="border border-gray-300 px-4 py-2 text-right">Per Person USD</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {generatedQuote.occupancyOptions.map((option: any, index: number) => (
+                      <tr key={index} className={index === 1 ? 'bg-blue-50' : ''}>
+                        <td className="border border-gray-300 px-4 py-2 font-medium">{option.occupancyType}</td>
+                        <td className="border border-gray-300 px-4 py-2 text-center">{option.roomsNeeded}</td>
+                        <td className="border border-gray-300 px-4 py-2 text-center">{option.extraBeds}</td>
+                        <td className="border border-gray-300 px-4 py-2 text-right">AED {option.hotelCost.toLocaleString()}</td>
+                        <td className="border border-gray-300 px-4 py-2 text-right font-semibold">AED {option.totalCostAED.toLocaleString()}</td>
+                        <td className="border border-gray-300 px-4 py-2 text-right font-semibold">USD {Math.round(option.totalCostUSD).toLocaleString()}</td>
+                        <td className="border border-gray-300 px-4 py-2 text-right font-bold text-blue-600">USD {Math.round(option.perPersonUSD)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p className="text-xs text-muted-foreground mt-2">
+                  * DBL (Double occupancy) is highlighted as the most common option
+                </p>
               </div>
             </div>
           </CardContent>

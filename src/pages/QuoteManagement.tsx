@@ -193,7 +193,7 @@ const QuoteManagement = () => {
 
   const editQuote = (quote: Quote) => {
     // Navigate to quote tool with the quote data
-    navigate('/quote-tool', { state: { editQuote: quote } });
+    navigate('/quote', { state: { editQuote: quote } });
   };
 
   const getStatusColor = (status: string) => {
