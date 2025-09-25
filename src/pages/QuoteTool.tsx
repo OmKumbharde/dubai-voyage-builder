@@ -48,7 +48,7 @@ const QuoteTool = () => {
   ];
   
   // Selection states
-  const [selectedHotel, setSelectedHotel] = useState<any>(null);
+  const [selectedHotels, setSelectedHotels] = useState<any[]>([]);
   const [selectedTours, setSelectedTours] = useState<any[]>([]);
   const [selectedInclusions, setSelectedInclusions] = useState<any[]>([]);
   
@@ -76,9 +76,11 @@ const QuoteTool = () => {
       setCwb(quote.cwb || 0);
       
       // Load existing hotel selection
-      if (quote.selectedHotel) {
-        const existingHotel = hotels.find(h => h.id === quote.selectedHotel.id) || quote.selectedHotel;
-        setSelectedHotel(existingHotel);
+      if (quote.selectedHotels && Array.isArray(quote.selectedHotels)) {
+        const existingHotels = quote.selectedHotels.map(hotelData => 
+          hotels.find(h => h.id === hotelData.id) || hotelData
+        ).filter(Boolean);
+        setSelectedHotels(existingHotels);
       }
       
       // Load existing tours selection
@@ -145,12 +147,23 @@ const QuoteTool = () => {
     }
   };
 
+  // Add/remove hotel functions
+  const addHotel = (hotel: any) => {
+    if (!selectedHotels.find(h => h.id === hotel.id)) {
+      setSelectedHotels([...selectedHotels, hotel]);
+    }
+  };
+
+  const removeHotel = (hotelId: string) => {
+    setSelectedHotels(selectedHotels.filter(hotel => hotel.id !== hotelId));
+  };
+
   // Calculate quote function with multiple occupancy options
   const calculateQuote = () => {
-    if (!selectedHotel || !checkInDate || !checkOutDate) {
+    if (selectedHotels.length === 0 || !checkInDate || !checkOutDate) {
       toast({
         title: "Missing Information",
-        description: "Please select hotel and dates",
+        description: "Please select at least one hotel and dates",
         variant: "destructive"
       });
       return;
@@ -168,47 +181,54 @@ const QuoteTool = () => {
 
     const exchangeRate = 3.67;
     
-    // Calculate for each selected occupancy type
-    const occupancyOptions = selectedOccupancies.map(occupancyType => {
-      let roomsNeeded = 1;
-      let extraBeds = 0;
-      let hotelRate = selectedHotel.baseRate || 0;
-      let extraBedRate = selectedHotel.extraBedRate || 0;
+    // Calculate for each hotel and occupancy type combination
+    const hotelOptions = selectedHotels.map(hotel => {
+      const occupancyOptions = selectedOccupancies.map(occupancyType => {
+        let roomsNeeded = 1;
+        let extraBeds = 0;
+        let hotelRate = hotel.baseRate || 0;
+        let extraBedRate = hotel.extraBedRate || 0;
 
-      // Calculate rooms and extra beds based on occupancy type
-      if (occupancyType === 'SGL') {
-        roomsNeeded = adults;
-        extraBeds = cwb > 0 ? cwb : 0; // Extra bed only for CWB
-      } else if (occupancyType === 'DBL') {
-        roomsNeeded = Math.ceil(adults / 2);
-        extraBeds = cwb > 0 ? cwb : 0; // Extra bed only for CWB
-      } else if (occupancyType === 'TPL') {
-        roomsNeeded = Math.ceil(adults / 3);
-        extraBeds = cwb > 0 ? cwb : 0; // Extra bed only for CWB
-      }
+        // Calculate rooms and extra beds based on occupancy type
+        if (occupancyType === 'SGL') {
+          roomsNeeded = adults;
+          extraBeds = cwb > 0 ? cwb : 0; // Extra bed only for CWB
+        } else if (occupancyType === 'DBL') {
+          roomsNeeded = Math.ceil(adults / 2);
+          extraBeds = cwb > 0 ? cwb : 0; // Extra bed only for CWB
+        } else if (occupancyType === 'TPL') {
+          roomsNeeded = Math.ceil(adults / 3);
+          extraBeds = cwb > 0 ? cwb : 0; // Extra bed only for CWB
+        }
 
-      const hotelCost = (roomsNeeded * hotelRate + extraBeds * extraBedRate) * nights;
+        const hotelCost = (roomsNeeded * hotelRate + extraBeds * extraBedRate) * nights;
+        
+        // Tours and inclusions cost (same for all occupancy types)
+        const toursCost = selectedTours.reduce((total, tour) => total + (tour.costPerPerson * totalPax), 0);
+        const inclusionsCost = selectedInclusions.reduce((total, inclusion) => total + (inclusion.cost * totalPax), 0);
+        
+        const totalCostAED = hotelCost + toursCost + inclusionsCost;
+        const totalCostUSD = totalCostAED / exchangeRate;
+        const perPersonAED = totalCostAED / totalPax;
+        const perPersonUSD = totalCostUSD / totalPax;
+
+        return {
+          occupancyType,
+          roomsNeeded,
+          extraBeds,
+          hotelCost,
+          toursCost,
+          inclusionsCost,
+          totalCostAED,
+          totalCostUSD,
+          perPersonAED,
+          perPersonUSD
+        };
+      });
       
-      // Tours and inclusions cost (same for all occupancy types)
-      const toursCost = selectedTours.reduce((total, tour) => total + (tour.costPerPerson * totalPax), 0);
-      const inclusionsCost = selectedInclusions.reduce((total, inclusion) => total + (inclusion.cost * totalPax), 0);
-      
-      const totalCostAED = hotelCost + toursCost + inclusionsCost;
-      const totalCostUSD = totalCostAED / exchangeRate;
-      const perPersonAED = totalCostAED / totalPax;
-      const perPersonUSD = totalCostUSD / totalPax;
-
       return {
-        occupancyType,
-        roomsNeeded,
-        extraBeds,
-        hotelCost,
-        toursCost,
-        inclusionsCost,
-        totalCostAED,
-        totalCostUSD,
-        perPersonAED,
-        perPersonUSD
+        hotel,
+        occupancyOptions
       };
     });
 
@@ -219,10 +239,10 @@ const QuoteTool = () => {
       checkOutDate,
       nights,
       paxDetails: { adults, infants, cnb, cwb },
-      selectedHotel,
+      selectedHotels,
       selectedTours,
       selectedInclusions,
-      occupancyOptions,
+      hotelOptions,
       exchangeRate,
       totalPax
     };
@@ -231,9 +251,9 @@ const QuoteTool = () => {
     generateQuoteText(quote);
   };
 
-  // Generate quote text function matching user's exact format
+  // Generate quote text function matching user's exact format with multiple hotels
   const generateQuoteText = (quote: any) => {
-    const { occupancyOptions, paxDetails, nights, totalPax } = quote;
+    const { hotelOptions, paxDetails, nights, totalPax } = quote;
     
     // Format exactly like the user's example
     let quoteHTML = `<div style="font-family: Arial, sans-serif; line-height: 1.3; font-size: 13px;">`;
@@ -264,7 +284,7 @@ const QuoteTool = () => {
     quoteHTML += `<strong>Check-in:</strong> ${format(new Date(checkInDate), 'do MMMM yyyy')}<br />`;
     quoteHTML += `<strong>Check-out:</strong> ${format(new Date(checkOutDate), 'do MMMM yyyy')}<br /><br />`;
 
-    // Hotel pricing table exactly like user's format
+    // Hotel pricing table exactly like user's format with multiple hotels
     quoteHTML += `<table border="1" cellpadding="4" cellspacing="0" style="border-collapse: collapse; width: 100%; max-width: 800px; font-size: 11px;">`;
     quoteHTML += `<tr>`;
     quoteHTML += `<td><strong>Hotel Name</strong></td>`;
@@ -288,33 +308,39 @@ const QuoteTool = () => {
     
     quoteHTML += `</tr>`;
     quoteHTML += `<tbody>`;
-    quoteHTML += `<tr><td style="padding: 4px;">${selectedHotel.name}</td>`;
     
-    // Add pricing for each occupancy type
-    occupancyOptions.forEach((option: any) => {
-      const perPersonUSD = Math.round(option.perPersonUSD);
-      quoteHTML += `<td style="padding: 4px;">USD ${perPersonUSD} per person with BB</td>`;
+    // Add row for each hotel
+    hotelOptions.forEach((hotelOption: any) => {
+      quoteHTML += `<tr><td style="padding: 4px;">${hotelOption.hotel.name}</td>`;
+      
+      // Add pricing for each occupancy type for this hotel
+      hotelOption.occupancyOptions.forEach((option: any) => {
+        const perPersonUSD = Math.round(option.perPersonUSD);
+        quoteHTML += `<td style="padding: 4px;">USD ${perPersonUSD} per person with BB</td>`;
+      });
+      
+      // Add child prices if applicable for this hotel
+      if (paxDetails.cwb > 0) {
+        const extraBedUSD = Math.round((hotelOption.hotel.extraBedRate * nights) / quote.exchangeRate);
+        const toursCost = selectedTours.reduce((total, tour) => total + tour.costPerPerson, 0) / quote.exchangeRate;
+        const inclusionsCost = selectedInclusions.reduce((total, inclusion) => total + inclusion.cost, 0) / quote.exchangeRate;
+        const totalCwbUSD = Math.round(extraBedUSD + toursCost + inclusionsCost);
+        quoteHTML += `<td style="padding: 4px;">USD ${totalCwbUSD} per person with BB</td>`;
+      }
+      
+      if (paxDetails.cnb > 0) {
+        const toursCost = selectedTours.reduce((total, tour) => total + tour.costPerPerson, 0) / quote.exchangeRate;
+        const inclusionsCost = selectedInclusions.reduce((total, inclusion) => total + inclusion.cost, 0) / quote.exchangeRate;
+        const totalCnbUSD = Math.round(toursCost + inclusionsCost);
+        quoteHTML += `<td style="padding: 4px;">USD ${totalCnbUSD} per person</td>`;
+      }
+      
+      quoteHTML += `</tr>`;
     });
     
-    // Add child prices if applicable
-    if (paxDetails.cwb > 0) {
-      const extraBedUSD = Math.round((selectedHotel.extraBedRate * nights) / quote.exchangeRate);
-      const toursCost = selectedTours.reduce((total, tour) => total + tour.costPerPerson, 0) / quote.exchangeRate;
-      const inclusionsCost = selectedInclusions.reduce((total, inclusion) => total + inclusion.cost, 0) / quote.exchangeRate;
-      const totalCwbUSD = Math.round(extraBedUSD + toursCost + inclusionsCost);
-      quoteHTML += `<td style="padding: 4px;">USD ${totalCwbUSD} per person with BB</td>`;
-    }
-    
-    if (paxDetails.cnb > 0) {
-      const toursCost = selectedTours.reduce((total, tour) => total + tour.costPerPerson, 0) / quote.exchangeRate;
-      const inclusionsCost = selectedInclusions.reduce((total, inclusion) => total + inclusion.cost, 0) / quote.exchangeRate;
-      const totalCnbUSD = Math.round(toursCost + inclusionsCost);
-      quoteHTML += `<td style="padding: 4px;">USD ${totalCnbUSD} per person</td>`;
-    }
-    
-    quoteHTML += `</tr></tbody></table><br /><br />`;
+    quoteHTML += `</tbody></table><br /><br />`;
 
-    // Inclusions section exactly like user's format
+    // Inclusions section exactly like user's format - include all services here
     quoteHTML += `<strong><u>Inclusions:</u></strong><br /><br />`;
     quoteHTML += `<ul class="list-disc list-inside space-y-1">`;
     quoteHTML += `<li><strong>${String(nights).padStart(2, '0')}</strong> Night${nights > 1 ? "'s" : ""} accommodation in above specified hotel(s)</li>`;
@@ -325,33 +351,17 @@ const QuoteTool = () => {
       quoteHTML += `<li>${tour.name}</li>`;
     });
     
-    // Add visa and transfer if selected as inclusions
-    const hasVisa = selectedInclusions.some(inc => inc.type === 'visa');
-    const hasTransfer = selectedInclusions.some(inc => inc.type === 'transfer');
-    
-    if (hasVisa) {
-      quoteHTML += `<li>Dubai Tourist Visa Fees</li>`;
-    }
-    if (hasTransfer) {
-      quoteHTML += `<li>Private Return Airport Transfers (Dubai International Airport Terminal 1, 2, or 3)</li>`;
-    }
+    // Add ALL selected inclusions (not just visa/transfer)
+    selectedInclusions.forEach((inclusion: any) => {
+      quoteHTML += `<li>${inclusion.name}</li>`;
+    });
     
     // Standard inclusions
     quoteHTML += `<li>All transfers on a SIC basis</li>`;
     quoteHTML += `<li>All taxes except Tourism Dirham</li>`;
     quoteHTML += `</ul><br /><br />`;
     
-    // Optional tours/services
-    const optionalInclusions = selectedInclusions.filter(inc => inc.isOptional);
-    if (optionalInclusions.length > 0) {
-      quoteHTML += `<strong><u>Optional Cost:</u></strong><br /><br />`;
-      quoteHTML += `<ul class="list-disc list-inside space-y-1">`;
-      optionalInclusions.forEach((inclusion: any) => {
-        const costUSD = Math.round(inclusion.cost / quote.exchangeRate);
-        quoteHTML += `<li>${inclusion.name} @ USD ${costUSD} per person</li>`;
-      });
-      quoteHTML += `</ul><br /><br />`;
-    }
+    // Note: Removed the "Optional Cost" section as requested - all services are now part of inclusions
 
     quoteHTML += `<strong>Note: Rates and rooms are subject to change at the time of confirmation. / Rates quoted are fully nonrefundable</strong><br /><br />`;
     quoteHTML += `Should you need any clarifications on the above or require further assistance, please feel free to contact me at any time.<br />`;
@@ -371,7 +381,7 @@ const QuoteTool = () => {
 
   // Generate breakdown HTML
   const generateBreakdown = (quote: any) => {
-    const { occupancyOptions, selectedTours, selectedInclusions, totalPax, nights } = quote;
+    const { hotelOptions, selectedTours, selectedInclusions, totalPax, nights } = quote;
     
     let breakdownHTML = `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #000;">`;
     breakdownHTML += `<h2 style="color: #000; margin: 0 0 20px 0; font-size: 18px;">Breakdown:</h2>`;
@@ -383,13 +393,15 @@ const QuoteTool = () => {
     breakdownHTML += `<table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">`;
     breakdownHTML += `<tbody>`;
     
-    // Hotel costs for each occupancy
-    occupancyOptions.forEach((option: any, index: number) => {
-      const hotelCostUSD = Math.round(option.hotelCost / quote.exchangeRate);
-      breakdownHTML += `<tr>`;
-      breakdownHTML += `<td style="border: 1px solid #000; padding: 8px; font-weight: bold;">${selectedHotel.name} ${option.occupancyType}</td>`;
-      breakdownHTML += `<td style="border: 1px solid #000; padding: 8px; text-align: right;">${hotelCostUSD} sell</td>`;
-      breakdownHTML += `</tr>`;
+    // Hotel costs for each hotel and occupancy
+    hotelOptions.forEach((hotelOption: any) => {
+      hotelOption.occupancyOptions.forEach((option: any, index: number) => {
+        const hotelCostUSD = Math.round(option.hotelCost / quote.exchangeRate);
+        breakdownHTML += `<tr>`;
+        breakdownHTML += `<td style="border: 1px solid #000; padding: 8px; font-weight: bold;">${hotelOption.hotel.name} ${option.occupancyType}</td>`;
+        breakdownHTML += `<td style="border: 1px solid #000; padding: 8px; text-align: right;">${hotelCostUSD} sell</td>`;
+        breakdownHTML += `</tr>`;
+      });
     });
     
     // Tours total
@@ -413,13 +425,16 @@ const QuoteTool = () => {
       });
     }
     
-    // Total for double occupancy (default)
-    const dblOption = occupancyOptions.find((opt: any) => opt.occupancyType === 'DBL') || occupancyOptions[0];
-    const totalUSD = Math.round(dblOption.totalCostUSD);
-    breakdownHTML += `<tr style="background-color: #f5f5f5;">`;
-    breakdownHTML += `<td style="border: 1px solid #000; padding: 8px; font-weight: bold; font-size: 16px;">Total</td>`;
-    breakdownHTML += `<td style="border: 1px solid #000; padding: 8px; text-align: right; font-weight: bold; font-size: 16px;">${totalUSD}</td>`;
-    breakdownHTML += `</tr>`;
+    // Total for double occupancy (default) or first hotel/occupancy
+    const firstHotel = hotelOptions[0];
+    const dblOption = firstHotel?.occupancyOptions.find((opt: any) => opt.occupancyType === 'DBL') || firstHotel?.occupancyOptions[0];
+    if (dblOption) {
+      const totalUSD = Math.round(dblOption.totalCostUSD);
+      breakdownHTML += `<tr style="background-color: #f5f5f5;">`;
+      breakdownHTML += `<td style="border: 1px solid #000; padding: 8px; font-weight: bold; font-size: 16px;">Total</td>`;
+      breakdownHTML += `<td style="border: 1px solid #000; padding: 8px; text-align: right; font-weight: bold; font-size: 16px;">${totalUSD}</td>`;
+      breakdownHTML += `</tr>`;
+    }
     
     breakdownHTML += `</tbody></table>`;
     breakdownHTML += `</div>`;
@@ -439,10 +454,11 @@ const QuoteTool = () => {
 
   // Copy breakdown
   const copyBreakdown = () => {
-    if (!generatedQuote || !generatedQuote.occupancyOptions) return;
+    if (!generatedQuote || !generatedQuote.hotelOptions) return;
     
     let breakdown = `COST BREAKDOWN (DBL Occupancy):\n\n`;
-    const dblOption = generatedQuote.occupancyOptions.find((opt: any) => opt.occupancyType === 'DBL') || generatedQuote.occupancyOptions[0];
+    const firstHotel = generatedQuote.hotelOptions[0];
+    const dblOption = firstHotel?.occupancyOptions?.find((opt: any) => opt.occupancyType === 'DBL') || firstHotel?.occupancyOptions?.[0];
     if (dblOption) {
       breakdown += `Hotel Cost: AED ${dblOption.hotelCost.toLocaleString()}\n`;
       breakdown += `Tours Cost: AED ${dblOption.toursCost.toLocaleString()}\n`;
@@ -490,7 +506,8 @@ const QuoteTool = () => {
     }
 
     try {
-      const dblOption = generatedQuote.occupancyOptions.find((opt: any) => opt.occupancyType === 'DBL') || generatedQuote.occupancyOptions[0];
+      const firstHotel = generatedQuote.hotelOptions[0];
+      const dblOption = firstHotel?.occupancyOptions?.find((opt: any) => opt.occupancyType === 'DBL') || firstHotel?.occupancyOptions?.[0];
       const quoteData = {
         ticketReference: editingQuote?.reference_number || `QT-${Date.now()}`,
         customerName,
@@ -500,7 +517,7 @@ const QuoteTool = () => {
           endDate: checkOutDate
         },
         paxDetails: { adults, infants, cnb, cwb },
-        selectedHotel,
+        selectedHotels,
         selectedTours,
         calculations: {
           totalCostAED: dblOption ? dblOption.totalCostAED : 0,
@@ -786,7 +803,7 @@ const QuoteTool = () => {
 
           {/* Hotel Selection */}
           <div>
-            <Label htmlFor="hotelSearch">Select Hotel *</Label>
+            <Label htmlFor="hotelSearch">Select Hotels *</Label>
             <div className="space-y-3">
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -799,59 +816,66 @@ const QuoteTool = () => {
                 />
               </div>
               
-              {selectedHotel ? (
-                <Card className="p-4 border-dubai-gold">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-medium">{selectedHotel.name}</h3>
-                      <p className="text-sm text-muted-foreground flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {selectedHotel.location}
-                      </p>
-                      <p className="text-sm mt-1">
-                        Base Rate: AED {selectedHotel.baseRate}/night
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Extra Bed: AED {selectedHotel.extraBedRate}/night
-                      </p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedHotel(null)}
-                    >
-                      Change
-                    </Button>
-                  </div>
-                </Card>
-              ) : (
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
-                  {filteredHotels.map(hotel => (
-                    <Card 
-                      key={hotel.id} 
-                      className="p-3 cursor-pointer hover:border-dubai-gold transition-colors"
-                      onClick={() => {
-                        setSelectedHotel(hotel);
-                        setHotelSearch('');
-                      }}
-                    >
-                      <h4 className="font-medium text-sm">{hotel.name}</h4>
-                      <p className="text-xs text-muted-foreground">{hotel.location}</p>
-                      <p className="text-xs mt-1">AED {hotel.baseRate}/night</p>
+              {/* Selected Hotels */}
+              {selectedHotels.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Selected Hotels:</p>
+                  {selectedHotels.map(hotel => (
+                    <Card key={hotel.id} className="p-4 border-dubai-gold">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-medium">{hotel.name}</h3>
+                          <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {hotel.location}
+                          </p>
+                          <p className="text-sm mt-1">
+                            Base Rate: AED {hotel.baseRate}/night
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Extra Bed: AED {hotel.extraBedRate}/night
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeHotel(hotel.id)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
                     </Card>
                   ))}
-                  {hotelSearch.length > 0 && filteredHotels.length === 0 && (
-                    <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
-                      No hotels found matching your search.
-                    </p>
-                  )}
-                  {hotelSearch.length === 0 && (
-                    <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
-                      Start typing to search for hotels...
-                    </p>
-                  )}
                 </div>
               )}
+              
+              {/* Available Hotels */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
+                {filteredHotels.map(hotel => (
+                  <Card 
+                    key={hotel.id} 
+                    className="p-3 cursor-pointer hover:border-dubai-gold transition-colors"
+                    onClick={() => {
+                      addHotel(hotel);
+                      setHotelSearch('');
+                    }}
+                  >
+                    <h4 className="font-medium text-sm">{hotel.name}</h4>
+                    <p className="text-xs text-muted-foreground">{hotel.location}</p>
+                    <p className="text-xs mt-1">AED {hotel.baseRate}/night</p>
+                  </Card>
+                ))}
+                {hotelSearch.length > 0 && filteredHotels.length === 0 && (
+                  <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
+                    No hotels found matching your search.
+                  </p>
+                )}
+                {hotelSearch.length === 0 && (
+                  <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
+                    Start typing to search for hotels...
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -993,7 +1017,7 @@ const QuoteTool = () => {
             <Button 
               onClick={calculateQuote}
               className="dubai-button-primary"
-              disabled={!selectedHotel || !customerName || !checkInDate || !checkOutDate || selectedOccupancies.length === 0}
+              disabled={selectedHotels.length === 0 || !customerName || !checkInDate || !checkOutDate || selectedOccupancies.length === 0}
             >
               <Calculator className="mr-2 h-4 w-4" />
               Generate Quote
