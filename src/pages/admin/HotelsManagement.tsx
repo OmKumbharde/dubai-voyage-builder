@@ -35,7 +35,7 @@ const HotelsManagement = () => {
 
   const handleSave = async () => {
     try {
-      if (editingId) {
+      if (editingId && editingId !== 'new') {
         await updateHotel(editingId, formData);
       } else {
         await addHotel({
@@ -54,8 +54,18 @@ const HotelsManagement = () => {
         extraBedRate: 100,
         amenities: []
       });
+      
+      toast({
+        title: "Success",
+        description: editingId && editingId !== 'new' ? "Hotel updated successfully" : "Hotel added successfully"
+      });
     } catch (error) {
       console.error('Error saving hotel:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save hotel. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
