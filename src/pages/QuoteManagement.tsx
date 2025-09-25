@@ -415,31 +415,48 @@ const QuoteManagement = () => {
                     {/* Actions */}
                     <div className="flex flex-col space-y-2 ml-6">
                       <div className="flex space-x-2">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button size="sm" variant="outline" disabled={!(quote as any).formatted_quote}>
-                              <Eye className="mr-2 h-3 w-3" />
-                              View
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                            <DialogHeader>
-                              <DialogTitle>Quote: {quote.reference_number}</DialogTitle>
-                            </DialogHeader>
-                            <div className="bg-white rounded-lg border p-6">
-                              <div 
-                                dangerouslySetInnerHTML={{ 
-                                  __html: (quote as any).formatted_quote || '<p>No formatted quote available</p>' 
-                                }} 
-                                style={{ 
-                                  fontFamily: 'Arial, sans-serif',
-                                  fontSize: '13px',
-                                  lineHeight: '1.3'
-                                }}
-                              />
-                            </div>
-                          </DialogContent>
-                        </Dialog>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          disabled={!(quote as any).formatted_quote}
+                          onClick={() => {
+                            if ((quote as any).formatted_quote) {
+                              // Open a new window to display the formatted quote
+                              const newWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
+                              if (newWindow) {
+                                newWindow.document.write(`
+                                  <html>
+                                    <head>
+                                      <title>Quote: ${quote.ticketReference}</title>
+                                      <style>
+                                        body { 
+                                          font-family: Arial, sans-serif; 
+                                          margin: 20px; 
+                                          line-height: 1.3; 
+                                          font-size: 13px; 
+                                        }
+                                      </style>
+                                    </head>
+                                    <body>
+                                      <h2>Quote: ${quote.ticketReference}</h2>
+                                      ${(quote as any).formatted_quote}
+                                    </body>
+                                  </html>
+                                `);
+                                newWindow.document.close();
+                              }
+                            } else {
+                              toast({
+                                title: "No Quote Content", 
+                                description: "This quote doesn't have formatted content to view",
+                                variant: "destructive"
+                              });
+                            }
+                          }}
+                        >
+                          <Eye className="mr-2 h-3 w-3" />
+                          View Quote
+                        </Button>
                         <Button size="sm" variant="outline" onClick={() => editQuote(quote)}>
                           <Edit3 className="mr-2 h-3 w-3" />
                           Edit

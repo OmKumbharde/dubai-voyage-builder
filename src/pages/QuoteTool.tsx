@@ -130,8 +130,8 @@ const QuoteTool = () => {
   // Hotels array for generateQuoteText
   const hotelsArray = selectedHotel ? [{
     name: selectedHotel.name,
-    rate: selectedHotel.base_rate,
-    extraBed: selectedHotel.extra_bed_rate
+    rate: selectedHotel.baseRate,
+    extraBed: selectedHotel.extraBedRate
   }] : [];
 
   // Toggle occupancy selection
@@ -178,7 +178,7 @@ const QuoteTool = () => {
   };
 
   const calcToursTotalPerPersonAED = () => {
-    return selectedTours.reduce((total, tour) => total + (Number(tour.cost_per_person) || 0), 0);
+    return selectedTours.reduce((total, tour) => total + (Number(tour.costPerPerson) || 0), 0);
   };
 
   const calcAirportTransferCostAED = () => {
@@ -626,9 +626,9 @@ const QuoteTool = () => {
     }
 
     try {
-      const baseRate = Number(selectedHotel?.base_rate || 0);
+      const baseRate = Number(selectedHotel?.baseRate || 0);
       const totalCostAED = (baseRate * nights) + 
-        (selectedTours.reduce((sum, tour) => sum + (Number(tour.cost_per_person) || 0) * totalPax, 0)) +
+        (selectedTours.reduce((sum, tour) => sum + (Number(tour.costPerPerson) || 0) * totalPax, 0)) +
         (selectedInclusions.reduce((sum, inc) => sum + (Number(inc.cost) || 0) * totalPax, 0));
 
       if (editingQuote) {
@@ -989,8 +989,8 @@ const QuoteTool = () => {
                     {selectedHotel.location}
                   </p>
                   <p className="text-sm">
-                    Base Rate: AED {selectedHotel.base_rate}/night
-                    {cwb > 0 && ` • Extra Bed: AED ${selectedHotel.extra_bed_rate}/night`}
+                    Base Rate: AED {selectedHotel.baseRate}/night
+                    {cwb > 0 && ` • Extra Bed: AED ${selectedHotel.extraBedRate}/night`}
                   </p>
                 </div>
                 <Button
@@ -1030,8 +1030,8 @@ const QuoteTool = () => {
                       {hotel.location}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      AED {hotel.base_rate}/night
-                      {cwb > 0 && ` • Extra Bed: AED ${hotel.extra_bed_rate}/night`}
+                      AED {hotel.baseRate}/night
+                      {cwb > 0 && ` • Extra Bed: AED ${hotel.extraBedRate}/night`}
                     </p>
                   </div>
                   <Button size="sm" variant="outline">
@@ -1110,9 +1110,9 @@ const QuoteTool = () => {
                 />
                 <div className="flex-1">
                   <p className="font-medium text-sm">{tour.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    AED {tour.cost_per_person}/person × {totalPax} pax = AED {(tour.cost_per_person * totalPax).toLocaleString()}
-                  </p>
+                    <p className="text-xs text-muted-foreground">
+                      AED {tour.costPerPerson}/person × {totalPax} pax = AED {(tour.costPerPerson * totalPax).toLocaleString()}
+                    </p>
                 </div>
               </div>
             ))}
