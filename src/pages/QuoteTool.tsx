@@ -19,6 +19,7 @@ import {
 import { format } from 'date-fns';
 import html2pdf from 'html2pdf.js';
 import { useSupabaseData } from '../hooks/useSupabaseData';
+import { supabase } from '../integrations/supabase/client';
 
 const QuoteTool = () => {
   const navigate = useNavigate();
@@ -34,7 +35,14 @@ const QuoteTool = () => {
   const [infants, setInfants] = useState(0);
   const [cnb, setCnb] = useState(0);
   const [cwb, setCwb] = useState(0);
-  const [occupancyTypes] = useState(['SGL', 'DBL', 'TPL']);
+  
+  // Occupancy selection state
+  const [selectedOccupancies, setSelectedOccupancies] = useState<string[]>(['DBL']);
+  const occupancyTypes = [
+    { id: 'SGL', label: 'Single Occupancy', description: 'One person per room' },
+    { id: 'DBL', label: 'Double Occupancy', description: 'Two people per room' },
+    { id: 'TPL', label: 'Triple Occupancy', description: 'Three people per room' },
+  ];
   
   // Selection states
   const [selectedHotel, setSelectedHotel] = useState<any>(null);
@@ -44,6 +52,7 @@ const QuoteTool = () => {
   // Search states
   const [hotelSearch, setHotelSearch] = useState('');
   const [tourSearch, setTourSearch] = useState('');
+  const [inclusionSearch, setInclusionSearch] = useState('');
   
   // Generated quote and editing
   const [generatedQuote, setGeneratedQuote] = useState<any>(null);
@@ -62,21 +71,49 @@ const QuoteTool = () => {
       setInfants(quote.infants || 0);
       setCnb(quote.cnb || 0);
       setCwb(quote.cwb || 0);
+      
+      // Load existing hotel selection
+      if (quote.selectedHotel) {
+        const existingHotel = hotels.find(h => h.id === quote.selectedHotel.id);
+        if (existingHotel) setSelectedHotel(existingHotel);
+      }
+      
+      // Load existing tours selection
+      if (quote.selectedTours && Array.isArray(quote.selectedTours)) {
+        const existingTours = quote.selectedTours.map(tourData => 
+          tours.find(t => t.id === tourData.id) || tourData
+        ).filter(Boolean);
+        setSelectedTours(existingTours);
+      }
+      
+      // Load existing inclusions selection
+      if (quote.selectedInclusions && Array.isArray(quote.selectedInclusions)) {
+        const existingInclusions = quote.selectedInclusions.map(incData => 
+          inclusions.find(i => i.id === incData.id) || incData
+        ).filter(Boolean);
+        setSelectedInclusions(existingInclusions);
+      }
+      
       // Clear the location state to prevent re-loading on refresh
       window.history.replaceState({}, document.title);
     }
-  }, [location.state]);
+  }, [location.state, hotels, tours, inclusions]);
 
   // Filter functions
-  const filteredHotels = hotels.filter(hotel => 
+  const filteredHotels = hotelSearch.length > 0 ? hotels.filter(hotel => 
     hotel.name.toLowerCase().includes(hotelSearch.toLowerCase()) ||
     hotel.location.toLowerCase().includes(hotelSearch.toLowerCase())
-  );
+  ) : [];
 
-  const filteredTours = tours.filter(tour => 
+  const filteredTours = tourSearch.length > 0 ? tours.filter(tour => 
     tour.name.toLowerCase().includes(tourSearch.toLowerCase()) && 
     !selectedTours.find(selected => selected.id === tour.id)
-  );
+  ) : [];
+
+  const filteredInclusions = inclusionSearch.length > 0 ? inclusions.filter(inclusion => 
+    inclusion.name.toLowerCase().includes(inclusionSearch.toLowerCase()) &&
+    !selectedInclusions.find(selected => selected.id === inclusion.id)
+  ) : [];
 
   const totalPax = adults + cnb + cwb;
 
@@ -123,8 +160,8 @@ const QuoteTool = () => {
 
     const exchangeRate = 3.67;
     
-    // Calculate for each occupancy type
-    const occupancyOptions = occupancyTypes.map(occupancyType => {
+    // Calculate for each selected occupancy type
+    const occupancyOptions = selectedOccupancies.map(occupancyType => {
       let roomsNeeded = 1;
       let extraBeds = 0;
       let hotelRate = selectedHotel.baseRate || 0;
@@ -133,13 +170,13 @@ const QuoteTool = () => {
       // Calculate rooms and extra beds based on occupancy type
       if (occupancyType === 'SGL') {
         roomsNeeded = adults;
-        extraBeds = cnb > 0 || cwb > 0 ? Math.ceil((cnb + cwb) / 1) : 0;
+        extraBeds = cwb > 0 ? cwb : 0; // Extra bed only for CWB
       } else if (occupancyType === 'DBL') {
         roomsNeeded = Math.ceil(adults / 2);
-        extraBeds = cnb > 0 || cwb > 0 ? Math.ceil((cnb + cwb) / 2) : 0;
+        extraBeds = cwb > 0 ? cwb : 0; // Extra bed only for CWB
       } else if (occupancyType === 'TPL') {
         roomsNeeded = Math.ceil(adults / 3);
-        extraBeds = cnb > 0 || cwb > 0 ? Math.ceil((cnb + cwb) / 2) : 0;
+        extraBeds = cwb > 0 ? cwb : 0; // Extra bed only for CWB
       }
 
       const hotelCost = (roomsNeeded * hotelRate + extraBeds * extraBedRate) * nights;
@@ -186,78 +223,131 @@ const QuoteTool = () => {
     generateQuoteText(quote);
   };
 
-  // Generate quote text function with table format
+  // Generate quote text function with document format
   const generateQuoteText = (quote: any) => {
     const { occupancyOptions, paxDetails, nights, totalPax } = quote;
     
-    let quoteText = `DUBAI TOUR PACKAGE QUOTE\n\n`;
-    quoteText += `Customer: ${customerName}\n`;
-    if (customerEmail) quoteText += `Email: ${customerEmail}\n`;
-    quoteText += `Travel Dates: ${format(new Date(checkInDate), 'dd MMM yyyy')} - ${format(new Date(checkOutDate), 'dd MMM yyyy')} (${nights} nights)\n`;
-    quoteText += `Pax: ${paxDetails.adults} Adults`;
-    if (paxDetails.infants > 0) quoteText += `, ${paxDetails.infants} Infants`;
-    if (paxDetails.cnb > 0) quoteText += `, ${paxDetails.cnb} CNB`;
-    if (paxDetails.cwb > 0) quoteText += `, ${paxDetails.cwb} CWB`;
+    // Main Quote Text - Professional format like the Word document
+    let quoteText = `Quote:\n\n`;
+    quoteText += `Dear Partner,\n\n`;
+    quoteText += `Greetings for the day…!!!\n\n`;
+    quoteText += `Pleased to quote you as below :\n\n`;
+    quoteText += `Kindly check the rate / hotel availability with us when your client is ready to book\n\n`;
+    
+    // Pax and dates info
+    quoteText += `No of Pax: ${String(paxDetails.adults).padStart(2, '0')} Adults`;
+    if (paxDetails.infants > 0) quoteText += `, ${String(paxDetails.infants).padStart(2, '0')} Infants`;
+    if (paxDetails.cnb > 0) quoteText += `, ${String(paxDetails.cnb).padStart(2, '0')} CNB`;
+    if (paxDetails.cwb > 0) quoteText += `, ${String(paxDetails.cwb).padStart(2, '0')} CWB`;
     quoteText += `\n\n`;
+    
+    quoteText += `Check-in: ${format(new Date(checkInDate), 'do MMMM yyyy')}\n`;
+    quoteText += `Check-out: ${format(new Date(checkOutDate), 'do MMMM yyyy')}\n\n`;
 
-    // Hotel details
-    quoteText += `ACCOMMODATION:\n`;
-    quoteText += `${selectedHotel.name} - ${selectedHotel.location}\n`;
-    const baseRate = selectedHotel.baseRate || 0;
-    const extraBedRate = selectedHotel.extraBedRate || 0;
-    quoteText += `Base Rate: AED ${baseRate}/night per room\n`;
-    if (extraBedRate > 0) {
-      quoteText += `Extra Bed Rate: AED ${extraBedRate}/night\n`;
+    // Hotel table header
+    let headerRow = `Hotel`.padEnd(35);
+    if (occupancyOptions.some((opt: any) => opt.occupancyType === 'DBL')) {
+      headerRow += ` | Price (Double Occupancy)`.padEnd(25);
     }
-    quoteText += `\n`;
+    if (occupancyOptions.some((opt: any) => opt.occupancyType === 'SGL')) {
+      headerRow += ` | Price (Single Occupancy)`.padEnd(25);
+    }
+    if (occupancyOptions.some((opt: any) => opt.occupancyType === 'TPL')) {
+      headerRow += ` | Price (Triple Occupancy)`.padEnd(25);
+    }
+    if (cwb > 0) {
+      headerRow += ` | Price (Child with Extra Bed)`.padEnd(29);
+    }
+    
+    quoteText += `${headerRow}\n`;
+    quoteText += `${'-'.repeat(headerRow.length)}\n`;
 
-    // Pricing table header
-    quoteText += `PRICING TABLE:\n`;
-    quoteText += `${'Occupancy'.padEnd(12)} ${'Rooms'.padEnd(8)} ${'Extra Beds'.padEnd(12)} ${'Hotel Cost'.padEnd(15)} ${'Total AED'.padEnd(15)} ${'Total USD'.padEnd(15)} ${'Per Person USD'.padEnd(15)}\n`;
-    quoteText += `${'-'.repeat(110)}\n`;
-
-    // Pricing table rows
+    // Hotel row with prices
+    let hotelRow = `${selectedHotel.name} ${selectedHotel.starRating}*`.padEnd(35);
     occupancyOptions.forEach((option: any) => {
-      const occupancy = option.occupancyType.padEnd(12);
-      const rooms = option.roomsNeeded.toString().padEnd(8);
-      const extraBeds = option.extraBeds.toString().padEnd(12);
-      const hotelCost = `AED ${option.hotelCost.toLocaleString()}`.padEnd(15);
-      const totalAED = `AED ${option.totalCostAED.toLocaleString()}`.padEnd(15);
-      const totalUSD = `USD ${Math.round(option.totalCostUSD).toLocaleString()}`.padEnd(15);
-      const perPersonUSD = `USD ${Math.round(option.perPersonUSD)}`.padEnd(15);
-      
-      quoteText += `${occupancy} ${rooms} ${extraBeds} ${hotelCost} ${totalAED} ${totalUSD} ${perPersonUSD}\n`;
+      const perPersonUSD = Math.round(option.perPersonUSD);
+      if (option.occupancyType === 'DBL') {
+        hotelRow += ` | USD ${perPersonUSD} per person with BB`.padEnd(25);
+      } else if (option.occupancyType === 'SGL') {
+        hotelRow += ` | USD ${perPersonUSD} per person with BB`.padEnd(25);
+      } else if (option.occupancyType === 'TPL') {
+        hotelRow += ` | USD ${perPersonUSD} per person with BB`.padEnd(25);
+      }
     });
-    quoteText += `\n`;
-
-    // Tours
-    if (selectedTours.length > 0) {
-      quoteText += `TOURS & ACTIVITIES:\n`;
-      selectedTours.forEach(tour => {
-        const costPerPerson = tour.costPerPerson || 0;
-        const tourTotal = costPerPerson * totalPax;
-        quoteText += `• ${tour.name}\n`;
-        quoteText += `  AED ${costPerPerson}/person × ${totalPax} pax = AED ${tourTotal.toLocaleString()}\n`;
-      });
-      quoteText += `\n`;
+    if (cwb > 0) {
+      const extraBedUSD = Math.round((selectedHotel.extraBedRate * nights) / quote.exchangeRate);
+      hotelRow += ` | USD ${extraBedUSD} per person with BB`.padEnd(29);
     }
+    
+    quoteText += `${hotelRow}\n\n`;
 
     // Inclusions
-    if (selectedInclusions.length > 0) {
-      quoteText += `ADDITIONAL SERVICES:\n`;
-      selectedInclusions.forEach(inclusion => {
-        const inclusionTotal = inclusion.cost * totalPax;
-        quoteText += `• ${inclusion.name}\n`;
-        quoteText += `  AED ${inclusion.cost}/person × ${totalPax} pax = AED ${inclusionTotal.toLocaleString()}\n`;
-      });
-      quoteText += `\n`;
-    }
-
-    quoteText += `Exchange Rate: 1 USD = ${quote.exchangeRate} AED\n`;
-    quoteText += `Note: All prices are subject to availability and confirmation.\n`;
+    quoteText += `Inclusions:\n\n`;
+    quoteText += `- ${String(nights).padStart(2, '0')} Night's accommodation in above specified hotel(s)\n`;
+    quoteText += `- Daily Breakfast\n`;
+    
+    // Add selected tours as inclusions
+    selectedTours.forEach(tour => {
+      quoteText += `- ${tour.name}\n`;
+    });
+    
+    // Add selected inclusions
+    selectedInclusions.forEach(inclusion => {
+      quoteText += `- ${inclusion.name}\n`;
+    });
+    
+    quoteText += `- All transfers on a SIC basis\n`;
+    quoteText += `- All taxes Including Tourism Dirham\n\n`;
+    
+    quoteText += `Note: Rates and rooms are subject to change at the time of confirmation. / Rates quoted are fully nonrefundable\n\n`;
+    quoteText += `Should you need any clarifications on the above or require further assistance, please feel free to contact me at any time.\n\n`;
+    quoteText += `Looking forward to your earliest reply...\n\n`;
+    quoteText += `Note: As per the Dubai Executive Council Resolution No. (2) of 2014, a "Tourism Dirham (TD)" charge of AED 10 to AED 20 per room per night (depending on the Hotel Classification category) will apply for hotel rooms and Suites. For Apartments, charges apply.\n`;
 
     quote.formattedText = quoteText;
+    
+    // Generate breakdown
+    quote.breakdown = generateBreakdown(quote);
+    
     setGeneratedQuote(quote);
+  };
+
+  // Generate breakdown text
+  const generateBreakdown = (quote: any) => {
+    const { occupancyOptions, selectedTours, selectedInclusions, totalPax, nights } = quote;
+    
+    let breakdown = `Breakdown:\n\n`;
+    breakdown += `${format(new Date(checkInDate), 'dd MMM')} - ${format(new Date(checkOutDate), 'dd MMM')}\n\n`;
+    breakdown += `${String(nights).padStart(2, '0')} Nights\n\n`;
+    breakdown += `${totalPax} Adults\n\n`;
+
+    // Hotel costs for each occupancy
+    occupancyOptions.forEach((option: any, index: number) => {
+      const hotelCostUSD = Math.round(option.hotelCost / quote.exchangeRate);
+      breakdown += `${selectedHotel.name} ${option.occupancyType} | ${hotelCostUSD} sell\n`;
+    });
+    
+    // Tours total
+    if (selectedTours.length > 0) {
+      const toursTotal = selectedTours.reduce((total: number, tour: any) => total + (tour.costPerPerson * totalPax), 0);
+      const toursTotalUSD = Math.round(toursTotal / quote.exchangeRate);
+      breakdown += `Trio Tour | ${toursTotalUSD}\n`;
+    }
+    
+    // Inclusions total
+    if (selectedInclusions.length > 0) {
+      selectedInclusions.forEach((inclusion: any) => {
+        const inclusionTotalUSD = Math.round((inclusion.cost * totalPax) / quote.exchangeRate);
+        breakdown += `${inclusion.name} | ${inclusionTotalUSD}\n`;
+      });
+    }
+    
+    // Total for double occupancy (default)
+    const dblOption = occupancyOptions.find((opt: any) => opt.occupancyType === 'DBL') || occupancyOptions[0];
+    const totalUSD = Math.round(dblOption.totalCostUSD);
+    breakdown += `Total | ${totalUSD}\n`;
+
+    return breakdown;
   };
 
   // Copy formatted text
@@ -343,13 +433,58 @@ const QuoteTool = () => {
       };
 
       if (editingQuote) {
-        await updateQuote(editingQuote.id, quoteData);
+        // Use database field names directly
+        const updateData = {
+          reference_number: editingQuote.reference_number,
+          client_name: customerName,
+          client_email: customerEmail,
+          travel_dates_from: checkInDate,
+          travel_dates_to: checkOutDate,
+          adults,
+          infants,
+          cnb,
+          cwb,
+          total_amount: dblOption ? dblOption.totalCostAED : 0,
+          currency: 'AED',
+          status: 'draft',
+          formatted_quote: generatedQuote.formattedText,
+          notes: generatedQuote.breakdown
+        };
+        
+        const { error } = await supabase
+          .from('quotes')
+          .update(updateData)
+          .eq('id', editingQuote.id);
+          
+        if (error) throw error;
         toast({
           title: "Quote Updated",
           description: "Quote has been updated successfully"
         });
       } else {
-        await addQuote(quoteData);
+        // Use database field names directly  
+        const insertData = {
+          reference_number: `QT-${Date.now()}`,
+          client_name: customerName,
+          client_email: customerEmail,
+          travel_dates_from: checkInDate,
+          travel_dates_to: checkOutDate,
+          adults,
+          infants,
+          cnb,
+          cwb,
+          total_amount: dblOption ? dblOption.totalCostAED : 0,
+          currency: 'AED',
+          status: 'draft',
+          formatted_quote: generatedQuote.formattedText,
+          notes: generatedQuote.breakdown
+        };
+        
+        const { error } = await supabase
+          .from('quotes')
+          .insert([insertData]);
+          
+        if (error) throw error;
         toast({
           title: "Quote Saved",
           description: "Quote has been saved successfully"
@@ -528,13 +663,45 @@ const QuoteTool = () => {
             </div>
           </div>
 
+          {/* Occupancy Selection */}
+          <div>
+            <Label>Select Occupancy Types to Display *</Label>
+            <p className="text-sm text-muted-foreground mb-3">
+              Choose which occupancy types to show in the quote table
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {occupancyTypes.map(occupancy => (
+                <div 
+                  key={occupancy.id}
+                  className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
+                  onClick={() => {
+                    if (selectedOccupancies.includes(occupancy.id)) {
+                      setSelectedOccupancies(selectedOccupancies.filter(o => o !== occupancy.id));
+                    } else {
+                      setSelectedOccupancies([...selectedOccupancies, occupancy.id]);
+                    }
+                  }}
+                >
+                  <Checkbox 
+                    checked={selectedOccupancies.includes(occupancy.id)}
+                    onChange={() => {}}
+                  />
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{occupancy.label}</p>
+                    <p className="text-xs text-muted-foreground">{occupancy.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Note about multiple occupancy */}
           <div className="bg-blue-50 p-4 rounded-lg">
             <p className="text-sm text-blue-800 font-medium">
-              📋 Multiple Occupancy Options
+              📋 Quote Format
             </p>
             <p className="text-xs text-blue-600 mt-1">
-              The quote will show pricing for Single (SGL), Double (DBL), and Triple (TPL) occupancy options with USD per person rates.
+              The quote will show pricing for selected occupancy types with USD per person rates in a professional format.
             </p>
           </div>
 
@@ -579,7 +746,7 @@ const QuoteTool = () => {
                   </div>
                 </Card>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
                   {filteredHotels.map(hotel => (
                     <Card 
                       key={hotel.id} 
@@ -594,6 +761,16 @@ const QuoteTool = () => {
                       <p className="text-xs mt-1">AED {hotel.baseRate}/night</p>
                     </Card>
                   ))}
+                  {hotelSearch.length > 0 && filteredHotels.length === 0 && (
+                    <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
+                      No hotels found matching your search.
+                    </p>
+                  )}
+                  {hotelSearch.length === 0 && (
+                    <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
+                      Start typing to search for hotels...
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -650,6 +827,16 @@ const QuoteTool = () => {
                     <p className="text-xs mt-1">AED {tour.costPerPerson}/person</p>
                   </Card>
                 ))}
+                {tourSearch.length > 0 && filteredTours.length === 0 && (
+                  <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
+                    No tours found matching your search.
+                  </p>
+                )}
+                {tourSearch.length === 0 && (
+                  <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
+                    Start typing to search for tours...
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -657,25 +844,68 @@ const QuoteTool = () => {
           {/* Inclusions Selection */}
           <div>
             <Label>Additional Services</Label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {inclusions.map(inclusion => (
-                <div 
-                  key={inclusion.id}
-                  className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
-                  onClick={() => toggleInclusion(inclusion)}
-                >
-                  <Checkbox 
-                    checked={selectedInclusions.some(i => i.id === inclusion.id)}
-                    onChange={() => toggleInclusion(inclusion)}
-                  />
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">{inclusion.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      AED {inclusion.cost}/person × {totalPax} pax = AED {(inclusion.cost * totalPax).toLocaleString()}
-                    </p>
-                  </div>
+            <div className="space-y-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search additional services..."
+                  value={inclusionSearch}
+                  onChange={(e) => setInclusionSearch(e.target.value)}
+                  className="dubai-input pl-10"
+                />
+              </div>
+              
+              {/* Selected Inclusions */}
+              {selectedInclusions.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Selected Services:</p>
+                  {selectedInclusions.map(inclusion => (
+                    <div key={inclusion.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                      <div>
+                        <span className="font-medium">{inclusion.name}</span>
+                        <p className="text-sm text-muted-foreground">
+                          AED {inclusion.cost}/person × {totalPax} pax = AED {(inclusion.cost * totalPax).toLocaleString()}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => toggleInclusion(inclusion)}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
+              
+              {/* Available Inclusions */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
+                {filteredInclusions.map(inclusion => (
+                  <div 
+                    key={inclusion.id}
+                    className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
+                    onClick={() => toggleInclusion(inclusion)}
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{inclusion.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        AED {inclusion.cost}/person × {totalPax} pax = AED {(inclusion.cost * totalPax).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                {inclusionSearch.length > 0 && filteredInclusions.length === 0 && (
+                  <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
+                    No services found matching your search.
+                  </p>
+                )}
+                {inclusionSearch.length === 0 && (
+                  <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
+                    Start typing to search for additional services...
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -684,7 +914,7 @@ const QuoteTool = () => {
             <Button 
               onClick={calculateQuote}
               className="dubai-button-primary"
-              disabled={!selectedHotel || !customerName || !checkInDate || !checkOutDate}
+              disabled={!selectedHotel || !customerName || !checkInDate || !checkOutDate || selectedOccupancies.length === 0}
             >
               <Calculator className="mr-2 h-4 w-4" />
               Generate Quote
@@ -720,45 +950,68 @@ const QuoteTool = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="bg-muted/30 p-6 rounded-lg">
-              <pre className="whitespace-pre-wrap text-sm font-mono">
-                {generatedQuote.formattedText}
-              </pre>
-            </div>
-            
-            {/* Occupancy Options Table */}
-            <div className="mt-6">
-              <h3 className="text-lg font-semibold mb-4">Pricing Breakdown by Occupancy</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse border border-gray-300">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="border border-gray-300 px-4 py-2 text-left">Occupancy</th>
-                      <th className="border border-gray-300 px-4 py-2 text-center">Rooms</th>
-                      <th className="border border-gray-300 px-4 py-2 text-center">Extra Beds</th>
-                      <th className="border border-gray-300 px-4 py-2 text-right">Hotel Cost</th>
-                      <th className="border border-gray-300 px-4 py-2 text-right">Total AED</th>
-                      <th className="border border-gray-300 px-4 py-2 text-right">Total USD</th>
-                      <th className="border border-gray-300 px-4 py-2 text-right">Per Person USD</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {generatedQuote.occupancyOptions.map((option: any, index: number) => (
-                      <tr key={index} className={index === 1 ? 'bg-blue-50' : ''}>
-                        <td className="border border-gray-300 px-4 py-2 font-medium">{option.occupancyType}</td>
-                        <td className="border border-gray-300 px-4 py-2 text-center">{option.roomsNeeded}</td>
-                        <td className="border border-gray-300 px-4 py-2 text-center">{option.extraBeds}</td>
-                        <td className="border border-gray-300 px-4 py-2 text-right">AED {option.hotelCost.toLocaleString()}</td>
-                        <td className="border border-gray-300 px-4 py-2 text-right font-semibold">AED {option.totalCostAED.toLocaleString()}</td>
-                        <td className="border border-gray-300 px-4 py-2 text-right font-semibold">USD {Math.round(option.totalCostUSD).toLocaleString()}</td>
-                        <td className="border border-gray-300 px-4 py-2 text-right font-bold text-blue-600">USD {Math.round(option.perPersonUSD)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <p className="text-xs text-muted-foreground mt-2">
-                  * DBL (Double occupancy) is highlighted as the most common option
-                </p>
+            {/* Quote Display */}
+            <div id="quote-content" className="bg-white p-8 rounded-lg shadow-sm border">
+              <div className="space-y-6">
+                {/* Main Quote Text */}
+                <div className="bg-gray-50 p-6 rounded-lg">
+                  <pre className="whitespace-pre-wrap text-sm font-mono leading-relaxed text-gray-800">
+                    {generatedQuote.formattedText}
+                  </pre>
+                </div>
+                
+                {/* Breakdown Section */}
+                {generatedQuote.breakdown && (
+                  <div className="border-t pt-6">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-900">Breakdown:</h3>
+                    <div className="bg-gray-50 p-6 rounded-lg">
+                      <pre className="whitespace-pre-wrap text-sm font-mono leading-relaxed text-gray-800">
+                        {generatedQuote.breakdown}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+
+                {/* Detailed Pricing Table for Reference */}
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-semibold mb-4 text-gray-900">Detailed Pricing (All Occupancy Types)</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse border border-gray-300 text-sm">
+                      <thead className="bg-gray-100">
+                        <tr>
+                          <th className="border border-gray-300 px-3 py-2 text-left">Occupancy</th>
+                          <th className="border border-gray-300 px-3 py-2 text-center">Rooms</th>
+                          {cwb > 0 && <th className="border border-gray-300 px-3 py-2 text-center">Extra Beds</th>}
+                          <th className="border border-gray-300 px-3 py-2 text-right">Hotel Cost (AED)</th>
+                          <th className="border border-gray-300 px-3 py-2 text-right">Total AED</th>
+                          <th className="border border-gray-300 px-3 py-2 text-right">Total USD</th>
+                          <th className="border border-gray-300 px-3 py-2 text-right font-semibold">Per Person USD</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {generatedQuote.occupancyOptions.map((option: any, index: number) => (
+                          <tr key={index} className={option.occupancyType === 'DBL' ? 'bg-blue-50' : 'bg-white'}>
+                            <td className="border border-gray-300 px-3 py-2 font-medium">
+                              {option.occupancyType} 
+                              {option.occupancyType === 'DBL' && ' (Recommended)'}
+                            </td>
+                            <td className="border border-gray-300 px-3 py-2 text-center">{option.roomsNeeded}</td>
+                            {cwb > 0 && <td className="border border-gray-300 px-3 py-2 text-center">{option.extraBeds}</td>}
+                            <td className="border border-gray-300 px-3 py-2 text-right">AED {option.hotelCost.toLocaleString()}</td>
+                            <td className="border border-gray-300 px-3 py-2 text-right">AED {option.totalCostAED.toLocaleString()}</td>
+                            <td className="border border-gray-300 px-3 py-2 text-right">USD {Math.round(option.totalCostUSD).toLocaleString()}</td>
+                            <td className="border border-gray-300 px-3 py-2 text-right font-bold text-blue-600">
+                              USD {Math.round(option.perPersonUSD)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-xs text-gray-600 mt-3">
+                    * Double occupancy (DBL) is highlighted as the most commonly selected option
+                  </p>
+                </div>
               </div>
             </div>
           </CardContent>

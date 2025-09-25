@@ -415,7 +415,19 @@ const QuoteManagement = () => {
                     {/* Actions */}
                     <div className="flex flex-col space-y-2 ml-6">
                       <div className="flex space-x-2">
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" onClick={() => {
+                          // View quote functionality - show formatted quote
+                          const dbQuote = quote as any;
+                          if (dbQuote.formatted_quote) {
+                            alert(dbQuote.formatted_quote);
+                          } else {
+                            toast({
+                              title: "No Quote Content", 
+                              description: "This quote doesn't have formatted content to view",
+                              variant: "destructive"
+                            });
+                          }
+                        }}>
                           <Eye className="mr-2 h-3 w-3" />
                           View
                         </Button>
