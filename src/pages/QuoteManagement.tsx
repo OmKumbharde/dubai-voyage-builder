@@ -192,8 +192,17 @@ const QuoteManagement = () => {
   };
 
   const editQuote = (quote: Quote) => {
-    // Navigate to quote tool with the quote data
-    navigate('/quote', { state: { editQuote: quote } });
+    // Navigate to quote tool with the quote data, converting to expected format
+    const editData = {
+      ...quote,
+      client_name: quote.customerName,
+      client_email: quote.customerEmail,
+      reference_number: quote.ticketReference,
+      travel_dates_from: quote.travelDates.startDate,
+      travel_dates_to: quote.travelDates.endDate,
+      selectedOccupancies: ['DBL'] // Default occupancy selection
+    };
+    navigate('/quote', { state: { editQuote: editData } });
   };
 
   const getStatusColor = (status: string) => {
@@ -416,10 +425,74 @@ const QuoteManagement = () => {
                     <div className="flex flex-col space-y-2 ml-6">
                       <div className="flex space-x-2">
                         <Button size="sm" variant="outline" onClick={() => {
-                          // View quote functionality - show formatted quote
+                          // View quote functionality - show formatted quote in new window
                           const dbQuote = quote as any;
                           if (dbQuote.formatted_quote) {
-                            alert(dbQuote.formatted_quote);
+                            const newWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
+                            if (newWindow) {
+                              newWindow.document.open();
+                              newWindow.document.write(`
+                                <!DOCTYPE html>
+                                <html>
+                                <head>
+                                  <title>Quote - ${quote.ticketReference}</title>
+                                  <style>
+                                    body { 
+                                      font-family: Arial, sans-serif; 
+                                      padding: 20px; 
+                                      background: white;
+                                      margin: 0;
+                                    }
+                                    .actions {
+                                      position: fixed;
+                                      top: 10px;
+                                      right: 10px;
+                                      background: white;
+                                      padding: 10px;
+                                      border: 1px solid #ccc;
+                                      border-radius: 5px;
+                                      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                                    }
+                                    .actions button {
+                                      margin: 0 5px;
+                                      padding: 5px 10px;
+                                      background: #007cba;
+                                      color: white;
+                                      border: none;
+                                      border-radius: 3px;
+                                      cursor: pointer;
+                                    }
+                                    .actions button:hover {
+                                      background: #005a8b;
+                                    }
+                                    table { border-collapse: collapse; width: 100%; }
+                                    td, th { border: 1px solid #000; padding: 8px; }
+                                    ul { padding-left: 20px; }
+                                    li { margin: 5px 0; }
+                                  </style>
+                                </head>
+                                <body>
+                                  <div class="actions">
+                                    <button onclick="window.print()">Print</button>
+                                    <button onclick="copyToClipboard()">Copy HTML</button>
+                                    <button onclick="window.close()">Close</button>
+                                  </div>
+                                  <div id="quote-content">
+                                    ${dbQuote.formatted_quote}
+                                  </div>
+                                  <script>
+                                    function copyToClipboard() {
+                                      const content = document.getElementById('quote-content').innerHTML;
+                                      navigator.clipboard.writeText(content).then(() => {
+                                        alert('Quote HTML copied to clipboard!');
+                                      });
+                                    }
+                                  </script>
+                                </body>
+                                </html>
+                              `);
+                              newWindow.document.close();
+                            }
                           } else {
                             toast({
                               title: "No Quote Content", 

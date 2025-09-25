@@ -14,7 +14,8 @@ import {
   Plus, 
   Minus, 
   Search, 
-  MapPin 
+  MapPin,
+  FileText
 } from 'lucide-react';
 import { format } from 'date-fns';
 import html2pdf from 'html2pdf.js';
@@ -76,8 +77,8 @@ const QuoteTool = () => {
       
       // Load existing hotel selection
       if (quote.selectedHotel) {
-        const existingHotel = hotels.find(h => h.id === quote.selectedHotel.id);
-        if (existingHotel) setSelectedHotel(existingHotel);
+        const existingHotel = hotels.find(h => h.id === quote.selectedHotel.id) || quote.selectedHotel;
+        setSelectedHotel(existingHotel);
       }
       
       // Load existing tours selection
@@ -94,6 +95,11 @@ const QuoteTool = () => {
           inclusions.find(i => i.id === incData.id) || incData
         ).filter(Boolean);
         setSelectedInclusions(existingInclusions);
+      }
+      
+      // Load existing occupancy selections
+      if (quote.selectedOccupancies && Array.isArray(quote.selectedOccupancies)) {
+        setSelectedOccupancies(quote.selectedOccupancies);
       }
       
       // Clear the location state to prevent re-loading on refresh
@@ -225,85 +231,134 @@ const QuoteTool = () => {
     generateQuoteText(quote);
   };
 
-  // Generate quote text function with rich HTML format matching Word document
+  // Generate quote text function matching user's exact format
   const generateQuoteText = (quote: any) => {
     const { occupancyOptions, paxDetails, nights, totalPax } = quote;
     
-    // Main Quote HTML - Professional format like the Word document
-    let quoteHTML = `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #000;">`;
-    quoteHTML += `<h2 style="color: #000; margin: 0 0 20px 0; font-size: 18px;">Quote:</h2>`;
-    quoteHTML += `<p style="margin: 10px 0;">Dear Partner,</p>`;
-    quoteHTML += `<p style="margin: 10px 0;">Greetings for the day…!!!</p>`;
-    quoteHTML += `<p style="margin: 10px 0;">Pleased to quote you as below :</p>`;
-    quoteHTML += `<p style="margin: 10px 0;">Kindly check the rate / hotel availability with us when your client is ready to book</p>`;
+    // Format exactly like the user's example
+    let quoteHTML = `<div style="font-family: Arial, sans-serif; line-height: 1.3; font-size: 13px;">`;
+    quoteHTML += `Dear Partner,<br /><br />`;
+    quoteHTML += `Greetings for the day…!!!<br /><br />`;
+    quoteHTML += `Pleased to quote you as below :<br /><br />`;
+    quoteHTML += `Kindly check the rate / hotel availability with us when your client is ready to book<br /><br />`;
     
-    // Pax and dates info
-    let paxText = `No of Pax: ${String(paxDetails.adults).padStart(2, '0')} Adults`;
-    if (paxDetails.infants > 0) paxText += `, ${String(paxDetails.infants).padStart(2, '0')} Infants`;
-    if (paxDetails.cnb > 0) paxText += `, ${String(paxDetails.cnb).padStart(2, '0')} CNB`;
-    if (paxDetails.cwb > 0) paxText += `, ${String(paxDetails.cwb).padStart(2, '0')} CWB`;
+    // Pax summary
+    let paxSummary = '';
+    if (paxDetails.adults > 0) {
+      paxSummary += `${paxDetails.adults} Adult${paxDetails.adults > 1 ? 's' : ''}`;
+    }
+    if (paxDetails.cwb > 0) {
+      if (paxSummary) paxSummary += ', ';
+      paxSummary += `${paxDetails.cwb} Child${paxDetails.cwb > 1 ? 'ren' : ''} with Bed`;
+    }
+    if (paxDetails.cnb > 0) {
+      if (paxSummary) paxSummary += ', ';
+      paxSummary += `${paxDetails.cnb} Child${paxDetails.cnb > 1 ? 'ren' : ''} without Bed`;
+    }
+    if (paxDetails.infants > 0) {
+      if (paxSummary) paxSummary += ', ';
+      paxSummary += `${paxDetails.infants} Infant${paxDetails.infants > 1 ? 's' : ''}`;
+    }
     
-    quoteHTML += `<p style="margin: 20px 0 10px 0;">${paxText}</p>`;
-    quoteHTML += `<p style="margin: 10px 0;">Check-in: ${format(new Date(checkInDate), 'do MMMM yyyy')}</p>`;
-    quoteHTML += `<p style="margin: 10px 0 20px 0;">Check-out: ${format(new Date(checkOutDate), 'do MMMM yyyy')}</p>`;
+    quoteHTML += `<strong>No of Pax:</strong> ${paxSummary}<br />`;
+    quoteHTML += `<strong>Check-in:</strong> ${format(new Date(checkInDate), 'do MMMM yyyy')}<br />`;
+    quoteHTML += `<strong>Check-out:</strong> ${format(new Date(checkOutDate), 'do MMMM yyyy')}<br /><br />`;
 
-    // Hotel table
-    quoteHTML += `<table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">`;
-    quoteHTML += `<thead><tr style="background-color: #f5f5f5;">`;
-    quoteHTML += `<th style="border: 1px solid #000; padding: 8px; text-align: left; font-weight: bold;">Hotel</th>`;
+    // Hotel pricing table exactly like user's format
+    quoteHTML += `<table border="1" cellpadding="4" cellspacing="0" style="border-collapse: collapse; width: 100%; max-width: 800px; font-size: 11px;">`;
+    quoteHTML += `<tr>`;
+    quoteHTML += `<td><strong>Hotel Name</strong></td>`;
     
-    if (occupancyOptions.some((opt: any) => opt.occupancyType === 'DBL')) {
-      quoteHTML += `<th style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold;">Price (Double Occupancy)</th>`;
+    // Add headers based on selected occupancies
+    if (selectedOccupancies.includes('DBL')) {
+      quoteHTML += `<td style="padding: 4px;"><strong>Adult Price (Double Occupancy)</strong></td>`;
     }
-    if (occupancyOptions.some((opt: any) => opt.occupancyType === 'SGL')) {
-      quoteHTML += `<th style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold;">Price (Single Occupancy)</th>`;
+    if (selectedOccupancies.includes('SGL')) {
+      quoteHTML += `<td style="padding: 4px;"><strong>Adult Price (Single Occupancy)</strong></td>`;
     }
-    if (occupancyOptions.some((opt: any) => opt.occupancyType === 'TPL')) {
-      quoteHTML += `<th style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold;">Price (Triple Occupancy)</th>`;
+    if (selectedOccupancies.includes('TPL')) {
+      quoteHTML += `<td style="padding: 4px;"><strong>Adult Price (Triple Occupancy)</strong></td>`;
     }
-    if (cwb > 0) {
-      quoteHTML += `<th style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold;">Price (Child with Extra Bed)</th>`;
+    if (paxDetails.cwb > 0) {
+      quoteHTML += `<td style="padding: 4px;"><strong>Price (Child with Bed)</strong></td>`;
+    }
+    if (paxDetails.cnb > 0) {
+      quoteHTML += `<td style="padding: 4px;"><strong>Price (Child without Bed)</strong></td>`;
     }
     
-    quoteHTML += `</tr></thead><tbody><tr>`;
-    quoteHTML += `<td style="border: 1px solid #000; padding: 8px; font-weight: bold;">${selectedHotel.name} ${selectedHotel.starRating}*</td>`;
+    quoteHTML += `</tr>`;
+    quoteHTML += `<tbody>`;
+    quoteHTML += `<tr><td style="padding: 4px;">${selectedHotel.name}</td>`;
     
+    // Add pricing for each occupancy type
     occupancyOptions.forEach((option: any) => {
       const perPersonUSD = Math.round(option.perPersonUSD);
-      quoteHTML += `<td style="border: 1px solid #000; padding: 8px; text-align: center;">USD ${perPersonUSD} per person with BB</td>`;
+      quoteHTML += `<td style="padding: 4px;">USD ${perPersonUSD} per person with BB</td>`;
     });
     
-    if (cwb > 0) {
+    // Add child prices if applicable
+    if (paxDetails.cwb > 0) {
       const extraBedUSD = Math.round((selectedHotel.extraBedRate * nights) / quote.exchangeRate);
-      quoteHTML += `<td style="border: 1px solid #000; padding: 8px; text-align: center;">USD ${extraBedUSD} per person with BB</td>`;
+      const toursCost = selectedTours.reduce((total, tour) => total + tour.costPerPerson, 0) / quote.exchangeRate;
+      const inclusionsCost = selectedInclusions.reduce((total, inclusion) => total + inclusion.cost, 0) / quote.exchangeRate;
+      const totalCwbUSD = Math.round(extraBedUSD + toursCost + inclusionsCost);
+      quoteHTML += `<td style="padding: 4px;">USD ${totalCwbUSD} per person with BB</td>`;
     }
     
-    quoteHTML += `</tr></tbody></table>`;
+    if (paxDetails.cnb > 0) {
+      const toursCost = selectedTours.reduce((total, tour) => total + tour.costPerPerson, 0) / quote.exchangeRate;
+      const inclusionsCost = selectedInclusions.reduce((total, inclusion) => total + inclusion.cost, 0) / quote.exchangeRate;
+      const totalCnbUSD = Math.round(toursCost + inclusionsCost);
+      quoteHTML += `<td style="padding: 4px;">USD ${totalCnbUSD} per person</td>`;
+    }
+    
+    quoteHTML += `</tr></tbody></table><br /><br />`;
 
-    // Inclusions
-    quoteHTML += `<h3 style="color: #000; margin: 30px 0 15px 0; font-size: 16px;">Inclusions:</h3>`;
-    quoteHTML += `<ul style="margin: 0; padding-left: 20px; line-height: 1.8;">`;
-    quoteHTML += `<li>${String(nights).padStart(2, '0')} Night's accommodation in above specified hotel(s)</li>`;
+    // Inclusions section exactly like user's format
+    quoteHTML += `<strong><u>Inclusions:</u></strong><br /><br />`;
+    quoteHTML += `<ul class="list-disc list-inside space-y-1">`;
+    quoteHTML += `<li><strong>${String(nights).padStart(2, '0')}</strong> Night${nights > 1 ? "'s" : ""} accommodation in above specified hotel(s)</li>`;
     quoteHTML += `<li>Daily Breakfast</li>`;
     
-    // Add selected tours as inclusions
+    // Add selected tours
     selectedTours.forEach((tour: any) => {
       quoteHTML += `<li>${tour.name}</li>`;
     });
     
-    // Add selected inclusions
-    selectedInclusions.forEach((inclusion: any) => {
-      quoteHTML += `<li>${inclusion.name}</li>`;
-    });
+    // Add visa and transfer if selected as inclusions
+    const hasVisa = selectedInclusions.some(inc => inc.type === 'visa');
+    const hasTransfer = selectedInclusions.some(inc => inc.type === 'transfer');
     
+    if (hasVisa) {
+      quoteHTML += `<li>Dubai Tourist Visa Fees</li>`;
+    }
+    if (hasTransfer) {
+      quoteHTML += `<li>Private Return Airport Transfers (Dubai International Airport Terminal 1, 2, or 3)</li>`;
+    }
+    
+    // Standard inclusions
     quoteHTML += `<li>All transfers on a SIC basis</li>`;
-    quoteHTML += `<li>All taxes Including Tourism Dirham</li>`;
-    quoteHTML += `</ul>`;
+    quoteHTML += `<li>All taxes except Tourism Dirham</li>`;
+    quoteHTML += `</ul><br /><br />`;
     
-    quoteHTML += `<p style="margin: 20px 0 10px 0; font-style: italic;">Note: Rates and rooms are subject to change at the time of confirmation. / Rates quoted are fully nonrefundable</p>`;
-    quoteHTML += `<p style="margin: 10px 0;">Should you need any clarifications on the above or require further assistance, please feel free to contact me at any time.</p>`;
-    quoteHTML += `<p style="margin: 10px 0;">Looking forward to your earliest reply...</p>`;
-    quoteHTML += `<p style="margin: 20px 0 0 0; font-size: 12px; color: #666;">Note: As per the Dubai Executive Council Resolution No. (2) of 2014, a "Tourism Dirham (TD)" charge of AED 10 to AED 20 per room per night (depending on the Hotel Classification category) will apply for hotel rooms and Suites. For Apartments, charges apply.</p>`;
+    // Optional tours/services
+    const optionalInclusions = selectedInclusions.filter(inc => inc.isOptional);
+    if (optionalInclusions.length > 0) {
+      quoteHTML += `<strong><u>Optional Cost:</u></strong><br /><br />`;
+      quoteHTML += `<ul class="list-disc list-inside space-y-1">`;
+      optionalInclusions.forEach((inclusion: any) => {
+        const costUSD = Math.round(inclusion.cost / quote.exchangeRate);
+        quoteHTML += `<li>${inclusion.name} @ USD ${costUSD} per person</li>`;
+      });
+      quoteHTML += `</ul><br /><br />`;
+    }
+
+    quoteHTML += `<strong>Note: Rates and rooms are subject to change at the time of confirmation. / Rates quoted are fully nonrefundable</strong><br /><br />`;
+    quoteHTML += `Should you need any clarifications on the above or require further assistance, please feel free to contact me at any time.<br />`;
+    quoteHTML += `Looking forward to your earliest reply...<br /><br />`;
+    quoteHTML += `<em style="color: red;">`;
+    quoteHTML += `Note: As per the Dubai Executive Council Resolution No. (2) of 2014, a "Tourism Dirham (TD)" charge of AED 10 to AED 20 per room per night (depending on the Hotel Classification category) will apply for hotel rooms and Suites. For Apartments, charges apply.`;
+    quoteHTML += `</em><br /><br /><br />`;
     quoteHTML += `</div>`;
 
     quote.formattedText = quoteHTML;
@@ -947,16 +1002,19 @@ const QuoteTool = () => {
         </CardContent>
       </Card>
 
-      {/* Generated Quote */}
+      {/* Quote Preview with HTML rendering */}
       {generatedQuote && (
         <Card className="dubai-card">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>Generated Quote</span>
+              <span className="flex items-center">
+                <FileText className="mr-2 h-5 w-5 text-dubai-gold" />
+                Generated Quote Preview
+              </span>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={copyFormattedText}>
                   <Copy className="h-4 w-4 mr-2" />
-                  Copy Text
+                  Copy HTML
                 </Button>
                 <Button variant="outline" size="sm" onClick={copyBreakdown}>
                   <Copy className="h-4 w-4 mr-2" />
@@ -974,82 +1032,69 @@ const QuoteTool = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {/* Quote Display */}
-            <div id="quote-content" className="bg-white rounded-lg shadow-sm border">
-              <div className="space-y-6">
-                {/* Main Quote Text */}
-                <div className="quote-display">
-                  <ReactQuill
-                    value={generatedQuote.formattedText}
-                    readOnly={true}
-                    theme="bubble"
-                    style={{
-                      backgroundColor: 'white',
-                      border: 'none',
-                      fontSize: '14px'
-                    }}
-                  />
-                </div>
-                
-                {/* Breakdown Section */}
-                {generatedQuote.breakdown && (
-                  <div className="border-t pt-6">
-                    <div className="breakdown-display">
-                      <ReactQuill
-                        value={generatedQuote.breakdown}
-                        readOnly={true}
-                        theme="bubble"
-                        style={{
-                          backgroundColor: 'white',
-                          border: 'none',
-                          fontSize: '14px'
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Detailed Pricing Table for Reference */}
-                <div className="border-t pt-6">
-                  <h3 className="text-lg font-semibold mb-4 text-gray-900">Detailed Pricing (All Occupancy Types)</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse border border-gray-300 text-sm">
-                      <thead className="bg-gray-100">
-                        <tr>
-                          <th className="border border-gray-300 px-3 py-2 text-left">Occupancy</th>
-                          <th className="border border-gray-300 px-3 py-2 text-center">Rooms</th>
-                          {cwb > 0 && <th className="border border-gray-300 px-3 py-2 text-center">Extra Beds</th>}
-                          <th className="border border-gray-300 px-3 py-2 text-right">Hotel Cost (AED)</th>
-                          <th className="border border-gray-300 px-3 py-2 text-right">Total AED</th>
-                          <th className="border border-gray-300 px-3 py-2 text-right">Total USD</th>
-                          <th className="border border-gray-300 px-3 py-2 text-right font-semibold">Per Person USD</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {generatedQuote.occupancyOptions.map((option: any, index: number) => (
-                          <tr key={index} className={option.occupancyType === 'DBL' ? 'bg-blue-50' : 'bg-white'}>
-                            <td className="border border-gray-300 px-3 py-2 font-medium">
-                              {option.occupancyType} 
-                              {option.occupancyType === 'DBL' && ' (Recommended)'}
-                            </td>
-                            <td className="border border-gray-300 px-3 py-2 text-center">{option.roomsNeeded}</td>
-                            {cwb > 0 && <td className="border border-gray-300 px-3 py-2 text-center">{option.extraBeds}</td>}
-                            <td className="border border-gray-300 px-3 py-2 text-right">AED {option.hotelCost.toLocaleString()}</td>
-                            <td className="border border-gray-300 px-3 py-2 text-right">AED {option.totalCostAED.toLocaleString()}</td>
-                            <td className="border border-gray-300 px-3 py-2 text-right">USD {Math.round(option.totalCostUSD).toLocaleString()}</td>
-                            <td className="border border-gray-300 px-3 py-2 text-right font-bold text-blue-600">
-                              USD {Math.round(option.perPersonUSD)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <p className="text-xs text-gray-600 mt-3">
-                    * Double occupancy (DBL) is highlighted as the most commonly selected option
-                  </p>
-                </div>
+            {/* HTML Preview */}
+            <div className="bg-white p-6 rounded-lg border-2 border-gray-200 shadow-sm mb-6">
+              <div 
+                dangerouslySetInnerHTML={{ __html: generatedQuote.formattedText || '' }}
+                className="prose max-w-none"
+                style={{ 
+                  fontFamily: 'Arial, sans-serif',
+                  lineHeight: '1.3',
+                  fontSize: '13px'
+                }}
+              />
+            </div>
+            
+            {/* Breakdown Preview */}
+            {generatedQuote.breakdown && (
+              <div className="bg-gray-50 p-6 rounded-lg border mb-6">
+                <h3 className="text-lg font-semibold mb-4">Cost Breakdown</h3>
+                <div 
+                  dangerouslySetInnerHTML={{ __html: generatedQuote.breakdown }}
+                  className="prose max-w-none"
+                />
               </div>
+            )}
+
+            {/* Detailed Pricing Table for Reference */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold mb-4 text-gray-900">Detailed Pricing (All Occupancy Types)</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-gray-300 text-sm">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="border border-gray-300 px-3 py-2 text-left">Occupancy</th>
+                      <th className="border border-gray-300 px-3 py-2 text-center">Rooms</th>
+                      {cwb > 0 && <th className="border border-gray-300 px-3 py-2 text-center">Extra Beds</th>}
+                      <th className="border border-gray-300 px-3 py-2 text-right">Hotel Cost (AED)</th>
+                      <th className="border border-gray-300 px-3 py-2 text-right">Total AED</th>
+                      <th className="border border-gray-300 px-3 py-2 text-right">Total USD</th>
+                      <th className="border border-gray-300 px-3 py-2 text-right font-semibold">Per Person USD</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {generatedQuote.occupancyOptions.map((option: any, index: number) => (
+                      <tr key={index} className={option.occupancyType === 'DBL' ? 'bg-blue-50' : 'bg-white'}>
+                        <td className="border border-gray-300 px-3 py-2 font-medium">
+                          {option.occupancyType} 
+                          {option.occupancyType === 'DBL' && ' (Recommended)'}
+                        </td>
+                        <td className="border border-gray-300 px-3 py-2 text-center">{option.roomsNeeded}</td>
+                        {cwb > 0 && <td className="border border-gray-300 px-3 py-2 text-center">{option.extraBeds}</td>}
+                        <td className="border border-gray-300 px-3 py-2 text-right">AED {option.hotelCost.toLocaleString()}</td>
+                        <td className="border border-gray-300 px-3 py-2 text-right">AED {option.totalCostAED.toLocaleString()}</td>
+                        <td className="border border-gray-300 px-3 py-2 text-right">USD {Math.round(option.totalCostUSD).toLocaleString()}</td>
+                        <td className="border border-gray-300 px-3 py-2 text-right font-bold text-blue-600">
+                          USD {Math.round(option.perPersonUSD)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-xs text-gray-600 mt-3">
+                * Double occupancy (DBL) is highlighted as the most commonly selected option
+              </p>
             </div>
           </CardContent>
         </Card>
