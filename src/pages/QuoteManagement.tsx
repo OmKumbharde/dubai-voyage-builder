@@ -415,22 +415,31 @@ const QuoteManagement = () => {
                     {/* Actions */}
                     <div className="flex flex-col space-y-2 ml-6">
                       <div className="flex space-x-2">
-                        <Button size="sm" variant="outline" onClick={() => {
-                          // View quote functionality - show formatted quote
-                          const dbQuote = quote as any;
-                          if (dbQuote.formatted_quote) {
-                            alert(dbQuote.formatted_quote);
-                          } else {
-                            toast({
-                              title: "No Quote Content", 
-                              description: "This quote doesn't have formatted content to view",
-                              variant: "destructive"
-                            });
-                          }
-                        }}>
-                          <Eye className="mr-2 h-3 w-3" />
-                          View
-                        </Button>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button size="sm" variant="outline" disabled={!(quote as any).formatted_quote}>
+                              <Eye className="mr-2 h-3 w-3" />
+                              View
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle>Quote: {quote.reference_number}</DialogTitle>
+                            </DialogHeader>
+                            <div className="bg-white rounded-lg border p-6">
+                              <div 
+                                dangerouslySetInnerHTML={{ 
+                                  __html: (quote as any).formatted_quote || '<p>No formatted quote available</p>' 
+                                }} 
+                                style={{ 
+                                  fontFamily: 'Arial, sans-serif',
+                                  fontSize: '13px',
+                                  lineHeight: '1.3'
+                                }}
+                              />
+                            </div>
+                          </DialogContent>
+                        </Dialog>
                         <Button size="sm" variant="outline" onClick={() => editQuote(quote)}>
                           <Edit3 className="mr-2 h-3 w-3" />
                           Edit
