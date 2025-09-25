@@ -81,6 +81,12 @@ const QuoteTool = () => {
           hotels.find(h => h.id === hotelData.id) || hotelData
         ).filter(Boolean);
         setSelectedHotels(existingHotels);
+      } else if (quote.selectedHotel) {
+        // Backward compatibility for old quotes with single hotel
+        const existingHotel = hotels.find(h => h.id === quote.selectedHotel.id) || quote.selectedHotel;
+        if (existingHotel) {
+          setSelectedHotels([existingHotel]);
+        }
       }
       
       // Load existing tours selection
@@ -111,8 +117,9 @@ const QuoteTool = () => {
 
   // Filter functions
   const filteredHotels = hotelSearch.length > 0 ? hotels.filter(hotel => 
-    hotel.name.toLowerCase().includes(hotelSearch.toLowerCase()) ||
-    hotel.location.toLowerCase().includes(hotelSearch.toLowerCase())
+    (hotel.name.toLowerCase().includes(hotelSearch.toLowerCase()) ||
+    hotel.location.toLowerCase().includes(hotelSearch.toLowerCase())) &&
+    !selectedHotels.find(selected => selected.id === hotel.id)
   ) : [];
 
   const filteredTours = tourSearch.length > 0 ? tours.filter(tour => 
@@ -1027,7 +1034,7 @@ const QuoteTool = () => {
       </Card>
 
       {/* Quote Preview with HTML rendering */}
-      {generatedQuote && (
+      {generatedQuote && generatedQuote.formattedText && (
         <Card className="dubai-card">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
@@ -1082,11 +1089,12 @@ const QuoteTool = () => {
 
             {/* Detailed Pricing Table for Reference */}
             <div className="border-t pt-6">
-              <h3 className="text-lg font-semibold mb-4 text-gray-900">Detailed Pricing (All Occupancy Types)</h3>
+              <h3 className="text-lg font-semibold mb-4 text-gray-900">Detailed Pricing (All Hotels & Occupancy Types)</h3>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse border border-gray-300 text-sm">
                   <thead className="bg-gray-100">
                     <tr>
+                      <th className="border border-gray-300 px-3 py-2 text-left">Hotel</th>
                       <th className="border border-gray-300 px-3 py-2 text-left">Occupancy</th>
                       <th className="border border-gray-300 px-3 py-2 text-center">Rooms</th>
                       {cwb > 0 && <th className="border border-gray-300 px-3 py-2 text-center">Extra Beds</th>}
@@ -1097,22 +1105,27 @@ const QuoteTool = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {generatedQuote.occupancyOptions.map((option: any, index: number) => (
-                      <tr key={index} className={option.occupancyType === 'DBL' ? 'bg-blue-50' : 'bg-white'}>
-                        <td className="border border-gray-300 px-3 py-2 font-medium">
-                          {option.occupancyType} 
-                          {option.occupancyType === 'DBL' && ' (Recommended)'}
-                        </td>
-                        <td className="border border-gray-300 px-3 py-2 text-center">{option.roomsNeeded}</td>
-                        {cwb > 0 && <td className="border border-gray-300 px-3 py-2 text-center">{option.extraBeds}</td>}
-                        <td className="border border-gray-300 px-3 py-2 text-right">AED {option.hotelCost.toLocaleString()}</td>
-                        <td className="border border-gray-300 px-3 py-2 text-right">AED {option.totalCostAED.toLocaleString()}</td>
-                        <td className="border border-gray-300 px-3 py-2 text-right">USD {Math.round(option.totalCostUSD).toLocaleString()}</td>
-                        <td className="border border-gray-300 px-3 py-2 text-right font-bold text-blue-600">
-                          USD {Math.round(option.perPersonUSD)}
-                        </td>
-                      </tr>
-                    ))}
+                    {generatedQuote?.hotelOptions?.map((hotelOption: any, hotelIndex: number) => 
+                      hotelOption.occupancyOptions?.map((option: any, optionIndex: number) => (
+                        <tr key={`${hotelIndex}-${optionIndex}`} className={option.occupancyType === 'DBL' ? 'bg-blue-50' : 'bg-white'}>
+                          <td className="border border-gray-300 px-3 py-2 font-medium">
+                            {hotelOption.hotel?.name || 'Hotel'}
+                          </td>
+                          <td className="border border-gray-300 px-3 py-2 font-medium">
+                            {option.occupancyType} 
+                            {option.occupancyType === 'DBL' && ' (Recommended)'}
+                          </td>
+                          <td className="border border-gray-300 px-3 py-2 text-center">{option.roomsNeeded}</td>
+                          {cwb > 0 && <td className="border border-gray-300 px-3 py-2 text-center">{option.extraBeds}</td>}
+                          <td className="border border-gray-300 px-3 py-2 text-right">AED {option.hotelCost?.toLocaleString() || '0'}</td>
+                          <td className="border border-gray-300 px-3 py-2 text-right">AED {option.totalCostAED?.toLocaleString() || '0'}</td>
+                          <td className="border border-gray-300 px-3 py-2 text-right">USD {Math.round(option.totalCostUSD || 0).toLocaleString()}</td>
+                          <td className="border border-gray-300 px-3 py-2 text-right font-bold text-blue-600">
+                            USD {Math.round(option.perPersonUSD || 0)}
+                          </td>
+                        </tr>
+                      )) || []
+                    ) || []}
                   </tbody>
                 </table>
               </div>
