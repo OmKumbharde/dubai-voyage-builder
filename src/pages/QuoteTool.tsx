@@ -336,9 +336,7 @@ const QuoteTool = () => {
         calculations: {
           totalCostAED: dblOption ? dblOption.totalCostAED : 0,
           totalCostUSD: dblOption ? dblOption.totalCostUSD : 0,
-          hotelCost: dblOption ? dblOption.hotelCost : 0,
-          toursCost: dblOption ? dblOption.toursCost : 0,
-          inclusionsCost: dblOption ? dblOption.inclusionsCost : 0
+          exchangeRate: generatedQuote.exchangeRate || 3.67
         },
         status: 'draft' as const,
         createdBy: 'system'
