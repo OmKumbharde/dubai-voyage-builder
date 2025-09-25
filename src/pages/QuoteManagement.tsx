@@ -4,7 +4,6 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { useNavigate } from 'react-router-dom';
 import jsPDF from 'jspdf';
 import { 
@@ -416,47 +415,21 @@ const QuoteManagement = () => {
                     {/* Actions */}
                     <div className="flex flex-col space-y-2 ml-6">
                       <div className="flex space-x-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          disabled={!(quote as any).formatted_quote}
-                          onClick={() => {
-                            if ((quote as any).formatted_quote) {
-                              // Open a new window to display the formatted quote
-                              const newWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
-                              if (newWindow) {
-                                newWindow.document.write(`
-                                  <html>
-                                    <head>
-                                      <title>Quote: ${quote.ticketReference}</title>
-                                      <style>
-                                        body { 
-                                          font-family: Arial, sans-serif; 
-                                          margin: 20px; 
-                                          line-height: 1.3; 
-                                          font-size: 13px; 
-                                        }
-                                      </style>
-                                    </head>
-                                    <body>
-                                      <h2>Quote: ${quote.ticketReference}</h2>
-                                      ${(quote as any).formatted_quote}
-                                    </body>
-                                  </html>
-                                `);
-                                newWindow.document.close();
-                              }
-                            } else {
-                              toast({
-                                title: "No Quote Content", 
-                                description: "This quote doesn't have formatted content to view",
-                                variant: "destructive"
-                              });
-                            }
-                          }}
-                        >
+                        <Button size="sm" variant="outline" onClick={() => {
+                          // View quote functionality - show formatted quote
+                          const dbQuote = quote as any;
+                          if (dbQuote.formatted_quote) {
+                            alert(dbQuote.formatted_quote);
+                          } else {
+                            toast({
+                              title: "No Quote Content", 
+                              description: "This quote doesn't have formatted content to view",
+                              variant: "destructive"
+                            });
+                          }
+                        }}>
                           <Eye className="mr-2 h-3 w-3" />
-                          View Quote
+                          View
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => editQuote(quote)}>
                           <Edit3 className="mr-2 h-3 w-3" />
