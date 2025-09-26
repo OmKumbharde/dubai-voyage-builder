@@ -442,107 +442,138 @@ const QuoteTool = () => {
   const generateBreakdown = (quote: any) => {
     const { hotelOptions, selectedTours, selectedInclusions, totalPax, nights } = quote;
     
-    let breakdownHTML = `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #000;">`;
-    breakdownHTML += `<h2 style="color: #000; margin: 0 0 20px 0; font-size: 18px;">Breakdown:</h2>`;
-    breakdownHTML += `<p style="margin: 10px 0;">${format(new Date(checkInDate), 'dd MMM')} - ${format(new Date(checkOutDate), 'dd MMM')}</p>`;
-    breakdownHTML += `<p style="margin: 10px 0;">${String(nights).padStart(2, '0')} Nights</p>`;
-    breakdownHTML += `<p style="margin: 10px 0 20px 0;">${totalPax} Adults</p>`;
-
-    // Breakdown table
-    breakdownHTML += `<table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">`;
-    breakdownHTML += `<tbody>`;
+    let breakdownText = `${format(new Date(checkInDate), 'do MMM')} - ${format(new Date(checkOutDate), 'do MMM')}\n`;
+    breakdownText += `${String(nights).padStart(2, '0')} Nights\n`;
+    breakdownText += `${adults}${cwb > 0 ? ` + ${cwb} (15 Years)` : ''}\n\n`;
     
-    // Hotel costs for each hotel and occupancy
+    // Hotel costs using editable rates
     hotelOptions.forEach((hotelOption: any) => {
-      hotelOption.occupancyOptions.forEach((option: any, index: number) => {
-        const hotelCostUSD = Math.round(option.hotelCost / quote.exchangeRate);
-        breakdownHTML += `<tr>`;
-        breakdownHTML += `<td style="border: 1px solid #000; padding: 8px; font-weight: bold;">${hotelOption.hotel.name} ${option.occupancyType}</td>`;
-        breakdownHTML += `<td style="border: 1px solid #000; padding: 8px; text-align: right;">${hotelCostUSD} sell</td>`;
-        breakdownHTML += `</tr>`;
-      });
+      const hotelRateKey = `hotel_${hotelOption.hotel.id}`;
+      const rate = editableRates[hotelRateKey] ?? hotelOption.hotel.baseRate;
+      const sellRate = Math.round(rate / quote.exchangeRate);
+      breakdownText += `${hotelOption.hotel.name} - ${sellRate} sell\n`;
     });
     
-    // Tours total
-    if (selectedTours.length > 0) {
-      const toursTotal = selectedTours.reduce((total: number, tour: any) => total + (tour.costPerPerson * totalPax), 0);
-      const toursTotalUSD = Math.round(toursTotal / quote.exchangeRate);
-      breakdownHTML += `<tr>`;
-      breakdownHTML += `<td style="border: 1px solid #000; padding: 8px; font-weight: bold;">Trio Tour</td>`;
-      breakdownHTML += `<td style="border: 1px solid #000; padding: 8px; text-align: right;">${toursTotalUSD}</td>`;
-      breakdownHTML += `</tr>`;
-    }
+    breakdownText += `\n`;
     
-    // Inclusions total
-    if (selectedInclusions.length > 0) {
-      selectedInclusions.forEach((inclusion: any) => {
-        const inclusionTotalUSD = Math.round((inclusion.cost * totalPax) / quote.exchangeRate);
-        breakdownHTML += `<tr>`;
-        breakdownHTML += `<td style="border: 1px solid #000; padding: 8px; font-weight: bold;">${inclusion.name}</td>`;
-        breakdownHTML += `<td style="border: 1px solid #000; padding: 8px; text-align: right;">${inclusionTotalUSD}</td>`;
-        breakdownHTML += `</tr>`;
-      });
-    }
+    // Tours using editable rates
+    selectedTours.forEach((tour: any) => {
+      const rateKey = `tour_${tour.id}`;
+      const rate = editableRates[rateKey] ?? tour.costPerPerson;
+      const tourTotal = rate * totalPax;
+      const sellRate = Math.round(tourTotal / quote.exchangeRate);
+      breakdownText += `${tour.name} - ${sellRate}\n`;
+    });
     
-    // Total for double occupancy (default) or first hotel/occupancy
+    // Inclusions using editable rates
+    selectedInclusions.forEach((inclusion: any) => {
+      const rateKey = `inclusion_${inclusion.id}`;
+      const rate = editableRates[rateKey] ?? inclusion.cost;
+      const inclusionTotal = rate * totalPax;
+      const sellRate = Math.round(inclusionTotal / quote.exchangeRate);
+      breakdownText += `${inclusion.name} - ${sellRate}\n`;
+    });
+    
+    // Total
     const firstHotel = hotelOptions[0];
     const dblOption = firstHotel?.occupancyOptions.find((opt: any) => opt.occupancyType === 'DBL') || firstHotel?.occupancyOptions[0];
     if (dblOption) {
       const totalUSD = Math.round(dblOption.totalCostUSD);
-      breakdownHTML += `<tr style="background-color: #f5f5f5;">`;
-      breakdownHTML += `<td style="border: 1px solid #000; padding: 8px; font-weight: bold; font-size: 16px;">Total</td>`;
-      breakdownHTML += `<td style="border: 1px solid #000; padding: 8px; text-align: right; font-weight: bold; font-size: 16px;">${totalUSD}</td>`;
-      breakdownHTML += `</tr>`;
+      breakdownText += `Total - ${totalUSD}\n`;
     }
     
-    breakdownHTML += `</tbody></table>`;
-    breakdownHTML += `</div>`;
-
-    return breakdownHTML;
+    return breakdownText;
   };
 
-  // Copy formatted text
+  // Copy formatted text with proper table formatting
   const copyFormattedText = () => {
-    if (generatedQuote?.formattedText) {
-      // Strip HTML tags for plain text copy
-      const textContent = generatedQuote.formattedText.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
-      navigator.clipboard.writeText(textContent);
-      toast({ title: "Copied!", description: "Quote text copied to clipboard" });
+    if (!generatedQuote?.formattedText) return;
+    
+    // Create a more readable text version with proper table formatting
+    let formattedText = "Dear Partner,\n\n";
+    formattedText += "Greetings for the day…!!!\n\n";
+    formattedText += "Pleased to quote you as below :\n\n";
+    formattedText += "Kindly check the rate / hotel availability with us when your client is ready to book\n\n";
+    
+    // Pax summary
+    let paxSummary = '';
+    if (adults > 0) {
+      paxSummary += `${adults} Adult${adults > 1 ? 's' : ''}`;
     }
+    if (cwb > 0) {
+      if (paxSummary) paxSummary += ', ';
+      paxSummary += `${cwb} Child${cwb > 1 ? 'ren' : ''} with Bed`;
+    }
+    if (cnb > 0) {
+      if (paxSummary) paxSummary += ', ';
+      paxSummary += `${cnb} Child${cnb > 1 ? 'ren' : ''} without Bed`;
+    }
+    if (infants > 0) {
+      if (paxSummary) paxSummary += ', ';
+      paxSummary += `${infants} Infant${infants > 1 ? 's' : ''}`;
+    }
+    
+    formattedText += `No of Pax: ${paxSummary}\n`;
+    formattedText += `Check-in: ${format(new Date(checkInDate), 'do MMMM yyyy')}\n`;
+    formattedText += `Check-out: ${format(new Date(checkOutDate), 'do MMMM yyyy')}\n\n`;
+    
+    // Hotel table
+    formattedText += "Hotel Pricing:\n";
+    formattedText += "═".repeat(80) + "\n";
+    formattedText += "Hotel Name".padEnd(30);
+    if (selectedOccupancies.includes('DBL')) {
+      formattedText += "Double Occupancy".padEnd(20);
+    }
+    if (selectedOccupancies.includes('SGL')) {
+      formattedText += "Single Occupancy".padEnd(20);
+    }
+    if (selectedOccupancies.includes('TPL')) {
+      formattedText += "Triple Occupancy".padEnd(20);
+    }
+    formattedText += "\n" + "─".repeat(80) + "\n";
+    
+    generatedQuote.hotelOptions.forEach((hotelOption: any) => {
+      formattedText += hotelOption.hotel.name.padEnd(30);
+      hotelOption.occupancyOptions.forEach((option: any) => {
+        const perPersonUSD = Math.round(option.perPersonUSD);
+        formattedText += `USD ${perPersonUSD} per person with BB`.padEnd(20);
+      });
+      formattedText += "\n";
+    });
+    
+    formattedText += "═".repeat(80) + "\n\n";
+    
+    // Inclusions
+    formattedText += "Inclusions:\n\n";
+    const nights = generatedQuote.nights;
+    formattedText += `• ${String(nights).padStart(2, '0')} Night${nights > 1 ? "'s" : ""} accommodation in above specified hotel(s)\n`;
+    formattedText += "• Daily Breakfast\n";
+    
+    selectedTours.forEach((tour: any) => {
+      formattedText += `• ${tour.name}\n`;
+    });
+    
+    selectedInclusions.forEach((inclusion: any) => {
+      formattedText += `• ${inclusion.name}\n`;
+    });
+    
+    formattedText += "• All transfers on a SIC basis\n";
+    formattedText += "• All taxes except Tourism Dirham\n\n";
+    
+    formattedText += "Note: Rates and rooms are subject to change at the time of confirmation. / Rates quoted are fully nonrefundable\n\n";
+    formattedText += "Should you need any clarifications on the above or require further assistance, please feel free to contact me at any time.\n";
+    formattedText += "Looking forward to your earliest reply...\n\n";
+    formattedText += "Note: As per the Dubai Executive Council Resolution No. (2) of 2014, a \"Tourism Dirham (TD)\" charge of AED 10 to AED 20 per room per night (depending on the Hotel Classification category) will apply for hotel rooms and Suites. For Apartments, charges apply.\n";
+    
+    navigator.clipboard.writeText(formattedText);
+    toast({ title: "Copied!", description: "Quote text copied to clipboard" });
   };
 
   // Copy breakdown
   const copyBreakdown = () => {
-    if (!generatedQuote || !generatedQuote.hotelOptions) return;
+    if (!generatedQuote?.breakdown) return;
     
-    let breakdown = `COST BREAKDOWN:\n\n`;
-    breakdown += `${format(new Date(checkInDate), 'dd MMM')} - ${format(new Date(checkOutDate), 'dd MMM')}\n`;
-    breakdown += `${generatedQuote.nights} Nights\n`;
-    breakdown += `${totalPax} Adults\n\n`;
-    
-    // Show hotel rates per night and totals
-    generatedQuote.hotelOptions.forEach((hotelOption: any) => {
-      hotelOption.occupancyOptions.forEach((option: any) => {
-        const hotelRatePerNight = option.hotelCost / generatedQuote.nights;
-        breakdown += `${hotelOption.hotel.name} ${option.occupancyType}: AED ${hotelRatePerNight.toLocaleString()}/night x ${generatedQuote.nights} nights = AED ${option.hotelCost.toLocaleString()}\n`;
-      });
-    });
-    
-    // Tours and inclusions total
-    const firstHotel = generatedQuote.hotelOptions[0];
-    const dblOption = firstHotel?.occupancyOptions?.find((opt: any) => opt.occupancyType === 'DBL') || firstHotel?.occupancyOptions?.[0];
-    if (dblOption) {
-      if (dblOption.toursCost > 0) {
-        breakdown += `\nTours Total: AED ${dblOption.toursCost.toLocaleString()}\n`;
-      }
-      if (dblOption.inclusionsCost > 0) {
-        breakdown += `Services Total: AED ${dblOption.inclusionsCost.toLocaleString()}\n`;
-      }
-      breakdown += `\nGRAND TOTAL: AED ${dblOption.totalCostAED.toLocaleString()}\n`;
-      breakdown += `USD Equivalent: USD ${Math.round(dblOption.totalCostUSD).toLocaleString()}`;
-    }
-
-    navigator.clipboard.writeText(breakdown);
+    navigator.clipboard.writeText(generatedQuote.breakdown);
     toast({ title: "Copied!", description: "Breakdown copied to clipboard" });
   };
 
@@ -1182,10 +1213,9 @@ const QuoteTool = () => {
             {generatedQuote.breakdown && (
               <div className="bg-gray-50 p-6 rounded-lg border mb-6">
                 <h3 className="text-lg font-semibold mb-4">Cost Breakdown</h3>
-                <div 
-                  dangerouslySetInnerHTML={{ __html: generatedQuote.breakdown }}
-                  className="prose max-w-none"
-                />
+                <pre className="whitespace-pre-line font-mono text-sm">
+                  {generatedQuote.breakdown}
+                </pre>
               </div>
             )}
 

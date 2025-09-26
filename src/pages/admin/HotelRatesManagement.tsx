@@ -31,10 +31,8 @@ const HotelRatesManagement = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [rates, setRates] = useState<HotelRate[]>([]);
   const [loadingRates, setLoadingRates] = useState(false);
-  const [editingRate, setEditingRate] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    rate: 0
-  });
+  const [pendingRates, setPendingRates] = useState<{[key: string]: number}>({});
+  const [saving, setSaving] = useState(false);
 
   const fetchRates = async (hotelId: string, date: Date) => {
     if (!hotelId) return;
@@ -66,64 +64,75 @@ const HotelRatesManagement = () => {
     }
   };
 
-  const updateRate = async (rateId: string, updates: { rate?: number }) => {
+  const submitAllRates = async () => {
+    if (!selectedHotel || Object.keys(pendingRates).length === 0) return;
+    
+    setSaving(true);
     try {
-      const { data, error } = await supabase
-        .from('hotel_rates')
-        .update(updates)
-        .eq('id', rateId)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setRates(prev => prev.map(rate => 
-        rate.id === rateId ? { ...rate, ...updates } : rate
-      ));
+      const ratesToUpdate = [];
+      const ratesToCreate = [];
+      
+      for (const [dateStr, rate] of Object.entries(pendingRates)) {
+        const existingRate = rates.find(r => r.date === dateStr);
+        
+        if (existingRate) {
+          ratesToUpdate.push({
+            id: existingRate.id,
+            rate: rate
+          });
+        } else {
+          ratesToCreate.push({
+            hotel_id: selectedHotel,
+            date: dateStr,
+            rate: rate
+          });
+        }
+      }
+      
+      // Update existing rates
+      for (const rateUpdate of ratesToUpdate) {
+        const { error } = await supabase
+          .from('hotel_rates')
+          .update({ rate: rateUpdate.rate })
+          .eq('id', rateUpdate.id);
+        
+        if (error) throw error;
+      }
+      
+      // Create new rates
+      if (ratesToCreate.length > 0) {
+        const { error } = await supabase
+          .from('hotel_rates')
+          .insert(ratesToCreate);
+          
+        if (error) throw error;
+      }
+      
+      // Refresh rates and clear pending changes
+      await fetchRates(selectedHotel, selectedDate);
+      setPendingRates({});
       
       toast({
-        title: "Rate Updated",
-        description: "Hotel rate has been updated successfully"
+        title: "Rates Updated",
+        description: `Successfully updated ${Object.keys(pendingRates).length} rates`
       });
     } catch (error) {
-      console.error('Error updating rate:', error);
+      console.error('Error updating rates:', error);
       toast({
         title: "Error",
-        description: "Failed to update rate",
+        description: "Failed to update rates",
         variant: "destructive"
       });
+    } finally {
+      setSaving(false);
     }
   };
 
-  const createRate = async (hotelId: string, date: string, rate: number) => {
-    try {
-      const { data, error } = await supabase
-        .from('hotel_rates')
-        .insert([{
-          hotel_id: hotelId,
-          date,
-          rate,
-          inventory: 10
-        } as any])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setRates(prev => [...prev, data]);
-      
-      toast({
-        title: "Rate Created",
-        description: "New rate has been created successfully"
-      });
-    } catch (error) {
-      console.error('Error creating rate:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create rate",
-        variant: "destructive"
-      });
-    }
+  const handleRateChange = (dateStr: string, rate: number) => {
+    setPendingRates(prev => ({
+      ...prev,
+      [dateStr]: rate
+    }));
   };
 
   const generateDefaultRates = async () => {
@@ -149,8 +158,7 @@ const HotelRatesManagement = () => {
         ratesToCreate.push({
           hotel_id: selectedHotel,
           date: dateStr,
-          rate: finalRate,
-          inventory: isWeekend ? 8 : 12
+          rate: finalRate
         });
       }
 
@@ -269,12 +277,22 @@ const HotelRatesManagement = () => {
               <div className="space-y-6">
                 <div className="grid gap-6">
                   <div className="border rounded-lg p-6">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center justify-between">
-                      <span>Hotel Rates</span>
-                      <Badge variant="outline">
-                        Base Rate: AED {selectedHotelData.baseRate}
-                      </Badge>
-                    </h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <span>Hotel Rates</span>
+                        <Badge variant="outline">
+                          Base Rate: AED {selectedHotelData.baseRate}
+                        </Badge>
+                      </h3>
+                      <Button 
+                        onClick={submitAllRates}
+                        disabled={Object.keys(pendingRates).length === 0 || saving}
+                        className="dubai-button-primary"
+                      >
+                        <Save className="mr-2 h-4 w-4" />
+                        {saving ? 'Saving...' : `Submit Changes (${Object.keys(pendingRates).length})`}
+                      </Button>
+                    </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                       {Array.from(
@@ -294,42 +312,16 @@ const HotelRatesManagement = () => {
                                 </span>
                               </div>
                               
-                              {rate ? (
-                                <div className="space-y-2">
-                                  <Input
-                                    type="number"
-                                    value={rate.rate}
-                                    onChange={(e) => updateRate(rate.id, { rate: Number(e.target.value) })}
-                                    className="text-xs h-8"
-                                    placeholder="Rate"
-                                  />
-                                  <Button 
-                                    size="sm" 
-                                    onClick={() => toast({ title: "Rate Updated", description: "Hotel rate saved successfully" })}
-                                    className="text-xs w-full"
-                                  >
-                                    <Save className="mr-1 h-3 w-3" />
-                                    Save
-                                  </Button>
-                                </div>
-                              ) : (
-                                <div className="space-y-2">
-                                  <Input
-                                    type="number"
-                                    placeholder="Rate"
-                                    className="text-xs h-8"
-                                    onKeyPress={(e) => {
-                                      if (e.key === 'Enter') {
-                                        const rate = Number((e.target as HTMLInputElement).value);
-                                        if (rate > 0) {
-                                          createRate(selectedHotel, dateStr, rate);
-                                        }
-                                      }
-                                    }}
-                                  />
-                                  <div className="text-xs text-muted-foreground">
-                                    Press Enter to save
-                                  </div>
+                              <Input
+                                type="number"
+                                value={pendingRates[dateStr] ?? rate?.rate ?? ''}
+                                onChange={(e) => handleRateChange(dateStr, Number(e.target.value))}
+                                className={`text-xs h-8 ${pendingRates[dateStr] !== undefined ? 'border-yellow-400 bg-yellow-50' : ''}`}
+                                placeholder="Enter rate"
+                              />
+                              {pendingRates[dateStr] !== undefined && (
+                                <div className="text-xs text-yellow-600">
+                                  Modified
                                 </div>
                               )}
                             </div>
