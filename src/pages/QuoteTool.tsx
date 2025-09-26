@@ -438,135 +438,95 @@ const QuoteTool = () => {
     setGeneratedQuote(quote);
   };
 
-  // Generate breakdown HTML
+  // Generate breakdown following the exact format from the old quote tool
   const generateBreakdown = (quote: any) => {
     const { hotelOptions, selectedTours, selectedInclusions, totalPax, nights } = quote;
     
-    let breakdownText = `${format(new Date(checkInDate), 'do MMM')} - ${format(new Date(checkOutDate), 'do MMM')}\n`;
+    const checkInFormatted = new Date(checkInDate).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+    });
+    const checkOutFormatted = new Date(checkOutDate).toLocaleDateString("en-GB", {
+      day: "2-digit",  
+      month: "short",
+    });
+
+    let breakdownText = `${checkInFormatted} - ${checkOutFormatted}\n`;
     breakdownText += `${String(nights).padStart(2, '0')} Nights\n`;
-    breakdownText += `${adults}${cwb > 0 ? ` + ${cwb} (15 Years)` : ''}\n\n`;
     
-    // Hotel costs using editable rates
+    // Pax text - showing adults and children
+    let paxText = `${adults}`;
+    if (cnb > 0) paxText += ` + ${cnb} (03 to 05 Years)`;
+    if (cwb > 0) paxText += ` + ${cwb} (06 to 17 Years)`;
+    breakdownText += `${paxText}\n\n`;
+    
+    // Hotels - showing per room per night rates with extra bed if needed
     hotelOptions.forEach((hotelOption: any) => {
       const hotelRateKey = `hotel_${hotelOption.hotel.id}`;
       const rate = editableRates[hotelRateKey] ?? hotelOption.hotel.baseRate;
       const sellRate = Math.round(rate / quote.exchangeRate);
-      breakdownText += `${hotelOption.hotel.name} - ${sellRate} sell\n`;
+      
+      const hasExtraBed = cwb > 0;
+      if (hasExtraBed && hotelOption.hotel.extraBedRate) {
+        const extraBedRate = Math.round(hotelOption.hotel.extraBedRate / quote.exchangeRate);
+        breakdownText += `${hotelOption.hotel.name} - ${sellRate} sell | ${extraBedRate} EB\n`;
+      } else {
+        breakdownText += `${hotelOption.hotel.name} - ${sellRate} sell\n`;
+      }
     });
     
     breakdownText += `\n`;
     
-    // Tours using editable rates
+    // Tours - showing per person rates
+    let toursAndInclusionsTotal = 0;
     selectedTours.forEach((tour: any) => {
       const rateKey = `tour_${tour.id}`;
-      const rate = editableRates[rateKey] ?? tour.costPerPerson;
-      const tourTotal = rate * totalPax;
-      const sellRate = Math.round(tourTotal / quote.exchangeRate);
-      breakdownText += `${tour.name} - ${sellRate}\n`;
+      const perPersonRate = editableRates[rateKey] ?? tour.costPerPerson;
+      const perPersonUSD = Math.round(perPersonRate / quote.exchangeRate);
+      breakdownText += `${tour.name} - ${perPersonUSD}\n`;
+      toursAndInclusionsTotal += perPersonUSD;
     });
     
-    // Inclusions using editable rates
+    // Inclusions - showing per person rates  
     selectedInclusions.forEach((inclusion: any) => {
       const rateKey = `inclusion_${inclusion.id}`;
-      const rate = editableRates[rateKey] ?? inclusion.cost;
-      const inclusionTotal = rate * totalPax;
-      const sellRate = Math.round(inclusionTotal / quote.exchangeRate);
-      breakdownText += `${inclusion.name} - ${sellRate}\n`;
+      const perPersonRate = editableRates[rateKey] ?? inclusion.cost;
+      const perPersonUSD = Math.round(perPersonRate / quote.exchangeRate);
+      breakdownText += `${inclusion.name} - ${perPersonUSD}\n`;
+      toursAndInclusionsTotal += perPersonUSD;
     });
     
-    // Total
-    const firstHotel = hotelOptions[0];
-    const dblOption = firstHotel?.occupancyOptions.find((opt: any) => opt.occupancyType === 'DBL') || firstHotel?.occupancyOptions[0];
-    if (dblOption) {
-      const totalUSD = Math.round(dblOption.totalCostUSD);
-      breakdownText += `Total - ${totalUSD}\n`;
-    }
+    // Total per person for tours and inclusions
+    breakdownText += `Total - ${toursAndInclusionsTotal}\n`;
     
     return breakdownText;
   };
 
-  // Copy formatted text with proper table formatting
+  // Copy formatted text with proper table formatting - copies exactly as visible
   const copyFormattedText = () => {
     if (!generatedQuote?.formattedText) return;
     
-    // Create a more readable text version with proper table formatting
-    let formattedText = "Dear Partner,\n\n";
-    formattedText += "Greetings for the day…!!!\n\n";
-    formattedText += "Pleased to quote you as below :\n\n";
-    formattedText += "Kindly check the rate / hotel availability with us when your client is ready to book\n\n";
-    
-    // Pax summary
-    let paxSummary = '';
-    if (adults > 0) {
-      paxSummary += `${adults} Adult${adults > 1 ? 's' : ''}`;
+    // Copy the rendered HTML content as formatted text
+    const quotePreview = document.querySelector('[data-quote-preview]');
+    if (quotePreview) {
+      const range = document.createRange();
+      range.selectNodeContents(quotePreview);
+
+      const selection = window.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        try {
+          document.execCommand("copy");
+          selection.removeAllRanges();
+          toast({ title: "Copied!", description: "Formatted quote copied to clipboard" });
+        } catch (err) {
+          console.error("Copy failed:", err);
+          toast({ title: "Error", description: "Failed to copy formatted quote" });
+        }
+      }
     }
-    if (cwb > 0) {
-      if (paxSummary) paxSummary += ', ';
-      paxSummary += `${cwb} Child${cwb > 1 ? 'ren' : ''} with Bed`;
-    }
-    if (cnb > 0) {
-      if (paxSummary) paxSummary += ', ';
-      paxSummary += `${cnb} Child${cnb > 1 ? 'ren' : ''} without Bed`;
-    }
-    if (infants > 0) {
-      if (paxSummary) paxSummary += ', ';
-      paxSummary += `${infants} Infant${infants > 1 ? 's' : ''}`;
-    }
-    
-    formattedText += `No of Pax: ${paxSummary}\n`;
-    formattedText += `Check-in: ${format(new Date(checkInDate), 'do MMMM yyyy')}\n`;
-    formattedText += `Check-out: ${format(new Date(checkOutDate), 'do MMMM yyyy')}\n\n`;
-    
-    // Hotel table
-    formattedText += "Hotel Pricing:\n";
-    formattedText += "═".repeat(80) + "\n";
-    formattedText += "Hotel Name".padEnd(30);
-    if (selectedOccupancies.includes('DBL')) {
-      formattedText += "Double Occupancy".padEnd(20);
-    }
-    if (selectedOccupancies.includes('SGL')) {
-      formattedText += "Single Occupancy".padEnd(20);
-    }
-    if (selectedOccupancies.includes('TPL')) {
-      formattedText += "Triple Occupancy".padEnd(20);
-    }
-    formattedText += "\n" + "─".repeat(80) + "\n";
-    
-    generatedQuote.hotelOptions.forEach((hotelOption: any) => {
-      formattedText += hotelOption.hotel.name.padEnd(30);
-      hotelOption.occupancyOptions.forEach((option: any) => {
-        const perPersonUSD = Math.round(option.perPersonUSD);
-        formattedText += `USD ${perPersonUSD} per person with BB`.padEnd(20);
-      });
-      formattedText += "\n";
-    });
-    
-    formattedText += "═".repeat(80) + "\n\n";
-    
-    // Inclusions
-    formattedText += "Inclusions:\n\n";
-    const nights = generatedQuote.nights;
-    formattedText += `• ${String(nights).padStart(2, '0')} Night${nights > 1 ? "'s" : ""} accommodation in above specified hotel(s)\n`;
-    formattedText += "• Daily Breakfast\n";
-    
-    selectedTours.forEach((tour: any) => {
-      formattedText += `• ${tour.name}\n`;
-    });
-    
-    selectedInclusions.forEach((inclusion: any) => {
-      formattedText += `• ${inclusion.name}\n`;
-    });
-    
-    formattedText += "• All transfers on a SIC basis\n";
-    formattedText += "• All taxes except Tourism Dirham\n\n";
-    
-    formattedText += "Note: Rates and rooms are subject to change at the time of confirmation. / Rates quoted are fully nonrefundable\n\n";
-    formattedText += "Should you need any clarifications on the above or require further assistance, please feel free to contact me at any time.\n";
-    formattedText += "Looking forward to your earliest reply...\n\n";
-    formattedText += "Note: As per the Dubai Executive Council Resolution No. (2) of 2014, a \"Tourism Dirham (TD)\" charge of AED 10 to AED 20 per room per night (depending on the Hotel Classification category) will apply for hotel rooms and Suites. For Apartments, charges apply.\n";
-    
-    navigator.clipboard.writeText(formattedText);
-    toast({ title: "Copied!", description: "Quote text copied to clipboard" });
   };
 
   // Copy breakdown
@@ -1196,9 +1156,33 @@ const QuoteTool = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {/* HTML Preview */}
+            {/* HTML Preview with proper borders and copy functionality */}
             <div className="bg-white p-6 rounded-lg border-2 border-gray-200 shadow-sm mb-6">
+              <style dangerouslySetInnerHTML={{
+                __html: `
+                  [data-quote-preview] table {
+                    border-collapse: collapse;
+                    width: 100%;
+                    margin: 10px 0;
+                  }
+                  [data-quote-preview] table, 
+                  [data-quote-preview] th, 
+                  [data-quote-preview] td {
+                    border: 1px solid #000 !important;
+                  }
+                  [data-quote-preview] th, 
+                  [data-quote-preview] td {
+                    padding: 8px;
+                    text-align: left;
+                  }
+                  [data-quote-preview] th {
+                    background-color: #f5f5f5;
+                    font-weight: bold;
+                  }
+                `
+              }} />
               <div 
+                data-quote-preview
                 dangerouslySetInnerHTML={{ __html: generatedQuote.formattedText || '' }}
                 className="prose max-w-none"
                 style={{ 
