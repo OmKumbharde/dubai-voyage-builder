@@ -4,6 +4,7 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { useNavigate } from 'react-router-dom';
 import jsPDF from 'jspdf';
 import { 
@@ -21,7 +22,8 @@ import {
   Check,
   X,
   Clock,
-  DollarSign
+  DollarSign,
+  Copy
 } from 'lucide-react';
 import { useSupabaseData } from '../hooks/useSupabaseData';
 import { Quote } from '../hooks/useSupabaseData';
@@ -210,6 +212,9 @@ const QuoteManagement = () => {
       case 'draft': return 'bg-gray-100 text-gray-800';
       case 'sent': return 'bg-blue-100 text-blue-800';
       case 'confirmed': return 'bg-green-100 text-green-800';
+      case 'payment_received': return 'bg-emerald-100 text-emerald-800';
+      case 'booking_in_process': return 'bg-yellow-100 text-yellow-800';
+      case 'booking_completed': return 'bg-purple-100 text-purple-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -220,10 +225,23 @@ const QuoteManagement = () => {
       case 'draft': return <Clock className="h-3 w-3" />;
       case 'sent': return <Send className="h-3 w-3" />;
       case 'confirmed': return <Check className="h-3 w-3" />;
+      case 'payment_received': return <DollarSign className="h-3 w-3" />;
+      case 'booking_in_process': return <Clock className="h-3 w-3" />;
+      case 'booking_completed': return <Check className="h-3 w-3" />;
       case 'cancelled': return <X className="h-3 w-3" />;
       default: return <Clock className="h-3 w-3" />;
     }
   };
+
+  const statusOptions = [
+    { value: 'draft', label: 'Draft' },
+    { value: 'sent', label: 'Sent' },
+    { value: 'confirmed', label: 'Confirmed' },
+    { value: 'payment_received', label: 'Payment Received' },
+    { value: 'booking_in_process', label: 'Booking in Process' },
+    { value: 'booking_completed', label: 'Booking Completed' },
+    { value: 'cancelled', label: 'Cancelled' }
+  ];
 
   return (
     <div className="p-6 space-y-6">
@@ -265,10 +283,9 @@ const QuoteManagement = () => {
                 className="dubai-input"
               >
                 <option value="all">All Status</option>
-                <option value="draft">Draft</option>
-                <option value="sent">Sent</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="cancelled">Cancelled</option>
+                {statusOptions.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -323,7 +340,10 @@ const QuoteManagement = () => {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Value</p>
                 <p className="text-2xl font-bold text-dubai-navy">
-                  AED {quotes.reduce((sum, q) => sum + q.calculations.totalCostAED, 0).toLocaleString()}
+                  AED {quotes.reduce((sum, q) => {
+                    const dbQuote = q as any;
+                    return sum + (dbQuote.total_amount || q.calculations?.totalCostAED || 0);
+                  }, 0).toLocaleString()}
                 </p>
               </div>
               <DollarSign className="h-8 w-8 text-dubai-navy" />
@@ -342,221 +362,218 @@ const QuoteManagement = () => {
             <div className="text-center py-8">Loading quotes...</div>
           ) : (
             <div className="space-y-4">
-              {filteredQuotes.map((quote) => (
-                <div key={quote.id} className="p-6 rounded-lg border bg-gradient-card hover:shadow-card transition-smooth">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 space-y-3">
-                      {/* Header */}
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-semibold text-lg text-foreground">
-                            {quote.customerName}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">
-                            Quote #{quote.ticketReference}
-                          </p>
-                        </div>
-                        <Badge className={getStatusColor(quote.status)}>
-                          <span className="flex items-center space-x-1">
-                            {getStatusIcon(quote.status)}
-                            <span className="capitalize">{quote.status}</span>
-                          </span>
-                        </Badge>
-                      </div>
-
-                      {/* Quote Details */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="flex items-center space-x-3">
-                          <Calendar className="h-5 w-5 text-dubai-blue" />
+              {filteredQuotes.map((quote) => {
+                const dbQuote = quote as any;
+                return (
+                  <div key={quote.id} className="p-6 rounded-lg border bg-gradient-card hover:shadow-card transition-smooth">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 space-y-3">
+                        {/* Header */}
+                        <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-medium">
-                              {new Date(quote.travelDates.startDate).toLocaleDateString()} - 
-                              {new Date(quote.travelDates.endDate).toLocaleDateString()}
-                            </p>
-                            <p className="text-sm text-muted-foreground">Travel Dates</p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center space-x-3">
-                          <Users className="h-5 w-5 text-dubai-blue" />
-                          <div>
-                            <p className="font-medium">
-                              {quote.paxDetails.adults} Adults
-                              {quote.paxDetails.infants > 0 && `, ${quote.paxDetails.infants} Infants`}
-                              {quote.paxDetails.cnb > 0 && `, ${quote.paxDetails.cnb} CNB`}
-                              {quote.paxDetails.cwb > 0 && `, ${quote.paxDetails.cwb} CWB`}
-                            </p>
-                            <p className="text-sm text-muted-foreground">Passengers</p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center space-x-3">
-                          <DollarSign className="h-5 w-5 text-dubai-blue" />
-                          <div>
-                            <p className="font-medium">
-                              AED {quote.calculations.totalCostAED.toLocaleString()}
-                            </p>
+                            <h3 className="font-semibold text-lg text-foreground">
+                              {quote.customerName}
+                            </h3>
                             <p className="text-sm text-muted-foreground">
-                              USD ${quote.calculations.totalCostUSD.toLocaleString()}
+                              Quote #{quote.ticketReference}
                             </p>
                           </div>
+                          <Badge className={getStatusColor(quote.status)}>
+                            <span className="flex items-center space-x-1">
+                              {getStatusIcon(quote.status)}
+                              <span className="capitalize">{quote.status.replace('_', ' ')}</span>
+                            </span>
+                          </Badge>
+                        </div>
+
+                        {/* Quote Details */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="flex items-center space-x-3">
+                            <Calendar className="h-5 w-5 text-dubai-blue" />
+                            <div>
+                              <p className="font-medium">
+                                {new Date(quote.travelDates.startDate).toLocaleDateString()} - 
+                                {new Date(quote.travelDates.endDate).toLocaleDateString()}
+                              </p>
+                              <p className="text-sm text-muted-foreground">Travel Dates</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-3">
+                            <Users className="h-5 w-5 text-dubai-blue" />
+                            <div>
+                              <p className="font-medium">
+                                {quote.paxDetails.adults} Adults
+                                {quote.paxDetails.infants > 0 && `, ${quote.paxDetails.infants} Infants`}
+                                {quote.paxDetails.cnb > 0 && `, ${quote.paxDetails.cnb} CNB`}
+                                {quote.paxDetails.cwb > 0 && `, ${quote.paxDetails.cwb} CWB`}
+                              </p>
+                              <p className="text-sm text-muted-foreground">Passengers</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-3">
+                            <DollarSign className="h-5 w-5 text-dubai-blue" />
+                            <div>
+                              <p className="font-medium">
+                                AED {(dbQuote.total_amount || quote.calculations?.totalCostAED || 0).toLocaleString()}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                Total Package Cost
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Hotel and Tours */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {quote.selectedHotel && (
+                            <div className="flex items-center space-x-2">
+                              <Building2 className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm">Hotel: {quote.selectedHotel.name}</span>
+                            </div>
+                          )}
+                          
+                          {quote.selectedTours.length > 0 && (
+                            <div className="flex items-center space-x-2">
+                              <MapPin className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm">Tours: {quote.selectedTours.length} selected</span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
-                      {/* Hotel and Tours */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {quote.selectedHotel && (
-                          <div className="flex items-center space-x-2">
-                            <Building2 className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">Hotel: {quote.selectedHotel.name}</span>
-                          </div>
-                        )}
-                        
-                        {quote.selectedTours.length > 0 && (
-                          <div className="flex items-center space-x-2">
-                            <MapPin className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">Tours: {quote.selectedTours.length} selected</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex flex-col space-y-2 ml-6">
-                      <div className="flex space-x-2">
-                        <Button size="sm" variant="outline" onClick={() => {
-                          // View quote functionality - show formatted quote in new window
-                          const dbQuote = quote as any;
-                          if (dbQuote.formatted_quote) {
-                            const newWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
-                            if (newWindow) {
-                              newWindow.document.open();
-                              newWindow.document.write(`
-                                <!DOCTYPE html>
-                                <html>
-                                <head>
-                                  <title>Quote - ${quote.ticketReference}</title>
-                                  <style>
-                                    body { 
-                                      font-family: Arial, sans-serif; 
-                                      padding: 20px; 
-                                      background: white;
-                                      margin: 0;
-                                    }
-                                    .actions {
-                                      position: fixed;
-                                      top: 10px;
-                                      right: 10px;
-                                      background: white;
-                                      padding: 10px;
-                                      border: 1px solid #ccc;
-                                      border-radius: 5px;
-                                      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-                                    }
-                                    .actions button {
-                                      margin: 0 5px;
-                                      padding: 5px 10px;
-                                      background: #007cba;
-                                      color: white;
-                                      border: none;
-                                      border-radius: 3px;
-                                      cursor: pointer;
-                                    }
-                                    .actions button:hover {
-                                      background: #005a8b;
-                                    }
-                                    table { border-collapse: collapse; width: 100%; }
-                                    td, th { border: 1px solid #000; padding: 8px; }
-                                    ul { padding-left: 20px; }
-                                    li { margin: 5px 0; }
-                                  </style>
-                                </head>
-                                <body>
-                                  <div class="actions">
-                                    <button onclick="window.print()">Print</button>
-                                    <button onclick="copyToClipboard()">Copy HTML</button>
-                                    <button onclick="window.close()">Close</button>
-                                  </div>
-                                  <div id="quote-content">
-                                    ${dbQuote.formatted_quote}
-                                  </div>
-                                  <script>
-                                    function copyToClipboard() {
-                                      const content = document.getElementById('quote-content').innerHTML;
-                                      navigator.clipboard.writeText(content).then(() => {
-                                        alert('Quote HTML copied to clipboard!');
-                                      });
-                                    }
-                                  </script>
-                                </body>
-                                </html>
-                              `);
-                              newWindow.document.close();
+                      {/* Actions */}
+                      <div className="flex flex-col space-y-2 ml-6">
+                        <div className="flex space-x-2">
+                          <Button size="sm" variant="outline" onClick={() => {
+                            // View quote functionality - show formatted quote in new window with proper text copy
+                            if (dbQuote.formatted_quote) {
+                              const newWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
+                              if (newWindow) {
+                                newWindow.document.open();
+                                newWindow.document.write(`
+                                  <!DOCTYPE html>
+                                  <html>
+                                  <head>
+                                    <title>Quote - ${quote.ticketReference}</title>
+                                    <style>
+                                      body { 
+                                        font-family: Arial, sans-serif; 
+                                        padding: 20px; 
+                                        background: white;
+                                        margin: 0;
+                                      }
+                                      .actions {
+                                        position: fixed;
+                                        top: 10px;
+                                        right: 10px;
+                                        background: white;
+                                        padding: 10px;
+                                        border: 1px solid #ccc;
+                                        border-radius: 5px;
+                                        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                                      }
+                                      .actions button {
+                                        margin: 0 5px;
+                                        padding: 5px 10px;
+                                        background: #007cba;
+                                        color: white;
+                                        border: none;
+                                        border-radius: 3px;
+                                        cursor: pointer;
+                                      }
+                                      .actions button:hover {
+                                        background: #005a8b;
+                                      }
+                                      table { border-collapse: collapse; width: 100%; }
+                                      td, th { border: 1px solid #000; padding: 8px; }
+                                      ul { padding-left: 20px; }
+                                      li { margin: 5px 0; }
+                                    </style>
+                                  </head>
+                                  <body>
+                                    <div class="actions">
+                                      <button onclick="window.print()">Print</button>
+                                      <button onclick="copyAsText()">Copy Text</button>
+                                      <button onclick="window.close()">Close</button>
+                                    </div>
+                                    <div id="quote-content">
+                                      ${dbQuote.formatted_quote}
+                                    </div>
+                                    <script>
+                                      function copyAsText() {
+                                        const content = document.getElementById('quote-content').innerText;
+                                        navigator.clipboard.writeText(content).then(() => {
+                                          alert('Quote text copied to clipboard!');
+                                        });
+                                      }
+                                    </script>
+                                  </body>
+                                  </html>
+                                `);
+                                newWindow.document.close();
+                              }
+                            } else {
+                              toast({
+                                title: "No Quote Content", 
+                                description: "This quote doesn't have formatted content to view",
+                                variant: "destructive"
+                              });
                             }
-                          } else {
-                            toast({
-                              title: "No Quote Content", 
-                              description: "This quote doesn't have formatted content to view",
-                              variant: "destructive"
-                            });
-                          }
-                        }}>
-                          <Eye className="mr-2 h-3 w-3" />
-                          View
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => editQuote(quote)}>
-                          <Edit3 className="mr-2 h-3 w-3" />
-                          Edit
-                        </Button>
-                      </div>
-                      
-                      <div className="flex space-x-2">
-                        <Button 
-                          size="sm" 
-                          onClick={() => generateInvoice(quote)}
-                          className="dubai-button-gold text-xs"
-                        >
-                          <Download className="mr-2 h-3 w-3" />
-                          Invoice
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => generateItinerary(quote)}
-                          className="text-xs"
-                        >
-                          <Send className="mr-2 h-3 w-3" />
-                          Itinerary
-                        </Button>
-                      </div>
+                          }}>
+                            <Eye className="mr-2 h-3 w-3" />
+                            View
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => editQuote(quote)}>
+                            <Edit3 className="mr-2 h-3 w-3" />
+                            Edit
+                          </Button>
+                        </div>
+                        
+                        <div className="flex space-x-2">
+                          <Button 
+                            size="sm" 
+                            onClick={() => generateInvoice(quote)}
+                            className="dubai-button-gold text-xs"
+                          >
+                            <Download className="mr-2 h-3 w-3" />
+                            Invoice
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => generateItinerary(quote)}
+                            className="text-xs"
+                          >
+                            <Send className="mr-2 h-3 w-3" />
+                            Itinerary
+                          </Button>
+                        </div>
 
-                      {/* Status Update Buttons */}
-                      <div className="flex flex-col space-y-1">
-                        {quote.status === 'draft' && (
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => updateQuoteStatus(quote.id, 'sent')}
-                            className="text-xs"
+                        {/* Status Update Dropdown */}
+                        <div>
+                          <Select 
+                            value={quote.status} 
+                            onValueChange={(newStatus) => updateQuoteStatus(quote.id, newStatus as Quote['status'])}
                           >
-                            Mark as Sent
-                          </Button>
-                        )}
-                        {quote.status === 'sent' && (
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => updateQuoteStatus(quote.id, 'confirmed')}
-                            className="text-xs"
-                          >
-                            Confirm
-                          </Button>
-                        )}
+                            <SelectTrigger className="w-full text-xs">
+                              <SelectValue placeholder="Change Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {statusOptions.map(option => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               
               {filteredQuotes.length === 0 && !isLoading && (
                 <div className="text-center py-8 text-muted-foreground">

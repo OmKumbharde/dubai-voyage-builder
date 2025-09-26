@@ -33,8 +33,7 @@ const HotelRatesManagement = () => {
   const [loadingRates, setLoadingRates] = useState(false);
   const [editingRate, setEditingRate] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    rate: 0,
-    inventory: 10
+    rate: 0
   });
 
   const fetchRates = async (hotelId: string, date: Date) => {
@@ -67,7 +66,7 @@ const HotelRatesManagement = () => {
     }
   };
 
-  const updateRate = async (rateId: string, updates: { rate?: number; inventory?: number }) => {
+  const updateRate = async (rateId: string, updates: { rate?: number }) => {
     try {
       const { data, error } = await supabase
         .from('hotel_rates')
@@ -104,7 +103,7 @@ const HotelRatesManagement = () => {
           hotel_id: hotelId,
           date,
           rate,
-          inventory: formData.inventory
+          inventory: 10
         } as any])
         .select()
         .single();
@@ -297,24 +296,21 @@ const HotelRatesManagement = () => {
                               
                               {rate ? (
                                 <div className="space-y-2">
-                                  <div>
-                                    <Input
-                                      type="number"
-                                      value={rate.rate}
-                                      onChange={(e) => updateRate(rate.id, { rate: Number(e.target.value) })}
-                                      className="text-xs h-8"
-                                      placeholder="Rate"
-                                    />
-                                  </div>
-                                  <div>
-                                    <Input
-                                      type="number"
-                                      value={rate.inventory}
-                                      onChange={(e) => updateRate(rate.id, { inventory: Number(e.target.value) })}
-                                      className="text-xs h-8"
-                                      placeholder="Inventory"
-                                    />
-                                  </div>
+                                  <Input
+                                    type="number"
+                                    value={rate.rate}
+                                    onChange={(e) => updateRate(rate.id, { rate: Number(e.target.value) })}
+                                    className="text-xs h-8"
+                                    placeholder="Rate"
+                                  />
+                                  <Button 
+                                    size="sm" 
+                                    onClick={() => toast({ title: "Rate Updated", description: "Hotel rate saved successfully" })}
+                                    className="text-xs w-full"
+                                  >
+                                    <Save className="mr-1 h-3 w-3" />
+                                    Save
+                                  </Button>
                                 </div>
                               ) : (
                                 <div className="space-y-2">

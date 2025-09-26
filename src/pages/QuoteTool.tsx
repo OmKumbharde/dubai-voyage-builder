@@ -51,6 +51,7 @@ const QuoteTool = () => {
   const [selectedHotels, setSelectedHotels] = useState<any[]>([]);
   const [selectedTours, setSelectedTours] = useState<any[]>([]);
   const [selectedInclusions, setSelectedInclusions] = useState<any[]>([]);
+  const [editableRates, setEditableRates] = useState<{[key: string]: number}>({});
   
   // Search states
   const [hotelSearch, setHotelSearch] = useState('');
@@ -138,19 +139,45 @@ const QuoteTool = () => {
   const addTour = (tour: any) => {
     if (!selectedTours.find(t => t.id === tour.id)) {
       setSelectedTours([...selectedTours, tour]);
+      // Set default rate for the tour
+      const rateKey = `tour_${tour.id}`;
+      setEditableRates(prevRates => ({
+        ...prevRates,
+        [rateKey]: tour.costPerPerson
+      }));
     }
   };
 
   const removeTour = (tourId: string) => {
     setSelectedTours(selectedTours.filter(tour => tour.id !== tourId));
+    // Remove rate from editable rates
+    const rateKey = `tour_${tourId}`;
+    setEditableRates(prevRates => {
+      const newRates = { ...prevRates };
+      delete newRates[rateKey];
+      return newRates;
+    });
   };
 
   // Toggle inclusion function
   const toggleInclusion = (inclusion: any) => {
     if (selectedInclusions.find(i => i.id === inclusion.id)) {
       setSelectedInclusions(selectedInclusions.filter(i => i.id !== inclusion.id));
+      // Remove rate from editable rates
+      const rateKey = `inclusion_${inclusion.id}`;
+      setEditableRates(prevRates => {
+        const newRates = { ...prevRates };
+        delete newRates[rateKey];
+        return newRates;
+      });
     } else {
       setSelectedInclusions([...selectedInclusions, inclusion]);
+      // Set default rate for the inclusion
+      const rateKey = `inclusion_${inclusion.id}`;
+      setEditableRates(prevRates => ({
+        ...prevRates,
+        [rateKey]: inclusion.cost
+      }));
     }
   };
 
@@ -158,11 +185,24 @@ const QuoteTool = () => {
   const addHotel = (hotel: any) => {
     if (!selectedHotels.find(h => h.id === hotel.id)) {
       setSelectedHotels([...selectedHotels, hotel]);
+      // Set default rate for the hotel
+      const rateKey = `hotel_${hotel.id}`;
+      setEditableRates(prevRates => ({
+        ...prevRates,
+        [rateKey]: hotel.baseRate
+      }));
     }
   };
 
   const removeHotel = (hotelId: string) => {
     setSelectedHotels(selectedHotels.filter(hotel => hotel.id !== hotelId));
+    // Remove rate from editable rates
+    const rateKey = `hotel_${hotelId}`;
+    setEditableRates(prevRates => {
+      const newRates = { ...prevRates };
+      delete newRates[rateKey];
+      return newRates;
+    });
   };
 
   // Calculate quote function with multiple occupancy options
@@ -197,6 +237,9 @@ const QuoteTool = () => {
         let extraBedRate = hotel.extraBedRate || 0;
 
         // Calculate rooms and extra beds based on occupancy type
+        // Use editable rate for hotel if available
+        const hotelRateKey = `hotel_${hotel.id}`;
+        hotelRate = editableRates[hotelRateKey] ?? hotel.baseRate ?? 0;
         if (occupancyType === 'SGL') {
           roomsNeeded = adults;
           extraBeds = cwb > 0 ? cwb : 0; // Extra bed only for CWB
@@ -210,9 +253,18 @@ const QuoteTool = () => {
 
         const hotelCost = (roomsNeeded * hotelRate + extraBeds * extraBedRate) * nights;
         
-        // Tours and inclusions cost (same for all occupancy types)
-        const toursCost = selectedTours.reduce((total, tour) => total + (tour.costPerPerson * totalPax), 0);
-        const inclusionsCost = selectedInclusions.reduce((total, inclusion) => total + (inclusion.cost * totalPax), 0);
+        // Tours and inclusions cost using editable rates
+        const toursCost = selectedTours.reduce((total, tour) => {
+          const rateKey = `tour_${tour.id}`;
+          const rate = editableRates[rateKey] ?? tour.costPerPerson;
+          return total + (rate * totalPax);
+        }, 0);
+        
+        const inclusionsCost = selectedInclusions.reduce((total, inclusion) => {
+          const rateKey = `inclusion_${inclusion.id}`;
+          const rate = editableRates[rateKey] ?? inclusion.cost;
+          return total + (rate * totalPax);
+        }, 0);
         
         const totalCostAED = hotelCost + toursCost + inclusionsCost;
         const totalCostUSD = totalCostAED / exchangeRate;
@@ -463,14 +515,30 @@ const QuoteTool = () => {
   const copyBreakdown = () => {
     if (!generatedQuote || !generatedQuote.hotelOptions) return;
     
-    let breakdown = `COST BREAKDOWN (DBL Occupancy):\n\n`;
+    let breakdown = `COST BREAKDOWN:\n\n`;
+    breakdown += `${format(new Date(checkInDate), 'dd MMM')} - ${format(new Date(checkOutDate), 'dd MMM')}\n`;
+    breakdown += `${generatedQuote.nights} Nights\n`;
+    breakdown += `${totalPax} Adults\n\n`;
+    
+    // Show hotel rates per night and totals
+    generatedQuote.hotelOptions.forEach((hotelOption: any) => {
+      hotelOption.occupancyOptions.forEach((option: any) => {
+        const hotelRatePerNight = option.hotelCost / generatedQuote.nights;
+        breakdown += `${hotelOption.hotel.name} ${option.occupancyType}: AED ${hotelRatePerNight.toLocaleString()}/night x ${generatedQuote.nights} nights = AED ${option.hotelCost.toLocaleString()}\n`;
+      });
+    });
+    
+    // Tours and inclusions total
     const firstHotel = generatedQuote.hotelOptions[0];
     const dblOption = firstHotel?.occupancyOptions?.find((opt: any) => opt.occupancyType === 'DBL') || firstHotel?.occupancyOptions?.[0];
     if (dblOption) {
-      breakdown += `Hotel Cost: AED ${dblOption.hotelCost.toLocaleString()}\n`;
-      breakdown += `Tours Cost: AED ${dblOption.toursCost.toLocaleString()}\n`;
-      breakdown += `Services Cost: AED ${dblOption.inclusionsCost.toLocaleString()}\n`;
-      breakdown += `Total: AED ${dblOption.totalCostAED.toLocaleString()}\n`;
+      if (dblOption.toursCost > 0) {
+        breakdown += `\nTours Total: AED ${dblOption.toursCost.toLocaleString()}\n`;
+      }
+      if (dblOption.inclusionsCost > 0) {
+        breakdown += `Services Total: AED ${dblOption.inclusionsCost.toLocaleString()}\n`;
+      }
+      breakdown += `\nGRAND TOTAL: AED ${dblOption.totalCostAED.toLocaleString()}\n`;
       breakdown += `USD Equivalent: USD ${Math.round(dblOption.totalCostUSD).toLocaleString()}`;
     }
 
@@ -830,19 +898,29 @@ const QuoteTool = () => {
                   {selectedHotels.map(hotel => (
                     <Card key={hotel.id} className="p-4 border-dubai-gold">
                       <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-medium">{hotel.name}</h3>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {hotel.location}
-                          </p>
-                          <p className="text-sm mt-1">
-                            Base Rate: AED {hotel.baseRate}/night
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Extra Bed: AED {hotel.extraBedRate}/night
-                          </p>
-                        </div>
+                         <div>
+                           <h3 className="font-medium">{hotel.name}</h3>
+                           <p className="text-sm text-muted-foreground flex items-center gap-1">
+                             <MapPin className="h-3 w-3" />
+                             {hotel.location}
+                           </p>
+                           <div className="flex items-center gap-2 mt-2">
+                             <Label className="text-xs">Rate/night:</Label>
+                             <Input
+                               type="number"
+                               value={editableRates[`hotel_${hotel.id}`] ?? hotel.baseRate}
+                               onChange={(e) => setEditableRates(prev => ({
+                                 ...prev,
+                                 [`hotel_${hotel.id}`]: Number(e.target.value)
+                               }))}
+                               className="w-20 h-7 text-xs"
+                             />
+                             <span className="text-xs text-muted-foreground">AED</span>
+                           </div>
+                           <p className="text-xs text-muted-foreground">
+                             Extra Bed: AED {hotel.extraBedRate}/night
+                           </p>
+                         </div>
                         <Button
                           variant="outline"
                           size="sm"
@@ -906,12 +984,24 @@ const QuoteTool = () => {
                   <p className="text-sm font-medium">Selected Tours:</p>
                   {selectedTours.map(tour => (
                     <div key={tour.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                      <div>
-                        <span className="font-medium">{tour.name}</span>
-                        <p className="text-sm text-muted-foreground">
-                          AED {tour.costPerPerson}/person × {totalPax} pax = AED {(tour.costPerPerson * totalPax).toLocaleString()}
-                        </p>
-                      </div>
+                       <div className="flex-1">
+                         <span className="font-medium">{tour.name}</span>
+                         <div className="flex items-center gap-2 mt-1">
+                           <Label className="text-xs">Rate/person:</Label>
+                           <Input
+                             type="number"
+                             value={editableRates[`tour_${tour.id}`] ?? tour.costPerPerson}
+                             onChange={(e) => setEditableRates(prev => ({
+                               ...prev,
+                               [`tour_${tour.id}`]: Number(e.target.value)
+                             }))}
+                             className="w-20 h-7 text-xs"
+                           />
+                           <span className="text-xs text-muted-foreground">
+                             AED × {totalPax} pax = AED {((editableRates[`tour_${tour.id}`] ?? tour.costPerPerson) * totalPax).toLocaleString()}
+                           </span>
+                         </div>
+                       </div>
                       <Button
                         variant="outline"
                         size="sm"
@@ -971,12 +1061,24 @@ const QuoteTool = () => {
                   <p className="text-sm font-medium">Selected Services:</p>
                   {selectedInclusions.map(inclusion => (
                     <div key={inclusion.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                      <div>
-                        <span className="font-medium">{inclusion.name}</span>
-                        <p className="text-sm text-muted-foreground">
-                          AED {inclusion.cost}/person × {totalPax} pax = AED {(inclusion.cost * totalPax).toLocaleString()}
-                        </p>
-                      </div>
+                       <div className="flex-1">
+                         <span className="font-medium">{inclusion.name}</span>
+                         <div className="flex items-center gap-2 mt-1">
+                           <Label className="text-xs">Rate/person:</Label>
+                           <Input
+                             type="number"
+                             value={editableRates[`inclusion_${inclusion.id}`] ?? inclusion.cost}
+                             onChange={(e) => setEditableRates(prev => ({
+                               ...prev,
+                               [`inclusion_${inclusion.id}`]: Number(e.target.value)
+                             }))}
+                             className="w-20 h-7 text-xs"
+                           />
+                           <span className="text-xs text-muted-foreground">
+                             AED × {totalPax} pax = AED {((editableRates[`inclusion_${inclusion.id}`] ?? inclusion.cost) * totalPax).toLocaleString()}
+                           </span>
+                         </div>
+                       </div>
                       <Button
                         variant="outline"
                         size="sm"
@@ -1043,10 +1145,10 @@ const QuoteTool = () => {
                 Generated Quote Preview
               </span>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={copyFormattedText}>
-                  <Copy className="h-4 w-4 mr-2" />
-                  Copy HTML
-                </Button>
+                 <Button variant="outline" size="sm" onClick={copyFormattedText}>
+                   <Copy className="h-4 w-4 mr-2" />
+                   Copy Quote
+                 </Button>
                 <Button variant="outline" size="sm" onClick={copyBreakdown}>
                   <Copy className="h-4 w-4 mr-2" />
                   Copy Breakdown
