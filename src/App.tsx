@@ -18,7 +18,7 @@ import InclusionsManagement from "./pages/admin/InclusionsManagement";
 import HotelRatesManagement from "./pages/admin/HotelRatesManagement";
 import BankAccountsManagement from "./pages/admin/BankAccountsManagement";
 import QuoteManagement from "./pages/QuoteManagement";
-import ItineraryModule from "./pages/ItineraryModule";
+
 import SharedItinerary from "./pages/SharedItinerary";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -36,7 +36,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<Login />} />
-              <Route path="/shared-itinerary/:shareToken" element={<SharedItinerary />} />
+              <Route path="/shared-itinerary/:quoteId" element={<SharedItinerary />} />
               <Route path="/" element={
                 <ProtectedRoute>
                   <Layout />
@@ -47,7 +47,6 @@ const App = () => (
                 <Route path="quotes" element={<QuoteManagement />} />
                 <Route path="analytics" element={<Analytics />} />
                 <Route path="booking" element={<BookingCenter />} />
-                <Route path="itinerary" element={<ItineraryModule />} />
                 <Route path="admin/hotels" element={<HotelsManagement />} />
                 <Route path="admin/tours" element={<ToursManagement />} />
                 <Route path="admin/inclusions" element={<InclusionsManagement />} />

@@ -60,39 +60,19 @@ const BookingCenter = () => {
     }
   };
 
-  const generateItinerary = async (bookingId: string) => {
+  const sendItineraryLink = (bookingId: string) => {
     const booking = bookings.find(b => b.id === bookingId);
     if (!booking) return;
     
-    // Create a simple itinerary text
-    let itinerary = `ITINERARY FOR ${booking.customerName}\n`;
-    itinerary += `Booking Reference: ${booking.ticketReference}\n\n`;
-    if (booking.checkIn && booking.checkOut) {
-      itinerary += `Travel Period: ${format(new Date(booking.checkIn), 'do MMMM yyyy')} - ${format(new Date(booking.checkOut), 'do MMMM yyyy')}\n`;
-    }
-    itinerary += `Duration: ${booking.nights} nights\n`;
-    itinerary += `Passengers: ${booking.pax.adults} Adults${booking.pax.children > 0 ? `, ${booking.pax.children} Children` : ''}\n\n`;
+    // Generate shareable link
+    const shareUrl = `${window.location.origin}/shared-itinerary/${bookingId}`;
     
-    // Add formatted quote content if available
-    if (booking.formattedQuote) {
-      const textContent = booking.formattedQuote.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
-      itinerary += textContent;
-    }
+    // Copy to clipboard
+    navigator.clipboard.writeText(shareUrl);
     
-    // Create downloadable text file
-    const blob = new Blob([itinerary], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `itinerary-${booking.ticketReference}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    toast({ 
-      title: "Itinerary Generated", 
-      description: "Itinerary has been downloaded as a text file" 
+    toast({
+      title: "Link Copied!",
+      description: "Share this link with your client to arrange their itinerary",
     });
   };
 
@@ -364,11 +344,11 @@ const BookingCenter = () => {
                       </Button>
                       <Button 
                         size="sm" 
-                        onClick={() => generateItinerary(booking.id)}
+                        onClick={() => sendItineraryLink(booking.id)}
                         className="dubai-button-gold flex items-center text-sm"
                       >
-                        <Download className="mr-2 h-3 w-3" />
-                        Itinerary
+                        <Calendar className="mr-2 h-3 w-3" />
+                        Send Itinerary Link
                       </Button>
                     </div>
                   </div>

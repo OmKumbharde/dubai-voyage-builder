@@ -24,6 +24,8 @@ const InclusionsManagement = () => {
   
   const [isCreating, setIsCreating] = useState(false);
   const [editingInclusion, setEditingInclusion] = useState<Inclusion | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     type: 'other' as 'visa' | 'transfer' | 'insurance' | 'other',
@@ -105,6 +107,14 @@ const InclusionsManagement = () => {
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
+  
+  // Filtered inclusions
+  const filteredInclusions = inclusions.filter(inclusion => {
+    const matchesSearch = inclusion.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         inclusion.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = !filterType || inclusion.type === filterType;
+    return matchesSearch && matchesType;
+  });
 
   return (
     <div className="p-8 space-y-8">
@@ -221,8 +231,14 @@ const InclusionsManagement = () => {
             <Input
               placeholder="Search inclusions..."
               className="dubai-input flex-1"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <select className="dubai-input md:w-48">
+            <select 
+              className="dubai-input md:w-48"
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+            >
               <option value="">All Types</option>
               <option value="visa">Visa</option>
               <option value="transfer">Transfer</option>
@@ -256,7 +272,7 @@ const InclusionsManagement = () => {
                   <tr>
                     <td colSpan={6} className="text-center py-8">Loading inclusions...</td>
                   </tr>
-                ) : inclusions.map((inclusion, index) => (
+                ) : filteredInclusions.map((inclusion, index) => (
                   <tr key={inclusion.id} className="border-b hover:bg-gray-50">
                     <td className="p-3">{index + 1}</td>
                     <td className="p-3">

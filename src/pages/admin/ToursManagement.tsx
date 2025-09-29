@@ -22,6 +22,8 @@ const ToursManagement = () => {
   
   const [isCreating, setIsCreating] = useState(false);
   const [editingTour, setEditingTour] = useState<Tour | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -117,6 +119,14 @@ const ToursManagement = () => {
       highlights: prev.highlights.filter((_, i) => i !== index)
     }));
   };
+  
+  // Filtered tours
+  const filteredTours = tours.filter(tour => {
+    const matchesSearch = tour.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         tour.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = !filterType || tour.type === filterType;
+    return matchesSearch && matchesType;
+  });
 
   return (
     <div className="p-6 space-y-6">
@@ -290,8 +300,14 @@ const ToursManagement = () => {
             <Input
               placeholder="Search tours..."
               className="dubai-input flex-1"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <select className="dubai-input md:w-48">
+            <select 
+              className="dubai-input md:w-48"
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+            >
               <option value="">All Types</option>
               <option value="group">Sharing Tours</option>
               <option value="private">Private Tours</option>
@@ -323,7 +339,7 @@ const ToursManagement = () => {
                   <tr>
                     <td colSpan={6} className="text-center py-8">Loading tours...</td>
                   </tr>
-                ) : tours.map((tour, index) => (
+                ) : filteredTours.map((tour, index) => (
                   <tr key={tour.id} className="border-b hover:bg-gray-50">
                     <td className="p-3">{index + 1}</td>
                     <td className="p-3">

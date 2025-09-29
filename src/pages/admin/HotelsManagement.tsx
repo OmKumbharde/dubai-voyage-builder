@@ -22,6 +22,9 @@ import { toast } from '../../hooks/use-toast';
 const HotelsManagement = () => {
   const { hotels, isLoading, addHotel, updateHotel, deleteHotel } = useSupabaseData();
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterRating, setFilterRating] = useState('');
+  const [filterLocation, setFilterLocation] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     location: '',
@@ -32,6 +35,15 @@ const HotelsManagement = () => {
     amenities: [] as string[]
   });
   const [newAmenity, setNewAmenity] = useState('');
+  
+  // Filtered hotels
+  const filteredHotels = hotels.filter(hotel => {
+    const matchesSearch = hotel.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         hotel.location.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRating = !filterRating || hotel.starRating === Number(filterRating);
+    const matchesLocation = !filterLocation || hotel.location === filterLocation;
+    return matchesSearch && matchesRating && matchesLocation;
+  });
 
   const handleSave = async () => {
     try {
@@ -301,18 +313,28 @@ const HotelsManagement = () => {
             <Input
               placeholder="Search hotels..."
               className="dubai-input flex-1"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <select className="dubai-input md:w-48">
+            <select 
+              className="dubai-input md:w-48" 
+              value={filterRating}
+              onChange={(e) => setFilterRating(e.target.value)}
+            >
               <option value="">All Categories</option>
               <option value="3">3 Star</option>
               <option value="4">4 Star</option>
               <option value="5">5 Star</option>
             </select>
-            <select className="dubai-input md:w-48">
+            <select 
+              className="dubai-input md:w-48"
+              value={filterLocation}
+              onChange={(e) => setFilterLocation(e.target.value)}
+            >
               <option value="">All Locations</option>
-              <option value="Dubai">Dubai</option>
-              <option value="Abu Dhabi">Abu Dhabi</option>
-              <option value="Sharjah">Sharjah</option>
+              {[...new Set(hotels.map(h => h.location))].map(loc => (
+                <option key={loc} value={loc}>{loc}</option>
+              ))}
             </select>
           </div>
         </CardContent>
@@ -338,7 +360,7 @@ const HotelsManagement = () => {
                 </tr>
               </thead>
               <tbody>
-                {hotels.map((hotel, index) => (
+                {filteredHotels.map((hotel, index) => (
                   <tr key={hotel.id} className="border-b hover:bg-gray-50">
                     <td className="p-3">{index + 1}</td>
                     <td className="p-3">

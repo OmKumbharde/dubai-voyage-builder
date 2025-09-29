@@ -24,13 +24,18 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
   const { bankAccounts } = useSupabaseData();
   const [selectedBranch, setSelectedBranch] = useState('');
   const [selectedHotelOption, setSelectedHotelOption] = useState('');
-  const [selectedOccupancyType, setSelectedOccupancyType] = useState('');
-  const [occupancyDetails, setOccupancyDetails] = useState({
-    adults: 0,
-    cnb: 0,
-    cwb: 0,
-    infants: 0
+  
+  // Occupancy distribution: track how many PAX in each occupancy type
+  const [occupancyDistribution, setOccupancyDistribution] = useState<{
+    single: { adults: number; cwb: number; cnb: number; infants: number };
+    double: { adults: number; cwb: number; cnb: number; infants: number };
+    triple: { adults: number; cwb: number; cnb: number; infants: number };
+  }>({
+    single: { adults: 0, cwb: 0, cnb: 0, infants: 0 },
+    double: { adults: 0, cwb: 0, cnb: 0, infants: 0 },
+    triple: { adults: 0, cwb: 0, cnb: 0, infants: 0 }
   });
+  
   const [guestNames, setGuestNames] = useState<string[]>(['']);
 
   const branches = ['Ghana', 'Nigeria', 'Kenya', 'Dubai'];
@@ -54,10 +59,25 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
   };
 
   const generateInvoicePDF = () => {
-    if (!selectedBranch || !selectedHotelOption || !selectedOccupancyType) {
+    if (!selectedBranch || !selectedHotelOption) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all required fields",
+        description: "Please select branch and hotel option",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Calculate total PAX from all occupancy types
+    const totalPax = 
+      Object.values(occupancyDistribution.single).reduce((a, b) => a + b, 0) +
+      Object.values(occupancyDistribution.double).reduce((a, b) => a + b, 0) +
+      Object.values(occupancyDistribution.triple).reduce((a, b) => a + b, 0);
+    
+    if (totalPax === 0) {
+      toast({
+        title: "Missing Information",
+        description: "Please specify PAX distribution across occupancy types",
         variant: "destructive"
       });
       return;
@@ -102,27 +122,82 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
     yPos += 15;
     pdf.setFont('helvetica', 'normal');
     
-    // Hotel service
-    const totalPax = occupancyDetails.adults + occupancyDetails.cnb + occupancyDetails.cwb;
     const travelDates = `${new Date(quote.travelDates.startDate).toLocaleDateString('en-GB')} - ${new Date(quote.travelDates.endDate).toLocaleDateString('en-GB')}`;
     
-    pdf.text('1.', 20, yPos);
+    let srNo = 1;
     
-    // Split hotel service text if too long
-    const hotelText = `${quote.selectedHotel?.name || 'Hotel'} (${selectedOccupancyType} Occupancy)`;
-    const maxWidth = 65;
-    const splitHotelText = pdf.splitTextToSize(hotelText, maxWidth);
-    pdf.text(splitHotelText, 50, yPos);
+    // Add hotel services for each occupancy type that has PAX
+    const occupancyTypes: Array<'single' | 'double' | 'triple'> = ['single', 'double', 'triple'];
     
-    pdf.text(travelDates, 120, yPos);
-    pdf.text(totalPax.toString().padStart(2, '0'), 150, yPos);
+    occupancyTypes.forEach(occType => {
+      const occData = occupancyDistribution[occType];
+      const occPax = occData.adults + occData.cwb + occData.cnb;
+      
+      if (occPax > 0) {
+        pdf.text(`${srNo}.`, 20, yPos);
+        
+        const occTypeName = occType.charAt(0).toUpperCase() + occType.slice(1);
+        const hotelText = `${quote.selectedHotel?.name || 'Hotel'} (${occTypeName} Occupancy)`;
+        const maxWidth = 65;
+        const splitHotelText = pdf.splitTextToSize(hotelText, maxWidth);
+        pdf.text(splitHotelText, 50, yPos);
+        
+        pdf.text(travelDates, 120, yPos);
+        pdf.text(occPax.toString().padStart(2, '0'), 150, yPos);
+        
+        // Calculate cost for this occupancy type
+        const nights = Math.ceil((new Date(quote.travelDates.endDate).getTime() - new Date(quote.travelDates.startDate).getTime()) / (1000 * 60 * 60 * 24));
+        const baseRate = quote.selectedHotel?.baseRate || 0;
+        let occCost = 0;
+        
+        if (occType === 'single') {
+          occCost = occData.adults * baseRate * nights;
+        } else if (occType === 'double') {
+          const rooms = Math.ceil(occData.adults / 2);
+          occCost = rooms * baseRate * nights;
+        } else if (occType === 'triple') {
+          const rooms = Math.ceil(occData.adults / 3);
+          occCost = rooms * baseRate * nights;
+        }
+        
+        // Add extra bed costs
+        occCost += (occData.cwb * (quote.selectedHotel?.extraBedRate || 100) * nights);
+        
+        pdf.text(`USD ${occCost.toFixed(2)}`, 165, yPos);
+        pdf.text(`USD ${occCost.toFixed(2)}`, 185, yPos);
+        
+        yPos += 10;
+        srNo++;
+      }
+    });
+
+    // Calculate total cost from all occupancy types
+    let totalCost = 0;
+    const nights = Math.ceil((new Date(quote.travelDates.endDate).getTime() - new Date(quote.travelDates.startDate).getTime()) / (1000 * 60 * 60 * 24));
+    const baseRate = quote.selectedHotel?.baseRate || 0;
     
-    const totalCost = quote.calculations?.totalCostUSD || 0;
-    pdf.text(`USD ${totalCost}`, 165, yPos);
-    pdf.text(`USD ${totalCost}`, 185, yPos);
+    occupancyTypes.forEach(occType => {
+      const occData = occupancyDistribution[occType];
+      const occPax = occData.adults + occData.cwb + occData.cnb;
+      
+      if (occPax > 0) {
+        let occCost = 0;
+        if (occType === 'single') {
+          occCost = occData.adults * baseRate * nights;
+        } else if (occType === 'double') {
+          const rooms = Math.ceil(occData.adults / 2);
+          occCost = rooms * baseRate * nights;
+        } else if (occType === 'triple') {
+          const rooms = Math.ceil(occData.adults / 3);
+          occCost = rooms * baseRate * nights;
+        }
+        occCost += (occData.cwb * (quote.selectedHotel?.extraBedRate || 100) * nights);
+        totalCost += occCost;
+      }
+    });
 
     // Inclusions section
-    yPos += splitHotelText.length * 5 + 10;
+    yPos += 15;
     pdf.setFont('helvetica', 'bold');
     pdf.text('Inclusions', 20, yPos);
     
@@ -231,77 +306,202 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
             </Select>
           </div>
 
-          {/* Occupancy Type Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="occupancy">Select Occupancy Type *</Label>
-            <Select value={selectedOccupancyType} onValueChange={setSelectedOccupancyType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose occupancy type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Single">Single Occupancy</SelectItem>
-                <SelectItem value="Double">Double Occupancy</SelectItem>
-                <SelectItem value="Triple">Triple Occupancy</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* PAX Details */}
+          {/* Occupancy Distribution */}
           <Card>
-            <CardContent className="pt-4">
-              <Label className="text-sm font-medium">PAX Details</Label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
-                <div>
-                  <Label htmlFor="adults" className="text-xs">Adults</Label>
-                  <Input
-                    id="adults"
-                    type="number"
-                    min="0"
-                    value={occupancyDetails.adults}
-                    onChange={(e) => setOccupancyDetails(prev => ({
-                      ...prev,
-                      adults: parseInt(e.target.value) || 0
-                    }))}
-                  />
+            <CardContent className="pt-4 space-y-6">
+              <div>
+                <Label className="text-sm font-medium mb-4 block">PAX Distribution by Occupancy Type</Label>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Distribute your {quote.paxDetails?.adults || 0} adults across occupancy types
+                </p>
+              </div>
+              
+              {/* Single Occupancy */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <Label className="font-semibold">Single Occupancy</Label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div>
+                    <Label htmlFor="single-adults" className="text-xs">Adults</Label>
+                    <Input
+                      id="single-adults"
+                      type="number"
+                      min="0"
+                      value={occupancyDistribution.single.adults}
+                      onChange={(e) => setOccupancyDistribution(prev => ({
+                        ...prev,
+                        single: { ...prev.single, adults: parseInt(e.target.value) || 0 }
+                      }))}
+                      className="h-8"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="single-cwb" className="text-xs">CWB</Label>
+                    <Input
+                      id="single-cwb"
+                      type="number"
+                      min="0"
+                      value={occupancyDistribution.single.cwb}
+                      onChange={(e) => setOccupancyDistribution(prev => ({
+                        ...prev,
+                        single: { ...prev.single, cwb: parseInt(e.target.value) || 0 }
+                      }))}
+                      className="h-8"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="single-cnb" className="text-xs">CNB</Label>
+                    <Input
+                      id="single-cnb"
+                      type="number"
+                      min="0"
+                      value={occupancyDistribution.single.cnb}
+                      onChange={(e) => setOccupancyDistribution(prev => ({
+                        ...prev,
+                        single: { ...prev.single, cnb: parseInt(e.target.value) || 0 }
+                      }))}
+                      className="h-8"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="single-infants" className="text-xs">Infants</Label>
+                    <Input
+                      id="single-infants"
+                      type="number"
+                      min="0"
+                      value={occupancyDistribution.single.infants}
+                      onChange={(e) => setOccupancyDistribution(prev => ({
+                        ...prev,
+                        single: { ...prev.single, infants: parseInt(e.target.value) || 0 }
+                      }))}
+                      className="h-8"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="cwb" className="text-xs">Child with Bed</Label>
-                  <Input
-                    id="cwb"
-                    type="number"
-                    min="0"
-                    value={occupancyDetails.cwb}
-                    onChange={(e) => setOccupancyDetails(prev => ({
-                      ...prev,
-                      cwb: parseInt(e.target.value) || 0
-                    }))}
-                  />
+              </div>
+              
+              {/* Double Occupancy */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <Label className="font-semibold">Double Occupancy</Label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div>
+                    <Label htmlFor="double-adults" className="text-xs">Adults</Label>
+                    <Input
+                      id="double-adults"
+                      type="number"
+                      min="0"
+                      value={occupancyDistribution.double.adults}
+                      onChange={(e) => setOccupancyDistribution(prev => ({
+                        ...prev,
+                        double: { ...prev.double, adults: parseInt(e.target.value) || 0 }
+                      }))}
+                      className="h-8"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="double-cwb" className="text-xs">CWB</Label>
+                    <Input
+                      id="double-cwb"
+                      type="number"
+                      min="0"
+                      value={occupancyDistribution.double.cwb}
+                      onChange={(e) => setOccupancyDistribution(prev => ({
+                        ...prev,
+                        double: { ...prev.double, cwb: parseInt(e.target.value) || 0 }
+                      }))}
+                      className="h-8"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="double-cnb" className="text-xs">CNB</Label>
+                    <Input
+                      id="double-cnb"
+                      type="number"
+                      min="0"
+                      value={occupancyDistribution.double.cnb}
+                      onChange={(e) => setOccupancyDistribution(prev => ({
+                        ...prev,
+                        double: { ...prev.double, cnb: parseInt(e.target.value) || 0 }
+                      }))}
+                      className="h-8"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="double-infants" className="text-xs">Infants</Label>
+                    <Input
+                      id="double-infants"
+                      type="number"
+                      min="0"
+                      value={occupancyDistribution.double.infants}
+                      onChange={(e) => setOccupancyDistribution(prev => ({
+                        ...prev,
+                        double: { ...prev.double, infants: parseInt(e.target.value) || 0 }
+                      }))}
+                      className="h-8"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="cnb" className="text-xs">Child no Bed</Label>
-                  <Input
-                    id="cnb"
-                    type="number"
-                    min="0"
-                    value={occupancyDetails.cnb}
-                    onChange={(e) => setOccupancyDetails(prev => ({
-                      ...prev,
-                      cnb: parseInt(e.target.value) || 0
-                    }))}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="infants" className="text-xs">Infants</Label>
-                  <Input
-                    id="infants"
-                    type="number"
-                    min="0"
-                    value={occupancyDetails.infants}
-                    onChange={(e) => setOccupancyDetails(prev => ({
-                      ...prev,
-                      infants: parseInt(e.target.value) || 0
-                    }))}
-                  />
+              </div>
+              
+              {/* Triple Occupancy */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <Label className="font-semibold">Triple Occupancy</Label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div>
+                    <Label htmlFor="triple-adults" className="text-xs">Adults</Label>
+                    <Input
+                      id="triple-adults"
+                      type="number"
+                      min="0"
+                      value={occupancyDistribution.triple.adults}
+                      onChange={(e) => setOccupancyDistribution(prev => ({
+                        ...prev,
+                        triple: { ...prev.triple, adults: parseInt(e.target.value) || 0 }
+                      }))}
+                      className="h-8"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="triple-cwb" className="text-xs">CWB</Label>
+                    <Input
+                      id="triple-cwb"
+                      type="number"
+                      min="0"
+                      value={occupancyDistribution.triple.cwb}
+                      onChange={(e) => setOccupancyDistribution(prev => ({
+                        ...prev,
+                        triple: { ...prev.triple, cwb: parseInt(e.target.value) || 0 }
+                      }))}
+                      className="h-8"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="triple-cnb" className="text-xs">CNB</Label>
+                    <Input
+                      id="triple-cnb"
+                      type="number"
+                      min="0"
+                      value={occupancyDistribution.triple.cnb}
+                      onChange={(e) => setOccupancyDistribution(prev => ({
+                        ...prev,
+                        triple: { ...prev.triple, cnb: parseInt(e.target.value) || 0 }
+                      }))}
+                      className="h-8"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="triple-infants" className="text-xs">Infants</Label>
+                    <Input
+                      id="triple-infants"
+                      type="number"
+                      min="0"
+                      value={occupancyDistribution.triple.infants}
+                      onChange={(e) => setOccupancyDistribution(prev => ({
+                        ...prev,
+                        triple: { ...prev.triple, infants: parseInt(e.target.value) || 0 }
+                      }))}
+                      className="h-8"
+                    />
+                  </div>
                 </div>
               </div>
             </CardContent>

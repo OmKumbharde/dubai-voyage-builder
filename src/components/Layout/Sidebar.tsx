@@ -43,11 +43,6 @@ const Sidebar = () => {
       name: 'Analytics', 
       href: '/analytics', 
       icon: BarChart3 
-    },
-    { 
-      name: 'Itinerary Module', 
-      href: '/itinerary', 
-      icon: Navigation 
     }
   ];
 
