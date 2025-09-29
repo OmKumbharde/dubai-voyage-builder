@@ -10,7 +10,8 @@ import {
   MapPin, 
   Users,
   LogOut,
-  Plane
+  Plane,
+  Navigation
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -42,6 +43,11 @@ const Sidebar = () => {
       name: 'Analytics', 
       href: '/analytics', 
       icon: BarChart3 
+    },
+    { 
+      name: 'Itinerary Module', 
+      href: '/itinerary', 
+      icon: Navigation 
     }
   ];
 

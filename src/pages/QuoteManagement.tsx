@@ -549,7 +549,10 @@ const QuoteManagement = () => {
                         <div className="flex space-x-2">
                           <Button 
                             size="sm" 
-                            onClick={() => generateInvoice(quote)}
+                            onClick={() => {
+                              setQuoteForInvoice(quote);
+                              setInvoiceDialogOpen(true);
+                            }}
                             className="dubai-button-gold text-xs"
                           >
                             <Download className="mr-2 h-3 w-3" />
@@ -602,6 +605,18 @@ const QuoteManagement = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Invoice Generation Dialog */}
+      {quoteForInvoice && (
+        <InvoiceGenerationDialog
+          isOpen={invoiceDialogOpen}
+          onClose={() => {
+            setInvoiceDialogOpen(false);
+            setQuoteForInvoice(null);
+          }}
+          quote={quoteForInvoice}
+        />
+      )}
     </div>
   );
 };
