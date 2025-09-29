@@ -575,9 +575,8 @@ const QuoteTool = () => {
       const firstHotel = generatedQuote.hotelOptions[0];
       const dblOption = firstHotel?.occupancyOptions?.find((opt: any) => opt.occupancyType === 'DBL') || firstHotel?.occupancyOptions?.[0];
       const quoteData = {
-        ticketReference: editingQuote?.reference_number || `QT-${Date.now()}`,
+        ticketReference: referenceNumber || editingQuote?.reference_number || `QT-${Date.now()}`,
         customerName,
-        ticketReference: referenceNumber,
         travelDates: {
           startDate: checkInDate,
           endDate: checkOutDate

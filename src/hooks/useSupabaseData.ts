@@ -59,7 +59,7 @@ export interface DbQuote {
   id: string;
   reference_number: string;
   client_name: string;
-  client_email: string | null;
+  ticket_reference: string | null;
   travel_dates_from: string;
   travel_dates_to: string;
   adults: number;
@@ -152,7 +152,7 @@ export interface Quote {
   // Additional properties for compatibility with database
   reference_number?: string;
   client_name?: string;
-  client_email?: string;
+  ticket_reference?: string;
   adults?: number;
   infants?: number;
   cnb?: number;
@@ -203,7 +203,7 @@ const adaptDbQuoteToQuote = (dbQuote: DbQuote): Quote => ({
   id: dbQuote.id,
   ticketReference: dbQuote.reference_number,
   customerName: dbQuote.client_name,
-  customerEmail: dbQuote.client_email || undefined,
+  customerEmail: dbQuote.ticket_reference || undefined,
   travelDates: {
     startDate: dbQuote.travel_dates_from,
     endDate: dbQuote.travel_dates_to,
@@ -606,7 +606,7 @@ export const useSupabaseData = () => {
         .insert([{
           reference_number: referenceNumber,
           client_name: quote.customerName,
-          client_email: quote.customerEmail,
+          ticket_reference: referenceNumber,
           travel_dates_from: quote.travelDates.startDate,
           travel_dates_to: quote.travelDates.endDate,
           adults: quote.paxDetails.adults,
@@ -646,7 +646,7 @@ export const useSupabaseData = () => {
         .from('quotes')
         .update({
           client_name: updates.customerName,
-          client_email: updates.customerEmail,
+          ticket_reference: updates.ticketReference,
           status: updates.status,
           total_amount: updates.calculations?.totalCostAED,
         })
