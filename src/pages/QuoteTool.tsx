@@ -31,7 +31,7 @@ const QuoteTool = () => {
 
   // State for form data
   const [customerName, setCustomerName] = useState('');
-  const [customerEmail, setCustomerEmail] = useState('');
+  const [referenceNumber, setReferenceNumber] = useState('');
   const [checkInDate, setCheckInDate] = useState('');
   const [checkOutDate, setCheckOutDate] = useState('');
   const [adults, setAdults] = useState(2);
@@ -68,7 +68,7 @@ const QuoteTool = () => {
       const quote = location.state.editQuote;
       setEditingQuote(quote);
       setCustomerName(quote.client_name || '');
-      setCustomerEmail(quote.client_email || '');
+      setReferenceNumber(quote.reference_number || '');
       setCheckInDate(quote.travel_dates_from || '');
       setCheckOutDate(quote.travel_dates_to || '');
       setAdults(quote.adults || 2);
@@ -293,7 +293,7 @@ const QuoteTool = () => {
 
     const quote = {
       customerName,
-      customerEmail,
+      ticketReference: referenceNumber,
       checkInDate,
       checkOutDate,
       nights,
@@ -577,7 +577,7 @@ const QuoteTool = () => {
       const quoteData = {
         ticketReference: editingQuote?.reference_number || `QT-${Date.now()}`,
         customerName,
-        customerEmail,
+        ticketReference: referenceNumber,
         travelDates: {
           startDate: checkInDate,
           endDate: checkOutDate
@@ -599,7 +599,7 @@ const QuoteTool = () => {
         const updateData = {
           reference_number: editingQuote.reference_number,
           client_name: customerName,
-          client_email: customerEmail,
+          ticket_reference: referenceNumber,
           travel_dates_from: checkInDate,
           travel_dates_to: checkOutDate,
           adults,
@@ -628,7 +628,7 @@ const QuoteTool = () => {
         const insertData = {
           reference_number: `QT-${Date.now()}`,
           client_name: customerName,
-          client_email: customerEmail,
+          ticket_reference: referenceNumber,
           travel_dates_from: checkInDate,
           travel_dates_to: checkOutDate,
           adults,
@@ -697,15 +697,14 @@ const QuoteTool = () => {
               />
             </div>
             <div>
-              <Label htmlFor="customerEmail">Customer Email</Label>
-              <Input
-                id="customerEmail"
-                type="email"
-                value={customerEmail}
-                onChange={(e) => setCustomerEmail(e.target.value)}
-                placeholder="Enter customer email"
-                className="dubai-input"
-              />
+            <Label htmlFor="referenceNumber">TKT Reference Number</Label>
+            <Input
+              id="referenceNumber"
+              value={referenceNumber}
+              onChange={(e) => setReferenceNumber(e.target.value)}
+              placeholder="Enter TKT reference number"
+              className="dubai-input"
+            />
             </div>
           </div>
 

@@ -294,85 +294,93 @@ const HotelsManagement = () => {
         </Card>
       )}
 
-      {/* Hotels List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {hotels.map((hotel) => (
-          <Card key={hotel.id} className="dubai-card">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-lg">{hotel.name}</CardTitle>
-                  <div className="flex items-center text-sm text-muted-foreground mt-1">
-                    <MapPin className="h-4 w-4 mr-1" />
-                    {hotel.location}
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  {Array.from({ length: hotel.starRating }).map((_, i) => (
-                    <Star 
-                      key={i} 
-                      className="h-4 w-4 fill-dubai-gold text-dubai-gold" 
-                    />
-                  ))}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground line-clamp-3">
-                {hotel.description}
-              </p>
-              
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-lg font-semibold text-dubai-navy">
-                    AED {hotel.baseRate}/night
-                  </span>
-                  <Badge variant="outline">Base Rate</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Extra Bed: AED {hotel.extraBedRate}/night
-                  </span>
-                  <Badge variant="secondary" className="text-xs">Extra Bed</Badge>
-                </div>
-              </div>
+      {/* Search and Filter */}
+      <Card className="dubai-card">
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <Input
+              placeholder="Search hotels..."
+              className="dubai-input flex-1"
+            />
+            <select className="dubai-input md:w-48">
+              <option value="">All Categories</option>
+              <option value="3">3 Star</option>
+              <option value="4">4 Star</option>
+              <option value="5">5 Star</option>
+            </select>
+            <select className="dubai-input md:w-48">
+              <option value="">All Locations</option>
+              <option value="Dubai">Dubai</option>
+              <option value="Abu Dhabi">Abu Dhabi</option>
+              <option value="Sharjah">Sharjah</option>
+            </select>
+          </div>
+        </CardContent>
+      </Card>
 
-              {hotel.amenities && hotel.amenities.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {hotel.amenities.slice(0, 3).map((amenity, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs">
-                      {amenity}
-                    </Badge>
-                  ))}
-                  {hotel.amenities.length > 3 && (
-                    <Badge variant="secondary" className="text-xs">
-                      +{hotel.amenities.length - 3} more
-                    </Badge>
-                  )}
-                </div>
-              )}
-
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => startEdit(hotel)}
-                >
-                  <Edit3 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDelete(hotel.id)}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Hotels List - Table View */}
+      <Card className="dubai-card">
+        <CardHeader>
+          <CardTitle>Hotels List</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-3">Sr. No</th>
+                  <th className="text-left p-3">Hotel Name</th>
+                  <th className="text-left p-3">Category</th>
+                  <th className="text-left p-3">Location</th>
+                  <th className="text-left p-3">Base Rate</th>
+                  <th className="text-left p-3">Extra Bed Rate</th>
+                  <th className="text-left p-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {hotels.map((hotel, index) => (
+                  <tr key={hotel.id} className="border-b hover:bg-gray-50">
+                    <td className="p-3">{index + 1}</td>
+                    <td className="p-3">
+                      <div>
+                        <p className="font-semibold">{hotel.name}</p>
+                        <div className="flex items-center mt-1">
+                          {Array.from({ length: hotel.starRating }).map((_, i) => (
+                            <Star key={i} className="h-3 w-3 fill-dubai-gold text-dubai-gold" />
+                          ))}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-3">{hotel.starRating} Star</td>
+                    <td className="p-3">{hotel.location}</td>
+                    <td className="p-3">AED {hotel.baseRate}</td>
+                    <td className="p-3">AED {hotel.extraBedRate}</td>
+                    <td className="p-3">
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => startEdit(hotel)}
+                        >
+                          <Edit3 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(hotel.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
       {hotels.length === 0 && (
         <Card className="dubai-card">

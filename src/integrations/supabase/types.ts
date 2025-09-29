@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      bank_accounts: {
+        Row: {
+          account_name: string
+          account_number: string
+          bank_address: string | null
+          bank_name: string
+          branch_country: string
+          branch_name: string
+          created_at: string
+          currency: string
+          exchange_rate: number | null
+          iban: string | null
+          id: string
+          swift_code: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_name: string
+          account_number: string
+          bank_address?: string | null
+          bank_name: string
+          branch_country: string
+          branch_name: string
+          created_at?: string
+          currency?: string
+          exchange_rate?: number | null
+          iban?: string | null
+          id?: string
+          swift_code?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_name?: string
+          account_number?: string
+          bank_address?: string | null
+          bank_name?: string
+          branch_country?: string
+          branch_name?: string
+          created_at?: string
+          currency?: string
+          exchange_rate?: number | null
+          iban?: string | null
+          id?: string
+          swift_code?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hotel_rates: {
         Row: {
           created_at: string
@@ -174,6 +222,57 @@ export type Database = {
           },
         ]
       }
+      itineraries: {
+        Row: {
+          created_at: string
+          end_time: string | null
+          id: string
+          notes: string | null
+          quote_id: string | null
+          start_time: string | null
+          tour_date: string
+          tour_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          quote_id?: string | null
+          start_time?: string | null
+          tour_date: string
+          tour_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          quote_id?: string | null
+          start_time?: string | null
+          tour_date?: string
+          tour_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itineraries_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itineraries_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -201,7 +300,6 @@ export type Database = {
       quotes: {
         Row: {
           adults: number
-          client_email: string | null
           client_name: string
           cnb: number | null
           created_at: string
@@ -213,6 +311,7 @@ export type Database = {
           notes: string | null
           reference_number: string
           status: string | null
+          ticket_reference: string | null
           total_amount: number
           travel_dates_from: string
           travel_dates_to: string
@@ -220,7 +319,6 @@ export type Database = {
         }
         Insert: {
           adults?: number
-          client_email?: string | null
           client_name: string
           cnb?: number | null
           created_at?: string
@@ -232,6 +330,7 @@ export type Database = {
           notes?: string | null
           reference_number: string
           status?: string | null
+          ticket_reference?: string | null
           total_amount: number
           travel_dates_from: string
           travel_dates_to: string
@@ -239,7 +338,6 @@ export type Database = {
         }
         Update: {
           adults?: number
-          client_email?: string | null
           client_name?: string
           cnb?: number | null
           created_at?: string
@@ -251,6 +349,7 @@ export type Database = {
           notes?: string | null
           reference_number?: string
           status?: string | null
+          ticket_reference?: string | null
           total_amount?: number
           travel_dates_from?: string
           travel_dates_to?: string

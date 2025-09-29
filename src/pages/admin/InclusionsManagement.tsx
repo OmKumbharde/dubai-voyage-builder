@@ -214,70 +214,111 @@ const InclusionsManagement = () => {
         </Card>
       )}
 
-      {/* Inclusions List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {isLoading ? (
-          <div className="col-span-full text-center py-12">
-            <div className="text-muted-foreground">Loading inclusions...</div>
+      {/* Search and Filter */}
+      <Card className="dubai-card">
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <Input
+              placeholder="Search inclusions..."
+              className="dubai-input flex-1"
+            />
+            <select className="dubai-input md:w-48">
+              <option value="">All Types</option>
+              <option value="visa">Visa</option>
+              <option value="transfer">Transfer</option>
+              <option value="insurance">Insurance</option>
+              <option value="other">Other</option>
+            </select>
           </div>
-        ) : inclusions.map((inclusion) => (
-          <Card key={inclusion.id} className="dubai-card">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    {getTypeIcon(inclusion.type)}
-                    {inclusion.name}
-                  </CardTitle>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Badge className={getTypeColor(inclusion.type)}>
-                      {inclusion.type}
-                    </Badge>
-                    {!inclusion.isOptional && (
-                      <Badge variant="destructive" className="text-xs">
-                        Required
+        </CardContent>
+      </Card>
+
+      {/* Inclusions List - Table View */}
+      <Card className="dubai-card">
+        <CardHeader>
+          <CardTitle>Inclusions List</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-3">Sr. No</th>
+                  <th className="text-left p-3">Name</th>
+                  <th className="text-left p-3">Type</th>
+                  <th className="text-left p-3">Cost (AED)</th>
+                  <th className="text-left p-3">Optional</th>
+                  <th className="text-left p-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-8">Loading inclusions...</td>
+                  </tr>
+                ) : inclusions.map((inclusion, index) => (
+                  <tr key={inclusion.id} className="border-b hover:bg-gray-50">
+                    <td className="p-3">{index + 1}</td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        {getTypeIcon(inclusion.type)}
+                        <div>
+                          <p className="font-semibold">{inclusion.name}</p>
+                          <p className="text-sm text-muted-foreground truncate">{inclusion.description}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-3">
+                      <Badge className={getTypeColor(inclusion.type)}>
+                        {inclusion.type}
                       </Badge>
-                    )}
-                  </div>
-                </div>
-                <div className="flex space-x-1">
-                  <Button variant="ghost" size="sm" onClick={() => startEdit(inclusion)}>
-                    <Edit3 className="h-3 w-3" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => handleDelete(inclusion.id)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                {inclusion.description || 'No description available'}
-              </p>
-              
-              <div className="flex items-center justify-between">
-                <div className="text-lg font-semibold text-dubai-navy">
-                  AED {inclusion.cost.toFixed(2)}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {inclusion.isOptional ? 'Optional' : 'Required'}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-        
-        {!isLoading && inclusions.length === 0 && (
-          <div className="col-span-full text-center py-12 text-muted-foreground">
-            <Plane className="mx-auto h-12 w-12 mb-4 opacity-50" />
-            <p>No inclusions available. Add your first inclusion to get started.</p>
+                    </td>
+                    <td className="p-3">AED {inclusion.cost.toFixed(2)}</td>
+                    <td className="p-3">
+                      <Badge variant={inclusion.isOptional ? "secondary" : "destructive"}>
+                        {inclusion.isOptional ? 'Yes' : 'No'}
+                      </Badge>
+                    </td>
+                    <td className="p-3">
+                      <div className="flex space-x-2">
+                        <Button variant="ghost" size="sm" onClick={() => startEdit(inclusion)}>
+                          <Edit3 className="h-3 w-3" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleDelete(inclusion.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )}
-      </div>
+        </CardContent>
+      </Card>
+        
+      {!isLoading && inclusions.length === 0 && (
+        <Card className="dubai-card">
+          <CardContent className="text-center py-12">
+            <Plane className="mx-auto h-12 w-12 mb-4 opacity-50" />
+            <h3 className="text-lg font-semibold mb-2">No Inclusions Found</h3>
+            <p className="text-muted-foreground mb-4">
+              Start by adding your first inclusion.
+            </p>
+            <Button 
+              onClick={() => setIsCreating(true)} 
+              className="dubai-button-primary"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add First Inclusion
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

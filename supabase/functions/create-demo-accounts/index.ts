@@ -50,10 +50,11 @@ serve(async (req) => {
 
     for (const account of demoAccounts) {
       try {
-        // Check if user already exists
-        const { data: existingUser } = await supabaseAdmin.auth.admin.getUserByEmail(account.email);
+        // Check if user already exists by trying to find user with email
+        const { data: users } = await supabaseAdmin.auth.admin.listUsers();
         
-        if (existingUser.user) {
+        const existingUser = users.users?.find(user => user.email === account.email);
+        if (existingUser) {
           results.push({
             email: account.email,
             status: 'already_exists',
@@ -93,7 +94,7 @@ serve(async (req) => {
         results.push({
           email: account.email,
           status: 'error',
-          message: error.message
+          message: error instanceof Error ? error.message : 'Unknown error'
         });
       }
     }
@@ -116,7 +117,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message 
+        error: error instanceof Error ? error.message : 'Unknown error' 
       }),
       { 
         status: 500,

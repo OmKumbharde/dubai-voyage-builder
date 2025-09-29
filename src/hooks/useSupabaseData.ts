@@ -145,10 +145,19 @@ export interface Quote {
     totalCostUSD: number;
     exchangeRate: number;
   };
-  status: 'draft' | 'sent' | 'confirmed' | 'cancelled';
+  status: 'draft' | 'sent' | 'confirmed' | 'cancelled' | 'payment_received' | 'booking_in_process' | 'booking_completed';
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  // Additional properties for compatibility with database
+  reference_number?: string;
+  client_name?: string;
+  client_email?: string;
+  adults?: number;
+  infants?: number;
+  cnb?: number;
+  cwb?: number;
+  total_amount?: number;
 }
 
 // Adapters to convert database types to application types

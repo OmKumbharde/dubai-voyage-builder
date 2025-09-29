@@ -283,96 +283,102 @@ const ToursManagement = () => {
         </Card>
       )}
 
-      {/* Tours List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {isLoading ? (
-          <div className="col-span-full text-center py-8">Loading tours...</div>
-        ) : tours.map((tour) => (
-          <Card key={tour.id} className="dubai-card">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-lg">{tour.name}</CardTitle>
-                  <div className="flex items-center text-sm text-muted-foreground mt-1">
-                    <Clock className="h-3 w-3 mr-1" />
-                    {tour.duration}
-                  </div>
-                </div>
-                <div className="flex space-x-1">
-                  <Button variant="ghost" size="sm" onClick={() => startEdit(tour)}>
-                    <Edit3 className="h-3 w-3" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => deleteTour(tour.id)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                {tour.description || 'No description available'}
-              </p>
-              
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <DollarSign className="h-4 w-4 text-dubai-gold" />
-                  <span className="font-semibold">AED {tour.costPerPerson}</span>
-                  <span className="text-sm text-muted-foreground">per person</span>
-                </div>
-                <Badge variant={tour.type === 'private' ? 'default' : 'secondary'}>
-                  {tour.type === 'private' ? 'Private' : 'Sharing'}
-                </Badge>
-              </div>
-
-              {tour.type === 'private' && tour.privateTransferCost && tour.privateTransferCost > 0 && (
-                <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="flex items-center text-sm text-blue-800">
-                    <DollarSign className="h-3 w-3 mr-1" />
-                    <span className="font-medium">Private Transfer: AED {tour.privateTransferCost}</span>
-                  </div>
-                  <p className="text-xs text-blue-600 mt-1">
-                    (Split among all passengers)
-                  </p>
-                </div>
-              )}
-
-              {tour.transferIncluded && (
-                <Badge variant="outline" className="text-xs">
-                  Transfer Included
-                </Badge>
-              )}
-
-              {tour.highlights.length > 0 && (
-                <div className="mt-4">
-                  <h5 className="text-sm font-semibold mb-2">Highlights:</h5>
-                  <div className="space-y-1">
-                    {tour.highlights.slice(0, 3).map((highlight, index) => (
-                      <p key={index} className="text-xs text-muted-foreground">
-                        • {highlight}
-                      </p>
-                    ))}
-                    {tour.highlights.length > 3 && (
-                      <p className="text-xs text-muted-foreground">
-                        +{tour.highlights.length - 3} more highlights
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-        
-        {!isLoading && tours.length === 0 && (
-          <div className="col-span-full text-center py-8 text-muted-foreground">
-            No tours available. Add your first tour to get started.
+      {/* Search and Filter */}
+      <Card className="dubai-card">
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <Input
+              placeholder="Search tours..."
+              className="dubai-input flex-1"
+            />
+            <select className="dubai-input md:w-48">
+              <option value="">All Types</option>
+              <option value="group">Sharing Tours</option>
+              <option value="private">Private Tours</option>
+            </select>
           </div>
-        )}
-      </div>
+        </CardContent>
+      </Card>
+
+      {/* Tours List - Table View */}
+      <Card className="dubai-card">
+        <CardHeader>
+          <CardTitle>Tours List</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-3">Sr. No</th>
+                  <th className="text-left p-3">Tour Name</th>
+                  <th className="text-left p-3">Duration</th>
+                  <th className="text-left p-3">Type</th>
+                  <th className="text-left p-3">Cost Per Person</th>
+                  <th className="text-left p-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-8">Loading tours...</td>
+                  </tr>
+                ) : tours.map((tour, index) => (
+                  <tr key={tour.id} className="border-b hover:bg-gray-50">
+                    <td className="p-3">{index + 1}</td>
+                    <td className="p-3">
+                      <div>
+                        <p className="font-semibold">{tour.name}</p>
+                        <p className="text-sm text-muted-foreground truncate">{tour.description}</p>
+                      </div>
+                    </td>
+                    <td className="p-3">{tour.duration}</td>
+                    <td className="p-3">
+                      <Badge variant={tour.type === 'private' ? 'default' : 'secondary'}>
+                        {tour.type === 'private' ? 'Private' : 'Sharing'}
+                      </Badge>
+                    </td>
+                    <td className="p-3">AED {tour.costPerPerson}</td>
+                    <td className="p-3">
+                      <div className="flex space-x-2">
+                        <Button variant="ghost" size="sm" onClick={() => startEdit(tour)}>
+                          <Edit3 className="h-3 w-3" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => deleteTour(tour.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+        
+      {!isLoading && tours.length === 0 && (
+        <Card className="dubai-card">
+          <CardContent className="text-center py-8">
+            <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Tours Found</h3>
+            <p className="text-muted-foreground mb-4">
+              Start by adding your first tour package.
+            </p>
+            <Button 
+              onClick={() => setIsCreating(true)} 
+              className="dubai-button-primary"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add First Tour
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
