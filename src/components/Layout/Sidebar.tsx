@@ -65,6 +65,11 @@ const Sidebar = () => {
       name: 'Hotel Rates', 
       href: '/admin/hotel-rates', 
       icon: Calendar 
+    },
+    { 
+      name: 'Bank Accounts', 
+      href: '/admin/bank-accounts', 
+      icon: Users 
     }
   ];
 

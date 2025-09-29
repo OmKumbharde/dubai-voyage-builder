@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import jsPDF from 'jspdf';
 import { 
   FileText, 
@@ -28,13 +28,28 @@ import {
 import { useSupabaseData } from '../hooks/useSupabaseData';
 import { Quote } from '../hooks/useSupabaseData';
 import { toast } from '../hooks/use-toast';
+import { InvoiceGenerationDialog } from '../components/InvoiceGenerationDialog';
 
 const QuoteManagement = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { quotes, updateQuote, isLoading } = useSupabaseData();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [quoteForInvoice, setQuoteForInvoice] = useState<Quote | null>(null);
+
+  // Handle URL parameter for selected quote
+  useEffect(() => {
+    const selectedId = searchParams.get('selected');
+    if (selectedId && quotes.length > 0) {
+      const quote = quotes.find(q => q.id === selectedId);
+      if (quote) {
+        setSelectedQuote(quote);
+      }
+    }
+  }, [searchParams, quotes]);
 
   const filteredQuotes = quotes.filter(quote => {
     const matchesSearch = quote.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||

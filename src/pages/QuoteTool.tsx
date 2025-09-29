@@ -454,50 +454,49 @@ const QuoteTool = () => {
     let breakdownText = `${checkInFormatted} - ${checkOutFormatted}\n`;
     breakdownText += `${String(nights).padStart(2, '0')} Nights\n`;
     
-    // Pax text - showing adults and children
-    let paxText = `${adults}`;
-    if (cnb > 0) paxText += ` + ${cnb} (03 to 05 Years)`;
-    if (cwb > 0) paxText += ` + ${cwb} (06 to 17 Years)`;
+    // Pax text - show all possible cases
+    let paxText = `${adults} Adults`;
+    if (cwb > 0) paxText += ` + ${cwb} Child with Bed`;
+    if (cnb > 0) paxText += ` + ${cnb} Child without Bed`;
+    if (infants > 0) paxText += ` + ${infants} Infant`;
     breakdownText += `${paxText}\n\n`;
     
-    // Hotels - showing per room per night rates with extra bed if needed
+    // Hotels - showing rate per room per night
     hotelOptions.forEach((hotelOption: any) => {
       const hotelRateKey = `hotel_${hotelOption.hotel.id}`;
       const rate = editableRates[hotelRateKey] ?? hotelOption.hotel.baseRate;
-      const sellRate = Math.round(rate / quote.exchangeRate);
       
       const hasExtraBed = cwb > 0;
       if (hasExtraBed && hotelOption.hotel.extraBedRate) {
-        const extraBedRate = Math.round(hotelOption.hotel.extraBedRate / quote.exchangeRate);
-        breakdownText += `${hotelOption.hotel.name} - ${sellRate} sell | ${extraBedRate} EB\n`;
+        const extraBedRateKey = `hotel_${hotelOption.hotel.id}_extrabed`;
+        const extraBedRate = editableRates[extraBedRateKey] ?? hotelOption.hotel.extraBedRate;
+        breakdownText += `${hotelOption.hotel.name} - ${rate}/night | ${extraBedRate} EB/night\n`;
       } else {
-        breakdownText += `${hotelOption.hotel.name} - ${sellRate} sell\n`;
+        breakdownText += `${hotelOption.hotel.name} - ${rate}/night\n`;
       }
     });
     
     breakdownText += `\n`;
     
-    // Tours - showing per person rates
+    // Tours - showing per person price from actual selected rates
     let toursAndInclusionsTotal = 0;
     selectedTours.forEach((tour: any) => {
       const rateKey = `tour_${tour.id}`;
       const perPersonRate = editableRates[rateKey] ?? tour.costPerPerson;
-      const perPersonUSD = Math.round(perPersonRate / quote.exchangeRate);
-      breakdownText += `${tour.name} - ${perPersonUSD}\n`;
-      toursAndInclusionsTotal += perPersonUSD;
+      breakdownText += `${tour.name} - ${perPersonRate}\n`;
+      toursAndInclusionsTotal += perPersonRate;
     });
     
-    // Inclusions - showing per person rates  
+    // Inclusions - showing per person price from actual selected rates
     selectedInclusions.forEach((inclusion: any) => {
       const rateKey = `inclusion_${inclusion.id}`;
       const perPersonRate = editableRates[rateKey] ?? inclusion.cost;
-      const perPersonUSD = Math.round(perPersonRate / quote.exchangeRate);
-      breakdownText += `${inclusion.name} - ${perPersonUSD}\n`;
-      toursAndInclusionsTotal += perPersonUSD;
+      breakdownText += `${inclusion.name} - ${perPersonRate}\n`;
+      toursAndInclusionsTotal += perPersonRate;
     });
     
     // Total per person for tours and inclusions
-    breakdownText += `Total - ${toursAndInclusionsTotal}\n`;
+    breakdownText += `Total - ${toursAndInclusionsTotal} | per person\n`;
     
     return breakdownText;
   };

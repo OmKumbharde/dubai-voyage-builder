@@ -19,7 +19,7 @@ const Dashboard = () => {
   const { hotels, tours, quotes, isLoading } = useSupabaseData();
   const navigate = useNavigate();
 
-  const totalRevenue = quotes.reduce((sum, quote) => sum + (quote.total_amount || 0), 0);
+  const totalRevenue = quotes.reduce((sum, quote) => sum + (quote.calculations?.totalCostAED || quote.total_amount || 0), 0);
   const confirmedQuotes = quotes.filter(q => q.status === 'confirmed');
   const conversionRate = quotes.length > 0 ? ((confirmedQuotes.length / quotes.length) * 100).toFixed(1) : '0';
 
@@ -173,16 +173,16 @@ const Dashboard = () => {
                 <div 
                   key={quote.id} 
                   className="flex items-center justify-between p-3 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
-                  onClick={() => navigate(`/quote-management?selected=${quote.id}`)}
+                  onClick={() => navigate(`/quotes?selected=${quote.id}`)}
                 >
                   <div>
-                    <h4 className="font-semibold">Quote #{quote.reference_number}</h4>
+                    <h4 className="font-semibold">Quote #{quote.ticketReference}</h4>
                     <p className="text-sm text-muted-foreground">
-                      {quote.client_name} • {quote.adults} adults
+                      {quote.customerName} • {quote.paxDetails?.adults || quote.adults} adults
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-dubai-navy">AED {quote.total_amount?.toLocaleString()}</p>
+                    <p className="font-semibold text-dubai-navy">AED {quote.calculations?.totalCostAED?.toLocaleString() || quote.total_amount?.toLocaleString()}</p>
                     <p className={`text-xs capitalize ${
                       quote.status === 'confirmed' ? 'text-green-600' : 
                       quote.status === 'draft' ? 'text-yellow-600' : 'text-blue-600'

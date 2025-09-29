@@ -140,6 +140,7 @@ export interface Quote {
   };
   selectedHotel: Hotel | null;
   selectedTours: Tour[];
+  selectedInclusions: Inclusion[];
   calculations: {
     totalCostAED: number;
     totalCostUSD: number;
@@ -216,6 +217,7 @@ const adaptDbQuoteToQuote = (dbQuote: DbQuote): Quote => ({
   },
   selectedHotel: null, // Will be populated separately if needed
   selectedTours: [], // Will be populated separately if needed
+  selectedInclusions: [], // Will be populated separately if needed
   calculations: {
     totalCostAED: Number(dbQuote.total_amount),
     totalCostUSD: Number(dbQuote.total_amount) / 3.67, // Approximate AED to USD conversion
@@ -232,6 +234,7 @@ export const useSupabaseData = () => {
   const [tours, setTours] = useState<Tour[]>([]);
   const [inclusions, setInclusions] = useState<Inclusion[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
 
@@ -241,17 +244,19 @@ export const useSupabaseData = () => {
     
     setIsLoading(true);
     try {
-      const [hotelsRes, toursRes, inclusionsRes, quotesRes] = await Promise.all([
+      const [hotelsRes, toursRes, inclusionsRes, quotesRes, bankAccountsRes] = await Promise.all([
         supabase.from('hotels').select('*').order('name'),
         supabase.from('tours').select('*').order('name'),
         supabase.from('inclusions').select('*').order('name'),
-        supabase.from('quotes').select('*').order('created_at', { ascending: false })
+        supabase.from('quotes').select('*').order('created_at', { ascending: false }),
+        supabase.from('bank_accounts').select('*').order('branch_country')
       ]);
 
       if (hotelsRes.error) throw hotelsRes.error;
       if (toursRes.error) throw toursRes.error;
       if (inclusionsRes.error) throw inclusionsRes.error;
       if (quotesRes.error) throw quotesRes.error;
+      if (bankAccountsRes.error) throw bankAccountsRes.error;
 
       // Adapt the data
       const adaptedHotels = (hotelsRes.data || []).map(hotel => adaptDbHotelToHotel(hotel));
@@ -263,6 +268,7 @@ export const useSupabaseData = () => {
       setTours(adaptedTours);
       setInclusions(adaptedInclusions);
       setQuotes(adaptedQuotes);
+      setBankAccounts(bankAccountsRes.data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -732,6 +738,7 @@ export const useSupabaseData = () => {
     tours,
     inclusions,
     quotes,
+    bankAccounts,
     isLoading,
     addHotel,
     updateHotel,

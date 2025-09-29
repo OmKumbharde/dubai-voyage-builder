@@ -16,6 +16,7 @@ import HotelsManagement from "./pages/admin/HotelsManagement";
 import ToursManagement from "./pages/admin/ToursManagement";
 import InclusionsManagement from "./pages/admin/InclusionsManagement";
 import HotelRatesManagement from "./pages/admin/HotelRatesManagement";
+import BankAccountsManagement from "./pages/admin/BankAccountsManagement";
 import QuoteManagement from "./pages/QuoteManagement";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -47,6 +48,7 @@ const App = () => (
                 <Route path="admin/tours" element={<ToursManagement />} />
                 <Route path="admin/inclusions" element={<InclusionsManagement />} />
                 <Route path="admin/hotel-rates" element={<HotelRatesManagement />} />
+                <Route path="admin/bank-accounts" element={<BankAccountsManagement />} />
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
