@@ -561,10 +561,13 @@ const QuoteManagement = () => {
                           <Button 
                             size="sm" 
                             variant="outline"
-                            onClick={() => generateItinerary(quote)}
+                            onClick={() => {
+                              const shareUrl = `${window.location.origin}/shared-itinerary/${quote.id}`;
+                              window.open(shareUrl, '_blank');
+                            }}
                             className="text-xs"
                           >
-                            <Send className="mr-2 h-3 w-3" />
+                            <Calendar className="mr-2 h-3 w-3" />
                             Itinerary
                           </Button>
                         </div>

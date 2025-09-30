@@ -23,20 +23,13 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
 }) => {
   const { bankAccounts } = useSupabaseData();
   const [selectedBranch, setSelectedBranch] = useState('');
-  const [selectedHotelOption, setSelectedHotelOption] = useState('');
+  const [selectedHotelOption, setSelectedHotelOption] = useState<string>('');
+  const [leadPaxName, setLeadPaxName] = useState('');
   
-  // Occupancy distribution: track how many PAX in each occupancy type
-  const [occupancyDistribution, setOccupancyDistribution] = useState<{
-    single: { adults: number; cwb: number; cnb: number; infants: number };
-    double: { adults: number; cwb: number; cnb: number; infants: number };
-    triple: { adults: number; cwb: number; cnb: number; infants: number };
-  }>({
-    single: { adults: 0, cwb: 0, cnb: 0, infants: 0 },
-    double: { adults: 0, cwb: 0, cnb: 0, infants: 0 },
-    triple: { adults: 0, cwb: 0, cnb: 0, infants: 0 }
-  });
-  
-  const [guestNames, setGuestNames] = useState<string[]>(['']);
+  // PAX distribution by occupancy
+  const [singlePax, setSinglePax] = useState({ adults: 0, cwb: 0, cnb: 0 });
+  const [doublePax, setDoublePax] = useState({ adults: 0, cwb: 0, cnb: 0 });
+  const [triplePax, setTriplePax] = useState({ adults: 0, cwb: 0, cnb: 0 });
 
   const branches = ['Ghana', 'Nigeria', 'Kenya', 'Dubai'];
   
@@ -44,40 +37,40 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
     account.branch_country.toLowerCase() === selectedBranch.toLowerCase()
   );
 
-  const handleAddGuestName = () => {
-    setGuestNames([...guestNames, '']);
-  };
-
-  const handleRemoveGuestName = (index: number) => {
-    setGuestNames(guestNames.filter((_, i) => i !== index));
-  };
-
-  const handleGuestNameChange = (index: number, value: string) => {
-    const newNames = [...guestNames];
-    newNames[index] = value;
-    setGuestNames(newNames);
-  };
+  // Get available hotel options from quote
+  const quoteAny = quote as any;
+  const hotelOptions = quoteAny.hotelOptions || [];
 
   const generateInvoicePDF = () => {
-    if (!selectedBranch || !selectedHotelOption) {
+    if (!selectedBranch || !selectedHotelOption || !leadPaxName.trim()) {
       toast({
         title: "Missing Information",
-        description: "Please select branch and hotel option",
+        description: "Please fill in all required fields: branch, hotel option, and lead passenger name",
         variant: "destructive"
       });
       return;
     }
     
-    // Calculate total PAX from all occupancy types
-    const totalPax = 
-      Object.values(occupancyDistribution.single).reduce((a, b) => a + b, 0) +
-      Object.values(occupancyDistribution.double).reduce((a, b) => a + b, 0) +
-      Object.values(occupancyDistribution.triple).reduce((a, b) => a + b, 0);
+    // Calculate total PAX from distribution
+    const totalDistributed = 
+      singlePax.adults + singlePax.cwb + singlePax.cnb +
+      doublePax.adults + doublePax.cwb + doublePax.cnb +
+      triplePax.adults + triplePax.cwb + triplePax.cnb;
     
-    if (totalPax === 0) {
+    if (totalDistributed === 0) {
       toast({
         title: "Missing Information",
         description: "Please specify PAX distribution across occupancy types",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const selectedOption = hotelOptions.find((opt: any) => opt.hotel.id === selectedHotelOption);
+    if (!selectedOption) {
+      toast({
+        title: "Error",
+        description: "Selected hotel option not found",
         variant: "destructive"
       });
       return;
@@ -87,179 +80,260 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
     const pageWidth = pdf.internal.pageSize.width;
     const pageHeight = pdf.internal.pageSize.height;
 
-    // Header
-    pdf.setFontSize(20);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('SALES INVOICE', pageWidth / 2, 30, { align: 'center' });
-
-    // Company and Invoice Details
-    pdf.setFontSize(12);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text('Company: Q1 Travel Tours', 20, 50);
+    // Header - Professional styling
+    pdf.setFillColor(0, 51, 102); // Dark blue header
+    pdf.rect(0, 0, pageWidth, 40, 'F');
     
-    // Generate invoice number: date + reference number
+    pdf.setFontSize(24);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(255, 255, 255);
+    pdf.text('SALES INVOICE', pageWidth / 2, 20, { align: 'center' });
+    
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Q1 Travel Tours - Premium Travel Services', pageWidth / 2, 30, { align: 'center' });
+
+    // Reset text color for body
+    pdf.setTextColor(0, 0, 0);
+
+    // Company and Invoice Details in two columns
+    let yPos = 55;
+    
+    // Left column - Company details
+    pdf.setFontSize(11);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('FROM:', 20, yPos);
+    
+    yPos += 7;
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Q1 Travel Tours', 20, yPos);
+    yPos += 5;
+    pdf.text(`Branch: ${selectedBranch}`, 20, yPos);
+    yPos += 5;
+    pdf.text('Email: info@q1travel.com', 20, yPos);
+    yPos += 5;
+    pdf.text('Phone: +971 4 XXX XXXX', 20, yPos);
+
+    // Right column - Invoice details
+    yPos = 55;
+    const rightCol = pageWidth - 80;
+    
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('INVOICE DETAILS:', rightCol, yPos);
+    
+    yPos += 7;
+    pdf.setFont('helvetica', 'normal');
+    
+    // Generate invoice number: date + reference
     const today = new Date();
     const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
-    const invoiceNo = `${dateStr}${quote.ticketReference.replace(/\D/g, '')}`;
+    const invoiceNo = `${dateStr}-${quote.ticketReference}`;
     
-    pdf.text(`Invoice No.: ${invoiceNo}`, 20, 65);
-    pdf.text(`Address: ${selectedBranch}`, 20, 80);
-    pdf.text(`Invoice Date: ${today.toLocaleDateString('en-GB')}`, 20, 95);
-    pdf.text(`Guest Name: ${guestNames.filter(name => name.trim()).join(', ')}`, 20, 110);
-    pdf.text(`Reference No: TKT ${quote.ticketReference}`, 20, 125);
+    pdf.text(`Invoice No.: ${invoiceNo}`, rightCol, yPos);
+    yPos += 5;
+    pdf.text(`Date: ${today.toLocaleDateString('en-GB')}`, rightCol, yPos);
+    yPos += 5;
+    pdf.text(`Reference: TKT ${quote.ticketReference}`, rightCol, yPos);
 
-    // Table header
-    let yPos = 150;
+    // Horizontal line separator
+    yPos = 100;
+    pdf.setDrawColor(200, 200, 200);
+    pdf.setLineWidth(0.5);
+    pdf.line(20, yPos, pageWidth - 20, yPos);
+
+    // Bill To section
+    yPos += 10;
+    pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Sr. No.', 20, yPos);
-    pdf.text('Services', 50, yPos);
-    pdf.text('Travel Date', 120, yPos);
-    pdf.text('PAX', 150, yPos);
-    pdf.text('Cost', 165, yPos);
-    pdf.text('Amount', 185, yPos);
-
-    // Table content
+    pdf.text('BILL TO:', 20, yPos);
+    
+    yPos += 7;
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Guest Name: ${leadPaxName}`, 20, yPos);
+    yPos += 5;
+    
+    const travelDatesFrom = (quote as any).travel_dates_from || quote.travelDates.startDate;
+    const travelDatesTo = (quote as any).travel_dates_to || quote.travelDates.endDate;
+    pdf.text(`Travel Period: ${new Date(travelDatesFrom).toLocaleDateString('en-GB')} - ${new Date(travelDatesTo).toLocaleDateString('en-GB')}`, 20, yPos);
+    
+    // Services table
     yPos += 15;
+    pdf.setFontSize(11);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('SERVICES', 20, yPos);
+
+    yPos += 8;
+    
+    // Table headers
+    pdf.setFillColor(240, 240, 240);
+    pdf.rect(20, yPos - 5, pageWidth - 40, 8, 'F');
+    
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Sr.', 22, yPos);
+    pdf.text('Description', 35, yPos);
+    pdf.text('Dates', 110, yPos);
+    pdf.text('PAX', 140, yPos);
+    pdf.text('Rate', 155, yPos);
+    pdf.text('Amount (USD)', 175, yPos);
+
+    yPos += 10;
     pdf.setFont('helvetica', 'normal');
     
-    const travelDates = `${new Date(quote.travelDates.startDate).toLocaleDateString('en-GB')} - ${new Date(quote.travelDates.endDate).toLocaleDateString('en-GB')}`;
-    
+    const nights = Math.ceil((new Date(travelDatesTo).getTime() - new Date(travelDatesFrom).getTime()) / (1000 * 60 * 60 * 24));
     let srNo = 1;
-    
-    // Add hotel services for each occupancy type that has PAX
-    const occupancyTypes: Array<'single' | 'double' | 'triple'> = ['single', 'double', 'triple'];
-    
-    occupancyTypes.forEach(occType => {
-      const occData = occupancyDistribution[occType];
-      const occPax = occData.adults + occData.cwb + occData.cnb;
-      
-      if (occPax > 0) {
-        pdf.text(`${srNo}.`, 20, yPos);
-        
-        const occTypeName = occType.charAt(0).toUpperCase() + occType.slice(1);
-        const hotelText = `${quote.selectedHotel?.name || 'Hotel'} (${occTypeName} Occupancy)`;
-        const maxWidth = 65;
-        const splitHotelText = pdf.splitTextToSize(hotelText, maxWidth);
-        pdf.text(splitHotelText, 50, yPos);
-        
-        pdf.text(travelDates, 120, yPos);
-        pdf.text(occPax.toString().padStart(2, '0'), 150, yPos);
-        
-        // Calculate cost for this occupancy type
-        const nights = Math.ceil((new Date(quote.travelDates.endDate).getTime() - new Date(quote.travelDates.startDate).getTime()) / (1000 * 60 * 60 * 24));
-        const baseRate = quote.selectedHotel?.baseRate || 0;
-        let occCost = 0;
-        
-        if (occType === 'single') {
-          occCost = occData.adults * baseRate * nights;
-        } else if (occType === 'double') {
-          const rooms = Math.ceil(occData.adults / 2);
-          occCost = rooms * baseRate * nights;
-        } else if (occType === 'triple') {
-          const rooms = Math.ceil(occData.adults / 3);
-          occCost = rooms * baseRate * nights;
+    let totalAmount = 0;
+
+    // Hotel accommodation by occupancy type
+    const occupancies = [
+      { type: 'Single', pax: singlePax, multiplier: 1 },
+      { type: 'Double', pax: doublePax, multiplier: 0.5 },
+      { type: 'Triple', pax: triplePax, multiplier: 0.333 }
+    ];
+
+    occupancies.forEach(({ type, pax, multiplier }) => {
+      if (pax.adults > 0) {
+        if (yPos > 250) {
+          pdf.addPage();
+          yPos = 30;
         }
+
+        pdf.text(String(srNo), 22, yPos);
         
-        // Add extra bed costs
-        occCost += (occData.cwb * (quote.selectedHotel?.extraBedRate || 100) * nights);
+        const serviceDesc = `${selectedOption.hotel.name} (${type} Occupancy)`;
+        const splitDesc = pdf.splitTextToSize(serviceDesc, 70);
+        pdf.text(splitDesc, 35, yPos);
         
-        pdf.text(`USD ${occCost.toFixed(2)}`, 165, yPos);
-        pdf.text(`USD ${occCost.toFixed(2)}`, 185, yPos);
+        const travelDates = `${new Date(travelDatesFrom).toLocaleDateString('en-GB')} - ${new Date(travelDatesTo).toLocaleDateString('en-GB')}`;
+        pdf.text(travelDates, 110, yPos);
         
+        pdf.text(String(pax.adults).padStart(2, '0'), 140, yPos);
+        
+        // Calculate cost
+        const rooms = Math.ceil(pax.adults * multiplier);
+        const hotelRate = selectedOption.hotel.baseRate || 0;
+        const extraBedRate = selectedOption.hotel.extraBedRate || 100;
+        let lineCost = (rooms * hotelRate + pax.cwb * extraBedRate) * nights;
+        
+        // Convert to USD
+        lineCost = lineCost / 3.67;
+        
+        pdf.text(`$${lineCost.toFixed(2)}`, 155, yPos);
+        pdf.text(`$${lineCost.toFixed(2)}`, 175, yPos);
+        
+        totalAmount += lineCost;
         yPos += 10;
         srNo++;
       }
     });
 
-    // Calculate total cost from all occupancy types
-    let totalCost = 0;
-    const nights = Math.ceil((new Date(quote.travelDates.endDate).getTime() - new Date(quote.travelDates.startDate).getTime()) / (1000 * 60 * 60 * 24));
-    const baseRate = quote.selectedHotel?.baseRate || 0;
-    
-    occupancyTypes.forEach(occType => {
-      const occData = occupancyDistribution[occType];
-      const occPax = occData.adults + occData.cwb + occData.cnb;
-      
-      if (occPax > 0) {
-        let occCost = 0;
-        if (occType === 'single') {
-          occCost = occData.adults * baseRate * nights;
-        } else if (occType === 'double') {
-          const rooms = Math.ceil(occData.adults / 2);
-          occCost = rooms * baseRate * nights;
-        } else if (occType === 'triple') {
-          const rooms = Math.ceil(occData.adults / 3);
-          occCost = rooms * baseRate * nights;
+    // Tours and inclusions
+    if (quote.selectedTours && quote.selectedTours.length > 0) {
+      quote.selectedTours.forEach((tour) => {
+        if (yPos > 250) {
+          pdf.addPage();
+          yPos = 30;
         }
-        occCost += (occData.cwb * (quote.selectedHotel?.extraBedRate || 100) * nights);
-        totalCost += occCost;
-      }
-    });
 
-    // Inclusions section
-    yPos += 15;
+        pdf.text(String(srNo), 22, yPos);
+        pdf.text(`Tour: ${tour.name}`, 35, yPos);
+        pdf.text('-', 110, yPos);
+        pdf.text(String(totalDistributed).padStart(2, '0'), 140, yPos);
+        
+        const tourCost = (tour.costPerPerson * totalDistributed) / 3.67;
+        pdf.text(`$${(tour.costPerPerson / 3.67).toFixed(2)}`, 155, yPos);
+        pdf.text(`$${tourCost.toFixed(2)}`, 175, yPos);
+        
+        totalAmount += tourCost;
+        yPos += 8;
+        srNo++;
+      });
+    }
+
+    // Inclusions
+    yPos += 5;
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Inclusions', 20, yPos);
-    
-    yPos += 10;
+    pdf.text('Inclusions:', 22, yPos);
+    yPos += 7;
     pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8);
     
-    // List inclusions
-    const inclusions = [
+    const inclusionsList = [
       'Daily Breakfast',
-      ...quote.selectedTours.map(tour => tour.name),
-      ...quote.selectedInclusions.map(inclusion => inclusion.name),
+      ...quote.selectedTours.map(t => t.name),
+      ...(quote.selectedInclusions?.map(i => i.name) || []),
+      'All transfers on SIC basis',
       'All taxes except Tourism Dirham'
     ];
 
-    inclusions.forEach(inclusion => {
-      pdf.text(inclusion, 20, yPos);
-      pdf.text('-', 120, yPos);
-      pdf.text('-', 150, yPos);
-      pdf.text('-', 165, yPos);
-      pdf.text('-', 185, yPos);
-      yPos += 10;
+    inclusionsList.forEach(inc => {
+      if (yPos > 260) {
+        pdf.addPage();
+        yPos = 30;
+      }
+      pdf.text(`• ${inc}`, 25, yPos);
+      yPos += 5;
     });
 
     // Total
     yPos += 10;
+    pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Total', 20, yPos);
-    pdf.text(`USD ${totalCost}`, 165, yPos);
+    pdf.setFillColor(240, 240, 240);
+    pdf.rect(20, yPos - 7, pageWidth - 40, 10, 'F');
+    pdf.text('TOTAL AMOUNT:', 110, yPos);
+    pdf.text(`USD $${totalAmount.toFixed(2)}`, 175, yPos);
 
     // Bank Details
     if (selectedBankAccount) {
-      yPos += 30;
-      pdf.setFontSize(10);
+      yPos += 20;
+      if (yPos > 220) {
+        pdf.addPage();
+        yPos = 30;
+      }
+
+      pdf.setFontSize(11);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Bank Details:', 20, yPos);
+      pdf.text('BANK DETAILS FOR PAYMENT:', 20, yPos);
       
-      yPos += 10;
+      yPos += 8;
+      pdf.setFontSize(9);
       pdf.setFont('helvetica', 'normal');
       pdf.text(`Bank Name: ${selectedBankAccount.bank_name}`, 20, yPos);
-      pdf.text(`Account Name: ${selectedBankAccount.account_name}`, 20, yPos + 10);
-      pdf.text(`Account Number: ${selectedBankAccount.account_number}`, 20, yPos + 20);
+      yPos += 5;
+      pdf.text(`Account Name: ${selectedBankAccount.account_name}`, 20, yPos);
+      yPos += 5;
+      pdf.text(`Account Number: ${selectedBankAccount.account_number}`, 20, yPos);
+      yPos += 5;
       if (selectedBankAccount.swift_code) {
-        pdf.text(`SWIFT Code: ${selectedBankAccount.swift_code}`, 20, yPos + 30);
+        pdf.text(`SWIFT Code: ${selectedBankAccount.swift_code}`, 20, yPos);
+        yPos += 5;
       }
       if (selectedBankAccount.iban) {
-        pdf.text(`IBAN: ${selectedBankAccount.iban}`, 20, yPos + 40);
+        pdf.text(`IBAN: ${selectedBankAccount.iban}`, 20, yPos);
+        yPos += 5;
       }
+      pdf.text(`Currency: ${selectedBankAccount.currency}`, 20, yPos);
     }
 
-    // Declaration
-    const declarationY = pageHeight - 40;
-    pdf.setFontSize(10);
+    // Declaration at bottom
+    const declarationY = pageHeight - 35;
+    pdf.setFontSize(9);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Declaration', 20, declarationY);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text('We declare that this invoice shows the actual price of the Services described', 20, declarationY + 10);
-    pdf.text('and that all Particulars are true and correct', 20, declarationY + 20);
+    pdf.text('DECLARATION', 20, declarationY);
+    pdf.setFont('helvetica', 'italic');
+    pdf.text('We declare that this invoice shows the actual price of the services described', 20, declarationY + 5);
+    pdf.text('and that all particulars are true and correct.', 20, declarationY + 10);
     
-    pdf.text('U.A.E.', pageWidth - 30, declarationY + 30);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Authorized Signature: ________________', 20, declarationY + 20);
+    pdf.text(`Place: ${selectedBranch}`, pageWidth - 60, declarationY + 20);
 
     // Save the PDF
-    const fileName = `Invoice_TKT_${quote.ticketReference}_${invoiceNo}.pdf`;
+    const fileName = `Invoice_${quote.ticketReference}_${invoiceNo}.pdf`;
     pdf.save(fileName);
 
     toast({
@@ -270,9 +344,14 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
     onClose();
   };
 
+  // Calculate max values from quote
+  const totalAdults = quote.paxDetails.adults;
+  const totalCwb = quote.paxDetails.cwb;
+  const totalCnb = quote.paxDetails.cnb;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Generate Invoice - Quote #{quote.ticketReference}</DialogTitle>
         </DialogHeader>
@@ -301,78 +380,78 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
                 <SelectValue placeholder="Choose hotel option" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="option1">{quote.selectedHotel?.name || 'Selected Hotel'}</SelectItem>
+                {hotelOptions.length > 0 ? (
+                  hotelOptions.map((option: any) => (
+                    <SelectItem key={option.hotel.id} value={option.hotel.id}>
+                      {option.hotel.name}
+                    </SelectItem>
+                  ))
+                ) : quote.selectedHotel ? (
+                  <SelectItem value={quote.selectedHotel.id}>
+                    {quote.selectedHotel.name}
+                  </SelectItem>
+                ) : (
+                  <SelectItem value="none" disabled>No hotel selected in quote</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Occupancy Distribution */}
+          {/* Lead Passenger Name */}
+          <div className="space-y-2">
+            <Label htmlFor="leadPax">Lead Passenger Name *</Label>
+            <Input
+              id="leadPax"
+              value={leadPaxName}
+              onChange={(e) => setLeadPaxName(e.target.value)}
+              placeholder="Enter lead passenger full name"
+            />
+          </div>
+
+          {/* PAX Distribution */}
           <Card>
-            <CardContent className="pt-4 space-y-6">
+            <CardContent className="pt-4 space-y-4">
               <div>
-                <Label className="text-sm font-medium mb-4 block">PAX Distribution by Occupancy Type</Label>
+                <Label className="text-sm font-medium mb-2 block">PAX Distribution by Occupancy Type</Label>
                 <p className="text-xs text-muted-foreground mb-4">
-                  Distribute your {quote.paxDetails?.adults || 0} adults across occupancy types
+                  Total: {totalAdults} Adults, {totalCwb} CWB, {totalCnb} CNB
                 </p>
               </div>
               
               {/* Single Occupancy */}
-              <div className="border rounded-lg p-4 space-y-3">
-                <Label className="font-semibold">Single Occupancy</Label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="border rounded-lg p-3 space-y-2">
+                <Label className="font-semibold text-sm">Single Occupancy</Label>
+                <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <Label htmlFor="single-adults" className="text-xs">Adults</Label>
+                    <Label className="text-xs">Adults</Label>
                     <Input
-                      id="single-adults"
                       type="number"
                       min="0"
-                      value={occupancyDistribution.single.adults}
-                      onChange={(e) => setOccupancyDistribution(prev => ({
-                        ...prev,
-                        single: { ...prev.single, adults: parseInt(e.target.value) || 0 }
-                      }))}
+                      max={totalAdults}
+                      value={singlePax.adults}
+                      onChange={(e) => setSinglePax(prev => ({ ...prev, adults: parseInt(e.target.value) || 0 }))}
                       className="h-8"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="single-cwb" className="text-xs">CWB</Label>
+                    <Label className="text-xs">CWB</Label>
                     <Input
-                      id="single-cwb"
                       type="number"
                       min="0"
-                      value={occupancyDistribution.single.cwb}
-                      onChange={(e) => setOccupancyDistribution(prev => ({
-                        ...prev,
-                        single: { ...prev.single, cwb: parseInt(e.target.value) || 0 }
-                      }))}
+                      max={totalCwb}
+                      value={singlePax.cwb}
+                      onChange={(e) => setSinglePax(prev => ({ ...prev, cwb: parseInt(e.target.value) || 0 }))}
                       className="h-8"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="single-cnb" className="text-xs">CNB</Label>
+                    <Label className="text-xs">CNB</Label>
                     <Input
-                      id="single-cnb"
                       type="number"
                       min="0"
-                      value={occupancyDistribution.single.cnb}
-                      onChange={(e) => setOccupancyDistribution(prev => ({
-                        ...prev,
-                        single: { ...prev.single, cnb: parseInt(e.target.value) || 0 }
-                      }))}
-                      className="h-8"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="single-infants" className="text-xs">Infants</Label>
-                    <Input
-                      id="single-infants"
-                      type="number"
-                      min="0"
-                      value={occupancyDistribution.single.infants}
-                      onChange={(e) => setOccupancyDistribution(prev => ({
-                        ...prev,
-                        single: { ...prev.single, infants: parseInt(e.target.value) || 0 }
-                      }))}
+                      max={totalCnb}
+                      value={singlePax.cnb}
+                      onChange={(e) => setSinglePax(prev => ({ ...prev, cnb: parseInt(e.target.value) || 0 }))}
                       className="h-8"
                     />
                   </div>
@@ -380,62 +459,39 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
               </div>
               
               {/* Double Occupancy */}
-              <div className="border rounded-lg p-4 space-y-3">
-                <Label className="font-semibold">Double Occupancy</Label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="border rounded-lg p-3 space-y-2">
+                <Label className="font-semibold text-sm">Double Occupancy</Label>
+                <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <Label htmlFor="double-adults" className="text-xs">Adults</Label>
+                    <Label className="text-xs">Adults</Label>
                     <Input
-                      id="double-adults"
                       type="number"
                       min="0"
-                      value={occupancyDistribution.double.adults}
-                      onChange={(e) => setOccupancyDistribution(prev => ({
-                        ...prev,
-                        double: { ...prev.double, adults: parseInt(e.target.value) || 0 }
-                      }))}
+                      max={totalAdults}
+                      value={doublePax.adults}
+                      onChange={(e) => setDoublePax(prev => ({ ...prev, adults: parseInt(e.target.value) || 0 }))}
                       className="h-8"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="double-cwb" className="text-xs">CWB</Label>
+                    <Label className="text-xs">CWB</Label>
                     <Input
-                      id="double-cwb"
                       type="number"
                       min="0"
-                      value={occupancyDistribution.double.cwb}
-                      onChange={(e) => setOccupancyDistribution(prev => ({
-                        ...prev,
-                        double: { ...prev.double, cwb: parseInt(e.target.value) || 0 }
-                      }))}
+                      max={totalCwb}
+                      value={doublePax.cwb}
+                      onChange={(e) => setDoublePax(prev => ({ ...prev, cwb: parseInt(e.target.value) || 0 }))}
                       className="h-8"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="double-cnb" className="text-xs">CNB</Label>
+                    <Label className="text-xs">CNB</Label>
                     <Input
-                      id="double-cnb"
                       type="number"
                       min="0"
-                      value={occupancyDistribution.double.cnb}
-                      onChange={(e) => setOccupancyDistribution(prev => ({
-                        ...prev,
-                        double: { ...prev.double, cnb: parseInt(e.target.value) || 0 }
-                      }))}
-                      className="h-8"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="double-infants" className="text-xs">Infants</Label>
-                    <Input
-                      id="double-infants"
-                      type="number"
-                      min="0"
-                      value={occupancyDistribution.double.infants}
-                      onChange={(e) => setOccupancyDistribution(prev => ({
-                        ...prev,
-                        double: { ...prev.double, infants: parseInt(e.target.value) || 0 }
-                      }))}
+                      max={totalCnb}
+                      value={doublePax.cnb}
+                      onChange={(e) => setDoublePax(prev => ({ ...prev, cnb: parseInt(e.target.value) || 0 }))}
                       className="h-8"
                     />
                   </div>
@@ -443,62 +499,39 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
               </div>
               
               {/* Triple Occupancy */}
-              <div className="border rounded-lg p-4 space-y-3">
-                <Label className="font-semibold">Triple Occupancy</Label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="border rounded-lg p-3 space-y-2">
+                <Label className="font-semibold text-sm">Triple Occupancy</Label>
+                <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <Label htmlFor="triple-adults" className="text-xs">Adults</Label>
+                    <Label className="text-xs">Adults</Label>
                     <Input
-                      id="triple-adults"
                       type="number"
                       min="0"
-                      value={occupancyDistribution.triple.adults}
-                      onChange={(e) => setOccupancyDistribution(prev => ({
-                        ...prev,
-                        triple: { ...prev.triple, adults: parseInt(e.target.value) || 0 }
-                      }))}
+                      max={totalAdults}
+                      value={triplePax.adults}
+                      onChange={(e) => setTriplePax(prev => ({ ...prev, adults: parseInt(e.target.value) || 0 }))}
                       className="h-8"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="triple-cwb" className="text-xs">CWB</Label>
+                    <Label className="text-xs">CWB</Label>
                     <Input
-                      id="triple-cwb"
                       type="number"
                       min="0"
-                      value={occupancyDistribution.triple.cwb}
-                      onChange={(e) => setOccupancyDistribution(prev => ({
-                        ...prev,
-                        triple: { ...prev.triple, cwb: parseInt(e.target.value) || 0 }
-                      }))}
+                      max={totalCwb}
+                      value={triplePax.cwb}
+                      onChange={(e) => setTriplePax(prev => ({ ...prev, cwb: parseInt(e.target.value) || 0 }))}
                       className="h-8"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="triple-cnb" className="text-xs">CNB</Label>
+                    <Label className="text-xs">CNB</Label>
                     <Input
-                      id="triple-cnb"
                       type="number"
                       min="0"
-                      value={occupancyDistribution.triple.cnb}
-                      onChange={(e) => setOccupancyDistribution(prev => ({
-                        ...prev,
-                        triple: { ...prev.triple, cnb: parseInt(e.target.value) || 0 }
-                      }))}
-                      className="h-8"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="triple-infants" className="text-xs">Infants</Label>
-                    <Input
-                      id="triple-infants"
-                      type="number"
-                      min="0"
-                      value={occupancyDistribution.triple.infants}
-                      onChange={(e) => setOccupancyDistribution(prev => ({
-                        ...prev,
-                        triple: { ...prev.triple, infants: parseInt(e.target.value) || 0 }
-                      }))}
+                      max={totalCnb}
+                      value={triplePax.cnb}
+                      onChange={(e) => setTriplePax(prev => ({ ...prev, cnb: parseInt(e.target.value) || 0 }))}
                       className="h-8"
                     />
                   </div>
@@ -507,43 +540,11 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
             </CardContent>
           </Card>
 
-          {/* Guest Names */}
-          <div className="space-y-2">
-            <Label>Guest Names</Label>
-            {guestNames.map((name, index) => (
-              <div key={index} className="flex gap-2">
-                <Input
-                  value={name}
-                  onChange={(e) => handleGuestNameChange(index, e.target.value)}
-                  placeholder={`Guest ${index + 1} name`}
-                />
-                {index > 0 && (
-                  <Button 
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleRemoveGuestName(index)}
-                  >
-                    Remove
-                  </Button>
-                )}
-              </div>
-            ))}
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="sm" 
-              onClick={handleAddGuestName}
-            >
-              Add Guest
-            </Button>
-          </div>
-
           {/* Bank Account Preview */}
           {selectedBankAccount && (
             <Card>
               <CardContent className="pt-4">
-                <Label className="text-sm font-medium">Bank Account Details</Label>
+                <Label className="text-sm font-medium">Selected Bank Account</Label>
                 <div className="mt-2 text-sm space-y-1">
                   <p><strong>Bank:</strong> {selectedBankAccount.bank_name}</p>
                   <p><strong>Account:</strong> {selectedBankAccount.account_name}</p>

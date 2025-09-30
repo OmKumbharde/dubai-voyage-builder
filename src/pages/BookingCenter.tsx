@@ -76,11 +76,189 @@ const BookingCenter = () => {
     });
   };
 
+  const generateVoucher = async (booking: any) => {
+    const fullQuote = quotes.find(q => q.id === booking.id);
+    
+    if (!fullQuote) {
+      toast({
+        title: "Error",
+        description: "Could not find booking details",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const jsPDF = (await import('jspdf')).default;
+    const pdf = new jsPDF();
+    const pageWidth = pdf.internal.pageSize.width;
+    
+    // Header with company branding
+    pdf.setFontSize(22);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(0, 102, 204);
+    pdf.text('BOOKING VOUCHER', pageWidth / 2, 25, { align: 'center' });
+    
+    // Voucher number
+    pdf.setFontSize(10);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text(`Voucher #: VCH-${booking.ticketReference}`, pageWidth / 2, 35, { align: 'center' });
+    
+    // Company details
+    pdf.setFontSize(9);
+    pdf.setTextColor(0, 0, 0);
+    let yPos = 50;
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Q1 Travel Tours', 20, yPos);
+    yPos += 5;
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Dubai, United Arab Emirates', 20, yPos);
+    yPos += 5;
+    pdf.text('Phone: +971 4 XXX XXXX | Email: info@q1travel.com', 20, yPos);
+    
+    // Horizontal line
+    yPos += 8;
+    pdf.setDrawColor(200, 200, 200);
+    pdf.line(20, yPos, pageWidth - 20, yPos);
+    
+    // Guest Information
+    yPos += 10;
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('GUEST INFORMATION', 20, yPos);
+    
+    yPos += 8;
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Guest Name: ${booking.customerName}`, 20, yPos);
+    yPos += 6;
+    pdf.text(`Booking Reference: ${booking.ticketReference}`, 20, yPos);
+    yPos += 6;
+    if (booking.customerEmail) {
+      pdf.text(`Email: ${booking.customerEmail}`, 20, yPos);
+      yPos += 6;
+    }
+    pdf.text(`No. of Guests: ${booking.pax.adults} Adult(s)${booking.pax.children > 0 ? `, ${booking.pax.children} Child(ren)` : ''}`, 20, yPos);
+    
+    // Travel Details
+    yPos += 12;
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('TRAVEL DETAILS', 20, yPos);
+    
+    yPos += 8;
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    if (booking.checkIn && booking.checkOut) {
+      pdf.text(`Check-in: ${format(new Date(booking.checkIn), 'EEEE, do MMMM yyyy')}`, 20, yPos);
+      yPos += 6;
+      pdf.text(`Check-out: ${format(new Date(booking.checkOut), 'EEEE, do MMMM yyyy')}`, 20, yPos);
+      yPos += 6;
+      pdf.text(`Duration: ${booking.nights} Night(s)`, 20, yPos);
+      yPos += 6;
+    }
+    
+    // Hotel Information
+    const fullQuoteAny = fullQuote as any;
+    if (fullQuote.selectedHotel || (fullQuoteAny.selectedHotels && fullQuoteAny.selectedHotels.length > 0)) {
+      yPos += 6;
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('ACCOMMODATION', 20, yPos);
+      
+      yPos += 8;
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      
+      const hotels = fullQuoteAny.selectedHotels || [fullQuote.selectedHotel];
+      hotels.forEach((hotel: any) => {
+        if (hotel) {
+          pdf.text(`Hotel: ${hotel.name}`, 20, yPos);
+          yPos += 6;
+          pdf.text(`Location: ${hotel.location}`, 20, yPos);
+          yPos += 6;
+          pdf.text(`Rating: ${hotel.starRating || 5} Star`, 20, yPos);
+          yPos += 8;
+        }
+      });
+    }
+    
+    // Tours & Activities
+    if (fullQuote.selectedTours && fullQuote.selectedTours.length > 0) {
+      yPos += 2;
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('TOURS & ACTIVITIES', 20, yPos);
+      
+      yPos += 8;
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      
+      fullQuote.selectedTours.forEach((tour: any, index: number) => {
+        if (yPos > 270) {
+          pdf.addPage();
+          yPos = 20;
+        }
+        pdf.text(`${index + 1}. ${tour.name}`, 25, yPos);
+        yPos += 6;
+        if (tour.duration) {
+          pdf.text(`   Duration: ${tour.duration}`, 25, yPos);
+          yPos += 6;
+        }
+      });
+    }
+    
+    // Important Notes
+    if (yPos > 240) {
+      pdf.addPage();
+      yPos = 20;
+    } else {
+      yPos += 10;
+    }
+    
+    pdf.setFillColor(255, 248, 220);
+    pdf.rect(15, yPos, pageWidth - 30, 40, 'F');
+    yPos += 8;
+    
+    pdf.setFontSize(11);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('IMPORTANT NOTES:', 20, yPos);
+    
+    yPos += 7;
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('• Please carry a printed copy of this voucher', 20, yPos);
+    yPos += 5;
+    pdf.text('• Carry a valid photo ID proof', 20, yPos);
+    yPos += 5;
+    pdf.text('• Check-in time: 2:00 PM | Check-out time: 12:00 PM', 20, yPos);
+    yPos += 5;
+    pdf.text('• Tourism Dirham charges may apply separately at the hotel', 20, yPos);
+    
+    // Footer
+    const footerY = pdf.internal.pageSize.height - 20;
+    pdf.setFontSize(8);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text('Thank you for choosing Q1 Travel Tours. We wish you a pleasant journey!', pageWidth / 2, footerY, { align: 'center' });
+    pdf.text('For assistance, contact us: +971 4 XXX XXXX | support@q1travel.com', pageWidth / 2, footerY + 5, { align: 'center' });
+    
+    // Save PDF
+    pdf.save(`voucher-${booking.ticketReference}.pdf`);
+    
+    toast({
+      title: "Voucher Generated",
+      description: `Booking voucher for ${booking.customerName} has been downloaded`,
+    });
+  };
+
   const viewBookingDetails = (booking: any) => {
-    if (!booking.formattedQuote) {
+    // Find the full quote from quotes
+    const fullQuote = quotes.find(q => q.id === booking.id);
+    const formattedContent = (fullQuote as any)?.formatted_quote;
+    
+    if (!formattedContent) {
       toast({
         title: "No Details Available",
-        description: "Quote details are not available for this booking",
+        description: "Quote details are not available for this booking. Please generate the quote first.",
         variant: "destructive"
       });
       return;
@@ -111,7 +289,7 @@ const BookingCenter = () => {
               <strong>Status:</strong> ${booking.status}<br>
               <strong>Total Amount:</strong> AED ${booking.totalAmount.toLocaleString()}
             </div>
-            <div>${booking.formattedQuote}</div>
+            <div>${formattedContent}</div>
             <div style="margin-top: 30px; text-align: center;">
               <button onclick="window.print()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">Print</button>
               <button onclick="window.close()" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px;">Close</button>
@@ -123,41 +301,71 @@ const BookingCenter = () => {
     }
   };
 
-  const exportBookingReport = () => {
-    let report = "BOOKING REPORT\n";
-    report += "=".repeat(80) + "\n";
-    report += `Generated on: ${format(new Date(), 'do MMMM yyyy')}\n\n`;
+  const exportBookingReport = async () => {
+    const jsPDF = (await import('jspdf')).default;
+    const pdf = new jsPDF();
+    const pageWidth = pdf.internal.pageSize.width;
     
-    report += `SUMMARY:\n`;
-    report += `Total Bookings: ${bookings.length}\n`;
-    report += `Total Revenue: AED ${bookings.reduce((sum, b) => sum + b.totalAmount, 0).toLocaleString()}\n\n`;
+    // Header
+    pdf.setFontSize(18);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('BOOKING REPORT', pageWidth / 2, 20, { align: 'center' });
     
-    report += "BOOKING DETAILS:\n";
-    report += "=".repeat(80) + "\n";
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Generated on: ${format(new Date(), 'do MMMM yyyy')}`, pageWidth / 2, 30, { align: 'center' });
+    
+    // Summary
+    let yPos = 45;
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('SUMMARY', 20, yPos);
+    
+    yPos += 10;
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Total Bookings: ${bookings.length}`, 20, yPos);
+    yPos += 7;
+    pdf.text(`Total Revenue: AED ${bookings.reduce((sum, b) => sum + b.totalAmount, 0).toLocaleString()}`, 20, yPos);
+    
+    // Booking Details
+    yPos += 15;
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('BOOKING DETAILS', 20, yPos);
+    yPos += 10;
+    
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
     
     bookings.forEach((booking, index) => {
-      report += `${index + 1}. ${booking.customerName} (${booking.ticketReference})\n`;
-      if (booking.checkIn && booking.checkOut) {
-        report += `   Dates: ${format(new Date(booking.checkIn), 'dd/MM/yyyy')} - ${format(new Date(booking.checkOut), 'dd/MM/yyyy')}\n`;
+      if (yPos > 270) {
+        pdf.addPage();
+        yPos = 20;
       }
-      report += `   Pax: ${booking.pax.adults} Adults${booking.pax.children > 0 ? `, ${booking.pax.children} Children` : ''}\n`;
-      report += `   Status: ${booking.status}\n`;
-      report += `   Amount: AED ${booking.totalAmount.toLocaleString()}\n\n`;
+      
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`${index + 1}. ${booking.customerName} (${booking.ticketReference})`, 20, yPos);
+      yPos += 6;
+      
+      pdf.setFont('helvetica', 'normal');
+      if (booking.checkIn && booking.checkOut) {
+        pdf.text(`   Dates: ${format(new Date(booking.checkIn), 'dd/MM/yyyy')} - ${format(new Date(booking.checkOut), 'dd/MM/yyyy')}`, 20, yPos);
+        yPos += 5;
+      }
+      pdf.text(`   Pax: ${booking.pax.adults} Adults${booking.pax.children > 0 ? `, ${booking.pax.children} Children` : ''}`, 20, yPos);
+      yPos += 5;
+      pdf.text(`   Status: ${booking.status}`, 20, yPos);
+      yPos += 5;
+      pdf.text(`   Amount: AED ${booking.totalAmount.toLocaleString()}`, 20, yPos);
+      yPos += 8;
     });
     
-    const blob = new Blob([report], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `booking-report-${format(new Date(), 'yyyy-MM-dd')}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    pdf.save(`booking-report-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
     
     toast({ 
       title: "Report Exported", 
-      description: "Booking report has been downloaded" 
+      description: "Booking report PDF has been downloaded" 
     });
   };
 
@@ -349,6 +557,15 @@ const BookingCenter = () => {
                       >
                         <Calendar className="mr-2 h-3 w-3" />
                         Send Itinerary Link
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => generateVoucher(booking)}
+                        className="flex items-center text-sm"
+                      >
+                        <Download className="mr-2 h-3 w-3" />
+                        Voucher
                       </Button>
                     </div>
                   </div>
