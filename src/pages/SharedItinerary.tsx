@@ -325,12 +325,17 @@ const SharedItinerary = () => {
       // Insert new itinerary items
       const itemsToInsert = itineraryItems.map((item, index) => {
         const selectedTour = availableTours.find(t => t.id === item.tour_id);
+        
+        // Generate default times - start at 9 AM and add 3 hours for most tours
+        const startTime = '09:00:00';
+        const endTime = '17:00:00';
+        
         const insertItem = {
           quote_id: quoteId,
           tour_id: item.tour_id,
           tour_date: item.tour_date,
-          start_time: selectedTour?.duration?.split('-')?.[0]?.trim() || '09:00',
-          end_time: selectedTour?.duration?.split('-')?.[1]?.trim() || '17:00',
+          start_time: startTime,
+          end_time: endTime,
           notes: item.notes || null
         };
         console.log(`Item ${index + 1}:`, insertItem);
