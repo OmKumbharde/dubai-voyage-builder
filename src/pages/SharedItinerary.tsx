@@ -12,8 +12,6 @@ interface ItineraryItem {
   id?: string;
   tour_id: string | null;
   tour_date: string;
-  start_time: string;
-  end_time: string;
   notes: string;
 }
 
@@ -64,8 +62,6 @@ const SharedItinerary = () => {
           id: item.id,
           tour_id: item.tour_id,
           tour_date: item.tour_date,
-          start_time: item.start_time || '09:00',
-          end_time: item.end_time || '17:00',
           notes: item.notes || ''
         })));
       } else {
@@ -85,11 +81,10 @@ const SharedItinerary = () => {
   };
 
   const addNewItineraryItem = () => {
+    const startDate = quote?.travel_dates_from || new Date().toISOString().split('T')[0];
     setItineraryItems(prev => [...prev, {
       tour_id: null,
-      tour_date: new Date().toISOString().split('T')[0],
-      start_time: '09:00',
-      end_time: '17:00',
+      tour_date: startDate,
       notes: ''
     }]);
   };
@@ -119,14 +114,17 @@ const SharedItinerary = () => {
       // Insert new itinerary items
       const itemsToInsert = itineraryItems
         .filter(item => item.tour_id) // Only save items with tours selected
-        .map(item => ({
-          quote_id: quoteId,
-          tour_id: item.tour_id,
-          tour_date: item.tour_date,
-          start_time: item.start_time,
-          end_time: item.end_time,
-          notes: item.notes
-        }));
+        .map(item => {
+          const selectedTour = tours.find(t => t.id === item.tour_id);
+          return {
+            quote_id: quoteId,
+            tour_id: item.tour_id,
+            tour_date: item.tour_date,
+            start_time: selectedTour?.duration?.split('-')?.[0]?.trim() || '09:00',
+            end_time: selectedTour?.duration?.split('-')?.[1]?.trim() || '17:00',
+            notes: item.notes
+          };
+        });
 
       if (itemsToInsert.length > 0) {
         const { error: insertError } = await supabase
@@ -218,76 +216,62 @@ const SharedItinerary = () => {
           <CardHeader>
             <CardTitle className="text-lg">Your Tour Schedule</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2">
             {itineraryItems.map((item, index) => {
               const selectedTour = getSelectedTour(item.tour_id);
               return (
-                <div key={index} className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">Day {index + 1}</span>
+                <div key={index} className="border rounded-md p-3 hover:bg-muted/30 transition-colors">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-16 text-center">
+                      <div className="text-xs text-muted-foreground mb-1">Day {index + 1}</div>
+                      <Input
+                        type="date"
+                        value={item.tour_date}
+                        onChange={(e) => updateItineraryItem(index, 'tour_date', e.target.value)}
+                        min={minDate}
+                        max={maxDate}
+                        className="h-8 text-xs p-1"
+                      />
+                    </div>
+
+                    <div className="flex-1 space-y-2">
+                      <select
+                        value={item.tour_id || ''}
+                        onChange={(e) => updateItineraryItem(index, 'tour_id', e.target.value)}
+                        className="w-full p-2 text-sm rounded-md border bg-background"
+                      >
+                        <option value="">-- Select Tour --</option>
+                        {tours.map(tour => (
+                          <option key={tour.id} value={tour.id}>
+                            {tour.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      {selectedTour && (
+                        <div className="text-xs text-muted-foreground space-y-1 bg-muted/30 p-2 rounded">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-3 w-3" />
+                            <span>Time: {selectedTour.duration || 'Full day'}</span>
+                          </div>
+                          {selectedTour.description && (
+                            <p className="line-clamp-1 text-[11px]">{selectedTour.description}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
                     {itineraryItems.length > 1 && (
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => removeItineraryItem(index)}
-                        className="h-8 w-8 p-0"
+                        className="h-7 w-7 p-0 flex-shrink-0"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                     )}
                   </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Select Tour</Label>
-                    <select
-                      value={item.tour_id || ''}
-                      onChange={(e) => updateItineraryItem(index, 'tour_id', e.target.value)}
-                      className="w-full p-2 rounded-md border bg-background"
-                    >
-                      <option value="">-- Choose a tour --</option>
-                      {tours.map(tour => (
-                        <option key={tour.id} value={tour.id}>
-                          {tour.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {selectedTour && (
-                    <div className="text-xs text-muted-foreground space-y-1 pl-2 border-l-2 border-primary/20">
-                      <p className="flex items-center gap-2">
-                        <Clock className="h-3 w-3" />
-                        Duration: {selectedTour.duration}
-                      </p>
-                      {selectedTour.description && (
-                        <p className="line-clamp-2">{selectedTour.description}</p>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Tour Date</Label>
-                    <Input
-                      type="date"
-                      value={item.tour_date}
-                      onChange={(e) => updateItineraryItem(index, 'tour_date', e.target.value)}
-                      min={minDate}
-                      max={maxDate}
-                      className="w-full"
-                    />
-                  </div>
-
-                  {item.notes && (
-                    <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">Notes</Label>
-                      <textarea
-                        value={item.notes}
-                        onChange={(e) => updateItineraryItem(index, 'notes', e.target.value)}
-                        className="w-full p-2 rounded-md border bg-background text-sm min-h-[60px] resize-none"
-                        placeholder="Any special requests or notes..."
-                      />
-                    </div>
-                  )}
                 </div>
               );
             })}

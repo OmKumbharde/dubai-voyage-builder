@@ -22,7 +22,7 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
   quote
 }) => {
   const { bankAccounts } = useSupabaseData();
-  const [selectedBranch, setSelectedBranch] = useState('');
+  const [selectedBankAccountId, setSelectedBankAccountId] = useState('');
   const [selectedHotelOption, setSelectedHotelOption] = useState<string>('');
   const [leadPaxName, setLeadPaxName] = useState('');
   
@@ -30,42 +30,35 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
   const [singlePax, setSinglePax] = useState({ adults: 0, cwb: 0, cnb: 0 });
   const [doublePax, setDoublePax] = useState({ adults: 0, cwb: 0, cnb: 0 });
   const [triplePax, setTriplePax] = useState({ adults: 0, cwb: 0, cnb: 0 });
-
-  const branches = ['Ghana', 'Nigeria', 'Kenya', 'Dubai'];
   
-  const selectedBankAccount = bankAccounts.find(account => 
-    account.branch_country.toLowerCase() === selectedBranch.toLowerCase()
-  );
+  const selectedBankAccount = bankAccounts.find(account => account.id === selectedBankAccountId);
 
   // Get available hotel options from quote
   const quoteAny = quote as any;
-  
-  // Try multiple sources for hotel data
   let hotelOptions: any[] = [];
   
-  // Check if formatted quote has parsed hotel options
-  if (quoteAny.formattedQuote || quoteAny.formatted_quote) {
+  // Parse formatted quote to get hotel options
+  if (quoteAny.formatted_quote) {
     try {
-      const formatted = JSON.parse(quoteAny.formattedQuote || quoteAny.formatted_quote);
-      hotelOptions = formatted.hotelOptions || [];
+      const formatted = JSON.parse(quoteAny.formatted_quote);
+      if (formatted.hotelOptions && Array.isArray(formatted.hotelOptions)) {
+        hotelOptions = formatted.hotelOptions;
+      }
     } catch (e) {
       console.error('Error parsing formatted quote:', e);
     }
   }
   
-  // Fallback to selectedHotel if no hotel options found
+  // Fallback: try selectedHotel if it exists
   if (hotelOptions.length === 0 && quote.selectedHotel) {
-    hotelOptions = [{
-      hotel: quote.selectedHotel,
-      occupancy: 'double'
-    }];
+    hotelOptions = [{ hotel: quote.selectedHotel }];
   }
 
   const generateInvoicePDF = () => {
-    if (!selectedBranch || !selectedHotelOption || !leadPaxName.trim()) {
+    if (!selectedBankAccountId || !selectedHotelOption || !leadPaxName.trim()) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all required fields: branch, hotel option, and lead passenger name",
+        description: "Please fill in all required fields: bank account, hotel option, and lead passenger name",
         variant: "destructive"
       });
       return;
@@ -129,7 +122,9 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
     pdf.setFont('helvetica', 'normal');
     pdf.text('Q1 Travel Tours', 20, yPos);
     yPos += 5;
-    pdf.text(`Branch: ${selectedBranch}`, 20, yPos);
+    if (selectedBankAccount) {
+      pdf.text(`Branch: ${selectedBankAccount.branch_country}`, 20, yPos);
+    }
     yPos += 5;
     pdf.text('Email: info@q1travel.com', 20, yPos);
     yPos += 5;
@@ -348,9 +343,12 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
     pdf.text('We declare that this invoice shows the actual price of the services described', 20, declarationY + 5);
     pdf.text('and that all particulars are true and correct.', 20, declarationY + 10);
     
+    // Footer signature line
     pdf.setFont('helvetica', 'normal');
     pdf.text('Authorized Signature: ________________', 20, declarationY + 20);
-    pdf.text(`Place: ${selectedBranch}`, pageWidth - 60, declarationY + 20);
+    if (selectedBankAccount) {
+      pdf.text(`Place: ${selectedBankAccount.branch_country}`, pageWidth - 60, declarationY + 20);
+    }
 
     // Save the PDF
     const fileName = `Invoice_${quote.ticketReference}_${invoiceNo}.pdf`;
@@ -377,16 +375,18 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Branch Selection */}
+          {/* Bank Account Selection */}
           <div className="space-y-2">
-            <Label htmlFor="branch">Select Branch *</Label>
-            <Select value={selectedBranch} onValueChange={setSelectedBranch}>
+            <Label htmlFor="bankAccount">Select Bank Account *</Label>
+            <Select value={selectedBankAccountId} onValueChange={setSelectedBankAccountId}>
               <SelectTrigger>
-                <SelectValue placeholder="Choose branch location" />
+                <SelectValue placeholder="Choose bank account" />
               </SelectTrigger>
               <SelectContent>
-                {branches.map(branch => (
-                  <SelectItem key={branch} value={branch}>{branch}</SelectItem>
+                {bankAccounts.map(account => (
+                  <SelectItem key={account.id} value={account.id}>
+                    {account.bank_name} - {account.branch_country} ({account.currency})
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -430,130 +430,132 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
 
           {/* PAX Distribution */}
           <Card>
-            <CardContent className="pt-4 space-y-4">
+            <CardContent className="pt-4 space-y-3">
               <div>
-                <Label className="text-sm font-medium mb-2 block">PAX Distribution by Occupancy Type</Label>
-                <p className="text-xs text-muted-foreground mb-4">
-                  Total: {totalAdults} Adults, {totalCwb} CWB, {totalCnb} CNB
+                <Label className="text-sm font-medium">PAX Distribution by Occupancy</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Available: {totalAdults} Adults, {totalCwb} CWB, {totalCnb} CNB
                 </p>
               </div>
               
-              {/* Single Occupancy */}
-              <div className="border rounded-lg p-3 space-y-2">
-                <Label className="font-semibold text-sm">Single Occupancy</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <Label className="text-xs">Adults</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max={totalAdults}
-                      value={singlePax.adults}
-                      onChange={(e) => setSinglePax(prev => ({ ...prev, adults: parseInt(e.target.value) || 0 }))}
-                      className="h-8"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">CWB</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max={totalCwb}
-                      value={singlePax.cwb}
-                      onChange={(e) => setSinglePax(prev => ({ ...prev, cwb: parseInt(e.target.value) || 0 }))}
-                      className="h-8"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">CNB</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max={totalCnb}
-                      value={singlePax.cnb}
-                      onChange={(e) => setSinglePax(prev => ({ ...prev, cnb: parseInt(e.target.value) || 0 }))}
-                      className="h-8"
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              {/* Double Occupancy */}
-              <div className="border rounded-lg p-3 space-y-2">
-                <Label className="font-semibold text-sm">Double Occupancy</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <Label className="text-xs">Adults</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max={totalAdults}
-                      value={doublePax.adults}
-                      onChange={(e) => setDoublePax(prev => ({ ...prev, adults: parseInt(e.target.value) || 0 }))}
-                      className="h-8"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">CWB</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max={totalCwb}
-                      value={doublePax.cwb}
-                      onChange={(e) => setDoublePax(prev => ({ ...prev, cwb: parseInt(e.target.value) || 0 }))}
-                      className="h-8"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">CNB</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max={totalCnb}
-                      value={doublePax.cnb}
-                      onChange={(e) => setDoublePax(prev => ({ ...prev, cnb: parseInt(e.target.value) || 0 }))}
-                      className="h-8"
-                    />
+              <div className="space-y-2">
+                {/* Single Occupancy */}
+                <div className="flex items-center gap-3 p-2 border rounded-md">
+                  <span className="text-sm font-medium w-24">Single</span>
+                  <div className="flex gap-2 flex-1">
+                    <div className="flex items-center gap-1">
+                      <Label className="text-xs text-muted-foreground">Adults:</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max={totalAdults}
+                        value={singlePax.adults}
+                        onChange={(e) => setSinglePax(prev => ({ ...prev, adults: parseInt(e.target.value) || 0 }))}
+                        className="h-7 w-16 text-sm"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Label className="text-xs text-muted-foreground">CWB:</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max={totalCwb}
+                        value={singlePax.cwb}
+                        onChange={(e) => setSinglePax(prev => ({ ...prev, cwb: parseInt(e.target.value) || 0 }))}
+                        className="h-7 w-16 text-sm"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Label className="text-xs text-muted-foreground">CNB:</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max={totalCnb}
+                        value={singlePax.cnb}
+                        onChange={(e) => setSinglePax(prev => ({ ...prev, cnb: parseInt(e.target.value) || 0 }))}
+                        className="h-7 w-16 text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-              
-              {/* Triple Occupancy */}
-              <div className="border rounded-lg p-3 space-y-2">
-                <Label className="font-semibold text-sm">Triple Occupancy</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <Label className="text-xs">Adults</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max={totalAdults}
-                      value={triplePax.adults}
-                      onChange={(e) => setTriplePax(prev => ({ ...prev, adults: parseInt(e.target.value) || 0 }))}
-                      className="h-8"
-                    />
+
+                {/* Double Occupancy */}
+                <div className="flex items-center gap-3 p-2 border rounded-md">
+                  <span className="text-sm font-medium w-24">Double</span>
+                  <div className="flex gap-2 flex-1">
+                    <div className="flex items-center gap-1">
+                      <Label className="text-xs text-muted-foreground">Adults:</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max={totalAdults}
+                        value={doublePax.adults}
+                        onChange={(e) => setDoublePax(prev => ({ ...prev, adults: parseInt(e.target.value) || 0 }))}
+                        className="h-7 w-16 text-sm"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Label className="text-xs text-muted-foreground">CWB:</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max={totalCwb}
+                        value={doublePax.cwb}
+                        onChange={(e) => setDoublePax(prev => ({ ...prev, cwb: parseInt(e.target.value) || 0 }))}
+                        className="h-7 w-16 text-sm"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Label className="text-xs text-muted-foreground">CNB:</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max={totalCnb}
+                        value={doublePax.cnb}
+                        onChange={(e) => setDoublePax(prev => ({ ...prev, cnb: parseInt(e.target.value) || 0 }))}
+                        className="h-7 w-16 text-sm"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <Label className="text-xs">CWB</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max={totalCwb}
-                      value={triplePax.cwb}
-                      onChange={(e) => setTriplePax(prev => ({ ...prev, cwb: parseInt(e.target.value) || 0 }))}
-                      className="h-8"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">CNB</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max={totalCnb}
-                      value={triplePax.cnb}
-                      onChange={(e) => setTriplePax(prev => ({ ...prev, cnb: parseInt(e.target.value) || 0 }))}
-                      className="h-8"
-                    />
+                </div>
+
+                {/* Triple Occupancy */}
+                <div className="flex items-center gap-3 p-2 border rounded-md">
+                  <span className="text-sm font-medium w-24">Triple</span>
+                  <div className="flex gap-2 flex-1">
+                    <div className="flex items-center gap-1">
+                      <Label className="text-xs text-muted-foreground">Adults:</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max={totalAdults}
+                        value={triplePax.adults}
+                        onChange={(e) => setTriplePax(prev => ({ ...prev, adults: parseInt(e.target.value) || 0 }))}
+                        className="h-7 w-16 text-sm"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Label className="text-xs text-muted-foreground">CWB:</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max={totalCwb}
+                        value={triplePax.cwb}
+                        onChange={(e) => setTriplePax(prev => ({ ...prev, cwb: parseInt(e.target.value) || 0 }))}
+                        className="h-7 w-16 text-sm"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Label className="text-xs text-muted-foreground">CNB:</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max={totalCnb}
+                        value={triplePax.cnb}
+                        onChange={(e) => setTriplePax(prev => ({ ...prev, cnb: parseInt(e.target.value) || 0 }))}
+                        className="h-7 w-16 text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
