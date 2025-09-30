@@ -39,7 +39,27 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
 
   // Get available hotel options from quote
   const quoteAny = quote as any;
-  const hotelOptions = quoteAny.hotelOptions || [];
+  
+  // Try multiple sources for hotel data
+  let hotelOptions: any[] = [];
+  
+  // Check if formatted quote has parsed hotel options
+  if (quoteAny.formattedQuote || quoteAny.formatted_quote) {
+    try {
+      const formatted = JSON.parse(quoteAny.formattedQuote || quoteAny.formatted_quote);
+      hotelOptions = formatted.hotelOptions || [];
+    } catch (e) {
+      console.error('Error parsing formatted quote:', e);
+    }
+  }
+  
+  // Fallback to selectedHotel if no hotel options found
+  if (hotelOptions.length === 0 && quote.selectedHotel) {
+    hotelOptions = [{
+      hotel: quote.selectedHotel,
+      occupancy: 'double'
+    }];
+  }
 
   const generateInvoicePDF = () => {
     if (!selectedBranch || !selectedHotelOption || !leadPaxName.trim()) {

@@ -166,115 +166,135 @@ const SharedItinerary = () => {
     );
   }
 
+  const getSelectedTour = (tourId: string | null) => {
+    return tours.find(t => t.id === tourId);
+  };
+
+  // Get min and max dates from quote
+  const minDate = quote?.travel_dates_from || new Date().toISOString().split('T')[0];
+  const maxDate = quote?.travel_dates_to || new Date().toISOString().split('T')[0];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <Card className="dubai-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-3">
-              <Calendar className="h-6 w-6 text-dubai-gold" />
-              Itinerary Planning
-            </CardTitle>
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 p-4 md:p-8">
+      <div className="max-w-3xl mx-auto space-y-6">
+        {/* Quote Summary Header */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-2xl">Trip Itinerary</CardTitle>
             {quote && (
-              <div className="text-sm text-muted-foreground mt-2">
-                <p><strong>Booking Reference:</strong> {quote.reference_number}</p>
-                <p><strong>Client:</strong> {quote.client_name}</p>
-                <p><strong>Travel Dates:</strong> {new Date(quote.travel_dates_from).toLocaleDateString()} - {new Date(quote.travel_dates_to).toLocaleDateString()}</p>
+              <div className="mt-4 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Booking Reference:</span>
+                  <span className="font-medium">{quote.reference_number}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Guest Name:</span>
+                  <span className="font-medium">{quote.client_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Travel Period:</span>
+                  <span className="font-medium">
+                    {new Date(quote.travel_dates_from).toLocaleDateString()} - {new Date(quote.travel_dates_to).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total Passengers:</span>
+                  <span className="font-medium">{quote.adults} Adult(s)</span>
+                </div>
               </div>
             )}
           </CardHeader>
         </Card>
 
-        {/* Itinerary Items */}
-        <div className="space-y-4">
-          {itineraryItems.map((item, index) => (
-            <Card key={index} className="dubai-card">
-              <CardContent className="pt-6">
-                <div className="flex items-start justify-between mb-4">
-                  <h3 className="font-semibold flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-dubai-gold" />
-                    Day {index + 1}
-                  </h3>
-                  {itineraryItems.length > 1 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeItineraryItem(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
+        {/* Instructions */}
+        <Card className="bg-muted/50">
+          <CardContent className="pt-4 text-sm text-muted-foreground">
+            <p>Please arrange your preferred tour schedule below. Select a tour for each day and choose your preferred date within your travel period.</p>
+          </CardContent>
+        </Card>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor={`tour-${index}`}>Select Tour</Label>
+        {/* Itinerary List */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Your Tour Schedule</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {itineraryItems.map((item, index) => {
+              const selectedTour = getSelectedTour(item.tour_id);
+              return (
+                <div key={index} className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">Day {index + 1}</span>
+                    {itineraryItems.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeItineraryItem(index)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Select Tour</Label>
                     <select
-                      id={`tour-${index}`}
                       value={item.tour_id || ''}
                       onChange={(e) => updateItineraryItem(index, 'tour_id', e.target.value)}
-                      className="w-full dubai-input"
+                      className="w-full p-2 rounded-md border bg-background"
                     >
-                      <option value="">-- Select a tour --</option>
+                      <option value="">-- Choose a tour --</option>
                       {tours.map(tour => (
                         <option key={tour.id} value={tour.id}>
-                          {tour.name} ({tour.duration})
+                          {tour.name}
                         </option>
                       ))}
                     </select>
                   </div>
 
-                  <div>
-                    <Label htmlFor={`date-${index}`}>Date</Label>
+                  {selectedTour && (
+                    <div className="text-xs text-muted-foreground space-y-1 pl-2 border-l-2 border-primary/20">
+                      <p className="flex items-center gap-2">
+                        <Clock className="h-3 w-3" />
+                        Duration: {selectedTour.duration}
+                      </p>
+                      {selectedTour.description && (
+                        <p className="line-clamp-2">{selectedTour.description}</p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Tour Date</Label>
                     <Input
-                      id={`date-${index}`}
                       type="date"
                       value={item.tour_date}
                       onChange={(e) => updateItineraryItem(index, 'tour_date', e.target.value)}
-                      className="dubai-input"
+                      min={minDate}
+                      max={maxDate}
+                      className="w-full"
                     />
                   </div>
 
-                  <div>
-                    <Label htmlFor={`start-${index}`}>Start Time</Label>
-                    <Input
-                      id={`start-${index}`}
-                      type="time"
-                      value={item.start_time}
-                      onChange={(e) => updateItineraryItem(index, 'start_time', e.target.value)}
-                      className="dubai-input"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor={`end-${index}`}>End Time</Label>
-                    <Input
-                      id={`end-${index}`}
-                      type="time"
-                      value={item.end_time}
-                      onChange={(e) => updateItineraryItem(index, 'end_time', e.target.value)}
-                      className="dubai-input"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <Label htmlFor={`notes-${index}`}>Notes</Label>
-                    <textarea
-                      id={`notes-${index}`}
-                      value={item.notes}
-                      onChange={(e) => updateItineraryItem(index, 'notes', e.target.value)}
-                      className="w-full dubai-input min-h-[80px] resize-none"
-                      placeholder="Add any special notes or requirements..."
-                    />
-                  </div>
+                  {item.notes && (
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Notes</Label>
+                      <textarea
+                        value={item.notes}
+                        onChange={(e) => updateItineraryItem(index, 'notes', e.target.value)}
+                        className="w-full p-2 rounded-md border bg-background text-sm min-h-[60px] resize-none"
+                        placeholder="Any special requests or notes..."
+                      />
+                    </div>
+                  )}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              );
+            })}
+          </CardContent>
+        </Card>
 
-        {/* Actions */}
+        {/* Action Buttons */}
         <div className="flex gap-3">
           <Button
             onClick={addNewItineraryItem}
@@ -282,15 +302,15 @@ const SharedItinerary = () => {
             className="flex-1"
           >
             <Plus className="mr-2 h-4 w-4" />
-            Add Another Day
+            Add Day
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={isSaving}
-            className="flex-1 dubai-button-primary"
+            className="flex-1"
           >
             <Save className="mr-2 h-4 w-4" />
-            {isSaving ? 'Saving...' : 'Save Itinerary'}
+            {isSaving ? 'Saving...' : 'Submit Itinerary'}
           </Button>
         </div>
       </div>
