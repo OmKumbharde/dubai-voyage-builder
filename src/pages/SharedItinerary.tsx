@@ -167,14 +167,29 @@ const SharedItinerary = () => {
   const loadData = async () => {
     try {
       setIsLoading(true);
+      console.log('Loading itinerary for quote ID:', quoteId);
       
       const { data: quoteData, error: quoteError } = await supabase
         .from('quotes')
         .select('*')
         .eq('id', quoteId)
-        .single();
+        .maybeSingle();
       
-      if (quoteError) throw quoteError;
+      if (quoteError) {
+        console.error('Error fetching quote:', quoteError);
+        throw quoteError;
+      }
+      
+      if (!quoteData) {
+        toast({
+          title: "Quote Not Found",
+          description: `No quote found with ID: ${quoteId}`,
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+      
       setQuote(quoteData);
 
       // Parse selectedTours from notes field
@@ -345,12 +360,20 @@ const SharedItinerary = () => {
     );
   }
 
-  if (!quote) {
+  if (!quote && !isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20">
         <Card className="max-w-md">
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">Quote not found</p>
+          <CardContent className="pt-6 space-y-4">
+            <div className="text-center">
+              <p className="text-lg font-semibold text-destructive mb-2">Quote Not Found</p>
+              <p className="text-sm text-muted-foreground">
+                The quote you're looking for doesn't exist or has been removed.
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                Quote ID: {quoteId}
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
