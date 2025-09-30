@@ -97,57 +97,26 @@ const BookingCenter = () => {
   };
 
   const viewBookingDetails = async (booking: any) => {
-    // Find the full quote from quotes
     const fullQuote = quotes.find(q => q.id === booking.id);
-    const formattedContent = (fullQuote as any)?.formatted_quote;
     
-    if (!formattedContent) {
+    if (!fullQuote) {
       toast({
         title: "No Details Available",
-        description: "Quote details are not available for this booking. Please generate the quote first.",
+        description: "Booking not found",
         variant: "destructive"
       });
       return;
     }
 
     // Fetch itinerary items
-    const { data: itineraryItems, error } = await supabase
+    const { data: itineraryItems } = await supabase
       .from('itineraries')
       .select('*')
       .eq('quote_id', booking.id)
       .order('tour_date', { ascending: true });
 
-    let itineraryHTML = '';
-    if (itineraryItems && itineraryItems.length > 0) {
-      itineraryHTML = `
-        <div style="margin-top: 20px;">
-          <h3 style="color: #003366; margin-bottom: 15px;">Confirmed Itinerary</h3>
-          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-            <thead>
-              <tr style="background: #f0f0f0;">
-                <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Date</th>
-                <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Tour</th>
-                <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Pickup Time</th>
-                <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${itineraryItems.map(item => {
-                const tour = tours.find(t => t.id === item.tour_id);
-                return `
-                  <tr>
-                    <td style="padding: 10px; border: 1px solid #ddd;">${format(new Date(item.tour_date), 'EEE, do MMM yyyy')}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">${tour?.name || 'Unknown Tour'}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">${tour?.pickupTime || '09:00 AM'}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">${item.notes || '-'}</td>
-                  </tr>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>
-      `;
-    }
+    const quoteAny = fullQuote as any;
+    const selectedHotel = quoteAny.selectedHotels?.[0] || quoteAny.selectedHotel;
     
     const newWindow = window.open('', '_blank');
     if (newWindow) {
@@ -156,29 +125,264 @@ const BookingCenter = () => {
           <head>
             <title>Booking Details - ${booking.ticketReference}</title>
             <style>
-              body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
-              .header { text-align: center; margin-bottom: 30px; }
-              .booking-info { background: #f5f5f5; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
-              @media print { body { margin: 0; } }
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { 
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                padding: 40px; 
+                line-height: 1.6;
+                color: #333;
+                background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+              }
+              .container {
+                max-width: 900px;
+                margin: 0 auto;
+                background: white;
+                padding: 40px;
+                border-radius: 12px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+              }
+              .header { 
+                text-align: center; 
+                margin-bottom: 40px;
+                padding-bottom: 20px;
+                border-bottom: 3px solid #C8A15C;
+              }
+              .header h1 {
+                color: #003366;
+                font-size: 32px;
+                margin-bottom: 10px;
+                letter-spacing: 1px;
+              }
+              .header h2 {
+                color: #C8A15C;
+                font-size: 20px;
+                font-weight: 500;
+              }
+              .section {
+                margin-bottom: 30px;
+              }
+              .section-title {
+                color: #003366;
+                font-size: 18px;
+                font-weight: 600;
+                margin-bottom: 15px;
+                padding-bottom: 8px;
+                border-bottom: 2px solid #f0f0f0;
+              }
+              .info-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+                margin-bottom: 20px;
+              }
+              .info-item {
+                background: #f8f9fa;
+                padding: 15px;
+                border-radius: 8px;
+                border-left: 4px solid #C8A15C;
+              }
+              .info-label {
+                font-weight: 600;
+                color: #003366;
+                font-size: 12px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-bottom: 5px;
+              }
+              .info-value {
+                color: #333;
+                font-size: 16px;
+              }
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 15px;
+                background: white;
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+              }
+              thead {
+                background: linear-gradient(135deg, #003366 0%, #004488 100%);
+                color: white;
+              }
+              th {
+                padding: 12px;
+                text-align: left;
+                font-weight: 600;
+                font-size: 13px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+              td {
+                padding: 12px;
+                border-bottom: 1px solid #f0f0f0;
+              }
+              tr:last-child td {
+                border-bottom: none;
+              }
+              tbody tr:hover {
+                background: #f8f9fa;
+              }
+              .btn-container {
+                margin-top: 40px;
+                text-align: center;
+                padding-top: 20px;
+                border-top: 2px solid #f0f0f0;
+              }
+              button {
+                padding: 12px 30px;
+                margin: 0 10px;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 600;
+                transition: all 0.3s ease;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+              .btn-print {
+                background: linear-gradient(135deg, #003366 0%, #004488 100%);
+                color: white;
+              }
+              .btn-print:hover {
+                box-shadow: 0 4px 15px rgba(0, 51, 102, 0.3);
+                transform: translateY(-2px);
+              }
+              .btn-close {
+                background: #6c757d;
+                color: white;
+              }
+              .btn-close:hover {
+                background: #5a6268;
+              }
+              @media print {
+                body { 
+                  background: white; 
+                  padding: 0; 
+                }
+                .container {
+                  box-shadow: none;
+                  padding: 20px;
+                }
+                .btn-container { 
+                  display: none; 
+                }
+              }
             </style>
           </head>
           <body>
-            <div class="header">
-              <h1>BOOKING DETAILS</h1>
-              <h2>${booking.ticketReference}</h2>
-            </div>
-            <div class="booking-info">
-              <strong>Customer:</strong> ${booking.customerName}<br>
-              <strong>Email:</strong> ${booking.customerEmail || 'N/A'}<br>
-              ${booking.checkIn && booking.checkOut ? `<strong>Travel Dates:</strong> ${format(new Date(booking.checkIn), 'do MMMM yyyy')} - ${format(new Date(booking.checkOut), 'do MMMM yyyy')}<br>` : ''}
-              <strong>Status:</strong> ${booking.status}<br>
-              <strong>Total Amount:</strong> AED ${booking.totalAmount.toLocaleString()}
-            </div>
-            <div>${formattedContent}</div>
-            ${itineraryHTML}
-            <div style="margin-top: 30px; text-align: center;">
-              <button onclick="window.print()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">Print</button>
-              <button onclick="window.close()" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px;">Close</button>
+            <div class="container">
+              <div class="header">
+                <h1>BOOKING DETAILS</h1>
+                <h2>TKT ${booking.ticketReference}</h2>
+              </div>
+
+              <div class="section">
+                <div class="section-title">Guest Information</div>
+                <div class="info-grid">
+                  <div class="info-item">
+                    <div class="info-label">Guest Name</div>
+                    <div class="info-value">${booking.customerName}</div>
+                  </div>
+                  ${booking.customerEmail ? `
+                  <div class="info-item">
+                    <div class="info-label">Email</div>
+                    <div class="info-value">${booking.customerEmail}</div>
+                  </div>
+                  ` : ''}
+                  <div class="info-item">
+                    <div class="info-label">Total Pax</div>
+                    <div class="info-value">${booking.pax.adults} Adults${booking.pax.children > 0 ? `, ${booking.pax.children} Children` : ''}</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="info-label">Booking Status</div>
+                    <div class="info-value" style="color: ${booking.status === 'confirmed' ? '#10b981' : '#3b82f6'}; font-weight: 600;">${booking.status.toUpperCase()}</div>
+                  </div>
+                </div>
+              </div>
+
+              ${selectedHotel ? `
+              <div class="section">
+                <div class="section-title">Accommodation Details</div>
+                <div class="info-grid">
+                  <div class="info-item">
+                    <div class="info-label">Hotel</div>
+                    <div class="info-value">${selectedHotel.name}</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="info-label">Location</div>
+                    <div class="info-value">${selectedHotel.location || 'Dubai'}</div>
+                  </div>
+                  ${booking.checkIn ? `
+                  <div class="info-item">
+                    <div class="info-label">Check In</div>
+                    <div class="info-value">${format(new Date(booking.checkIn), 'EEEE, do MMMM yyyy')}</div>
+                  </div>
+                  ` : ''}
+                  ${booking.checkOut ? `
+                  <div class="info-item">
+                    <div class="info-label">Check Out</div>
+                    <div class="info-value">${format(new Date(booking.checkOut), 'EEEE, do MMMM yyyy')}</div>
+                  </div>
+                  ` : ''}
+                  ${booking.nights ? `
+                  <div class="info-item">
+                    <div class="info-label">Nights</div>
+                    <div class="info-value">${booking.nights} Night${booking.nights !== 1 ? 's' : ''}</div>
+                  </div>
+                  ` : ''}
+                  <div class="info-item">
+                    <div class="info-label">Number of Rooms</div>
+                    <div class="info-value">${Math.ceil(booking.pax.adults / 2)} Room${Math.ceil(booking.pax.adults / 2) !== 1 ? 's' : ''}</div>
+                  </div>
+                </div>
+              </div>
+              ` : ''}
+
+              ${itineraryItems && itineraryItems.length > 0 ? `
+              <div class="section">
+                <div class="section-title">Confirmed Itinerary</div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Tour / Activity</th>
+                      <th>Pickup Time</th>
+                      <th>Drop Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${itineraryItems.map(item => {
+                      const tour = tours.find(t => t.id === item.tour_id);
+                      return `
+                        <tr>
+                          <td style="font-weight: 600;">${format(new Date(item.tour_date), 'EEE, do MMM yyyy')}</td>
+                          <td>${tour?.name || 'Unknown Tour'}</td>
+                          <td>${tour?.pickupTime || '09:00 AM'}</td>
+                          <td>${tour?.dropTime || '05:00 PM'}</td>
+                        </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+              ` : ''}
+
+              <div class="section">
+                <div class="info-grid">
+                  <div class="info-item" style="grid-column: 1 / -1; border-left: 4px solid #003366;">
+                    <div class="info-label">Total Amount</div>
+                    <div class="info-value" style="font-size: 24px; color: #003366; font-weight: 700;">AED ${booking.totalAmount.toLocaleString()}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="btn-container">
+                <button onclick="window.print()" class="btn-print">Print Details</button>
+                <button onclick="window.close()" class="btn-close">Close</button>
+              </div>
             </div>
           </body>
         </html>

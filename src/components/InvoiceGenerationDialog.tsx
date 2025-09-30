@@ -9,6 +9,7 @@ import { useSupabaseData } from '../hooks/useSupabaseData';
 import { Quote } from '../hooks/useSupabaseData';
 import { toast } from '../hooks/use-toast';
 import jsPDF from 'jspdf';
+import { format } from 'date-fns';
 
 interface InvoiceGenerationDialogProps {
   isOpen: boolean;
@@ -112,114 +113,164 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
     const pageWidth = pdf.internal.pageSize.width;
     const pageHeight = pdf.internal.pageSize.height;
 
-    // Header - Professional styling
-    pdf.setFillColor(0, 51, 102); // Dark blue header
-    pdf.rect(0, 0, pageWidth, 40, 'F');
+    // Modern gradient header
+    pdf.setFillColor(0, 51, 102); // Dubai Navy
+    pdf.rect(0, 0, pageWidth, 45, 'F');
     
-    pdf.setFontSize(24);
+    // Accent stripe
+    pdf.setFillColor(200, 161, 92); // Dubai Gold
+    pdf.rect(0, 45, pageWidth, 3, 'F');
+    
+    pdf.setFontSize(26);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(255, 255, 255);
     pdf.text('SALES INVOICE', pageWidth / 2, 20, { align: 'center' });
     
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
-    pdf.text('Q1 Travel Tours - Premium Travel Services', pageWidth / 2, 30, { align: 'center' });
+    pdf.text('Q1 Travel Tours', pageWidth / 2, 30, { align: 'center' });
+    pdf.setFontSize(8);
+    pdf.text('Premium Travel Experiences | Dubai, UAE', pageWidth / 2, 37, { align: 'center' });
 
     // Reset text color for body
     pdf.setTextColor(0, 0, 0);
 
-    // Company and Invoice Details in two columns
-    let yPos = 55;
+    // Company and Invoice Details in two columns with modern styling
+    let yPos = 60;
     
-    // Left column - Company details
-    pdf.setFontSize(11);
+    // Left column box - Company details
+    pdf.setDrawColor(0, 51, 102);
+    pdf.setLineWidth(0.5);
+    pdf.setFillColor(248, 249, 250);
+    pdf.roundedRect(15, yPos - 5, 80, 35, 2, 2, 'FD');
+    
+    pdf.setFontSize(9);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('FROM:', 20, yPos);
+    pdf.setTextColor(0, 51, 102);
+    pdf.text('FROM', 20, yPos);
     
-    yPos += 7;
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
+    yPos += 6;
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(0, 0, 0);
     pdf.text('Q1 Travel Tours', 20, yPos);
     yPos += 5;
-    if (selectedBankAccount) {
-      pdf.text(`Branch: ${selectedBankAccount.branch_country}`, 20, yPos);
-    }
-    yPos += 5;
-    pdf.text('Email: info@q1travel.com', 20, yPos);
-    yPos += 5;
-    pdf.text('Phone: +971 4 XXX XXXX', 20, yPos);
-
-    // Right column - Invoice details
-    yPos = 55;
-    const rightCol = pageWidth - 80;
-    
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('INVOICE DETAILS:', rightCol, yPos);
-    
-    yPos += 7;
     pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8);
+    if (selectedBankAccount) {
+      pdf.text(selectedBankAccount.branch_country, 20, yPos);
+      yPos += 4;
+    }
+    pdf.text('Email: info@q1travel.com', 20, yPos);
+    yPos += 4;
+    pdf.text('Tel: +971 4 XXX XXXX', 20, yPos);
+
+    // Right column box - Invoice details
+    yPos = 55;
+    const rightCol = pageWidth - 95;
+    
+    pdf.setDrawColor(200, 161, 92);
+    pdf.setFillColor(255, 253, 245);
+    pdf.roundedRect(rightCol, yPos, 80, 35, 2, 2, 'FD');
+    
+    yPos += 5;
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(200, 161, 92);
+    pdf.text('INVOICE DETAILS', rightCol + 5, yPos);
+    pdf.setTextColor(0, 0, 0);
+    
+    yPos += 6;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8);
     
     // Generate invoice number: date + reference
     const today = new Date();
     const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
-    const invoiceNo = `${dateStr}-${quote.ticketReference}`;
+    const invoiceNo = `INV-${dateStr}-${quote.ticketReference}`;
     
-    pdf.text(`Invoice No.: ${invoiceNo}`, rightCol, yPos);
-    yPos += 5;
-    pdf.text(`Date: ${today.toLocaleDateString('en-GB')}`, rightCol, yPos);
-    yPos += 5;
-    pdf.text(`Reference: TKT ${quote.ticketReference}`, rightCol, yPos);
-
-    // Horizontal line separator
-    yPos = 100;
-    pdf.setDrawColor(200, 200, 200);
-    pdf.setLineWidth(0.5);
-    pdf.line(20, yPos, pageWidth - 20, yPos);
-
-    // Bill To section
-    yPos += 10;
-    pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('BILL TO:', 20, yPos);
-    
-    yPos += 7;
-    pdf.setFontSize(10);
+    pdf.text(`Invoice No.:`, rightCol + 5, yPos);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(`Guest Name: ${leadPaxName}`, 20, yPos);
+    pdf.text(invoiceNo, rightCol + 30, yPos);
     yPos += 5;
-    
-    const travelDatesFrom = (quote as any).travel_dates_from || quote.travelDates.startDate;
-    const travelDatesTo = (quote as any).travel_dates_to || quote.travelDates.endDate;
-    pdf.text(`Travel Period: ${new Date(travelDatesFrom).toLocaleDateString('en-GB')} - ${new Date(travelDatesTo).toLocaleDateString('en-GB')}`, 20, yPos);
-    
-    // Services table
-    yPos += 15;
-    pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('SERVICES', 20, yPos);
+    pdf.text(`Date:`, rightCol + 5, yPos);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(format(today, 'dd MMM yyyy'), rightCol + 30, yPos);
+    yPos += 5;
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(`Ref:`, rightCol + 5, yPos);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`TKT ${quote.ticketReference}`, rightCol + 30, yPos);
 
+    // Separator line
+    yPos = 102;
+    pdf.setDrawColor(200, 161, 92);
+    pdf.setLineWidth(1);
+    pdf.line(15, yPos, pageWidth - 15, yPos);
+
+    // Bill To section with modern box
     yPos += 8;
+    pdf.setDrawColor(0, 51, 102);
+    pdf.setLineWidth(0.5);
+    pdf.setFillColor(248, 249, 250);
+    pdf.roundedRect(15, yPos, pageWidth - 30, 20, 2, 2, 'FD');
     
-    // Table headers
-    pdf.setFillColor(240, 240, 240);
-    pdf.rect(20, yPos - 5, pageWidth - 40, 8, 'F');
-    
+    yPos += 5;
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Sr.', 22, yPos);
-    pdf.text('Description', 35, yPos);
-    pdf.text('Dates', 110, yPos);
-    pdf.text('PAX', 140, yPos);
-    pdf.text('Rate', 155, yPos);
-    pdf.text('Amount (USD)', 175, yPos);
-
-    yPos += 10;
+    pdf.setTextColor(0, 51, 102);
+    pdf.text('BILL TO', 20, yPos);
+    pdf.setTextColor(0, 0, 0);
+    
+    yPos += 6;
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(leadPaxName, 20, yPos);
+    
+    yPos += 5;
     pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8);
+    const travelDatesFrom = (quote as any).travel_dates_from || quote.travelDates.startDate;
+    const travelDatesTo = (quote as any).travel_dates_to || quote.travelDates.endDate;
+    pdf.text(`Travel: ${format(new Date(travelDatesFrom), 'dd MMM yyyy')} - ${format(new Date(travelDatesTo), 'dd MMM yyyy')}`, 20, yPos);
+    
+    // Services table with modern header
+    yPos += 12;
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(0, 51, 102);
+    pdf.text('SERVICES & BREAKDOWN', 20, yPos);
+    pdf.setTextColor(0, 0, 0);
+
+    yPos += 7;
+    
+    // Table headers with gradient
+    pdf.setFillColor(0, 51, 102);
+    pdf.rect(15, yPos - 5, pageWidth - 30, 9, 'F');
+    
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(255, 255, 255);
+    pdf.text('#', 18, yPos);
+    pdf.text('DESCRIPTION', 28, yPos);
+    pdf.text('DATES', 105, yPos);
+    pdf.text('PAX', 135, yPos);
+    pdf.text('RATE', 150, yPos);
+    pdf.text('AMOUNT (USD)', 170, yPos);
+    pdf.setTextColor(0, 0, 0);
+
+    yPos += 8;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8);
     
     const nights = Math.ceil((new Date(travelDatesTo).getTime() - new Date(travelDatesFrom).getTime()) / (1000 * 60 * 60 * 24));
     let srNo = 1;
     let totalAmount = 0;
+    
+    // Alternating row colors for better readability
+    let isAlternate = false;
 
     // Hotel accommodation by occupancy type
     const occupancies = [
@@ -235,16 +286,26 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
           yPos = 30;
         }
 
-        pdf.text(String(srNo), 22, yPos);
+        // Alternating row background
+        if (isAlternate) {
+          pdf.setFillColor(248, 249, 250);
+          pdf.rect(15, yPos - 4, pageWidth - 30, 8, 'F');
+        }
+        isAlternate = !isAlternate;
+
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(String(srNo), 18, yPos);
         
-        const serviceDesc = `${selectedOption.hotel.name} (${type} Occupancy)`;
-        const splitDesc = pdf.splitTextToSize(serviceDesc, 70);
-        pdf.text(splitDesc, 35, yPos);
+        const serviceDesc = `${selectedOption.hotel.name} - ${type} Occupancy`;
+        const splitDesc = pdf.splitTextToSize(serviceDesc, 72);
+        pdf.text(splitDesc, 28, yPos);
         
-        const travelDates = `${new Date(travelDatesFrom).toLocaleDateString('en-GB')} - ${new Date(travelDatesTo).toLocaleDateString('en-GB')}`;
-        pdf.text(travelDates, 110, yPos);
+        pdf.setFontSize(7);
+        const travelDates = `${format(new Date(travelDatesFrom), 'dd MMM')} - ${format(new Date(travelDatesTo), 'dd MMM yyyy')}`;
+        pdf.text(travelDates, 105, yPos);
+        pdf.setFontSize(8);
         
-        pdf.text(String(pax.adults).padStart(2, '0'), 140, yPos);
+        pdf.text(String(pax.adults).padStart(2, '0'), 137, yPos);
         
         // Calculate cost
         const rooms = Math.ceil(pax.adults * multiplier);
@@ -255,11 +316,11 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
         // Convert to USD
         lineCost = lineCost / 3.67;
         
-        pdf.text(`$${lineCost.toFixed(2)}`, 155, yPos);
-        pdf.text(`$${lineCost.toFixed(2)}`, 175, yPos);
+        pdf.text(`$${(lineCost / pax.adults).toFixed(2)}`, 150, yPos);
+        pdf.text(`$${lineCost.toFixed(2)}`, 172, yPos);
         
         totalAmount += lineCost;
-        yPos += 10;
+        yPos += Math.max(8, splitDesc.length * 4);
         srNo++;
       }
     });
@@ -272,102 +333,147 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
           yPos = 30;
         }
 
-        pdf.text(String(srNo), 22, yPos);
-        pdf.text(`Tour: ${tour.name}`, 35, yPos);
-        pdf.text('-', 110, yPos);
-        pdf.text(String(totalDistributed).padStart(2, '0'), 140, yPos);
+        // Alternating row background
+        if (isAlternate) {
+          pdf.setFillColor(248, 249, 250);
+          pdf.rect(15, yPos - 4, pageWidth - 30, 8, 'F');
+        }
+        isAlternate = !isAlternate;
+
+        pdf.text(String(srNo), 18, yPos);
+        const tourDesc = pdf.splitTextToSize(`Tour: ${tour.name}`, 72);
+        pdf.text(tourDesc, 28, yPos);
+        pdf.text('-', 107, yPos);
+        pdf.text(String(totalDistributed).padStart(2, '0'), 137, yPos);
         
         const tourCost = (tour.costPerPerson * totalDistributed) / 3.67;
-        pdf.text(`$${(tour.costPerPerson / 3.67).toFixed(2)}`, 155, yPos);
-        pdf.text(`$${tourCost.toFixed(2)}`, 175, yPos);
+        pdf.text(`$${(tour.costPerPerson / 3.67).toFixed(2)}`, 150, yPos);
+        pdf.text(`$${tourCost.toFixed(2)}`, 172, yPos);
         
         totalAmount += tourCost;
-        yPos += 8;
+        yPos += Math.max(8, tourDesc.length * 4);
         srNo++;
       });
     }
 
-    // Inclusions
-    yPos += 5;
+    // Inclusions section
+    yPos += 8;
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Inclusions:', 22, yPos);
-    yPos += 7;
+    pdf.setFontSize(9);
+    pdf.setTextColor(0, 51, 102);
+    pdf.text('INCLUSIONS:', 18, yPos);
+    pdf.setTextColor(0, 0, 0);
+    yPos += 6;
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
+    pdf.setFontSize(7);
     
     const inclusionsList = [
-      'Daily Breakfast',
+      'Daily Breakfast at hotel',
       ...quote.selectedTours.map(t => t.name),
       ...(quote.selectedInclusions?.map(i => i.name) || []),
       'All transfers on SIC basis',
-      'All taxes except Tourism Dirham'
+      'All applicable taxes (Tourism Dirham excluded)'
     ];
 
     inclusionsList.forEach(inc => {
-      if (yPos > 260) {
+      if (yPos > 265) {
         pdf.addPage();
         yPos = 30;
       }
-      pdf.text(`• ${inc}`, 25, yPos);
-      yPos += 5;
+      pdf.text(`• ${inc}`, 22, yPos);
+      yPos += 4;
     });
 
-    // Total
-    yPos += 10;
-    pdf.setFontSize(12);
+    // Total with modern styling
+    yPos += 8;
+    pdf.setDrawColor(200, 161, 92);
+    pdf.setLineWidth(0.5);
+    pdf.setFillColor(255, 253, 245);
+    pdf.roundedRect(15, yPos - 5, pageWidth - 30, 12, 2, 2, 'FD');
+    
+    yPos += 2;
+    pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
-    pdf.setFillColor(240, 240, 240);
-    pdf.rect(20, yPos - 7, pageWidth - 40, 10, 'F');
-    pdf.text('TOTAL AMOUNT:', 110, yPos);
-    pdf.text(`USD $${totalAmount.toFixed(2)}`, 175, yPos);
+    pdf.setTextColor(0, 51, 102);
+    pdf.text('TOTAL AMOUNT:', 105, yPos);
+    pdf.setTextColor(200, 161, 92);
+    pdf.setFontSize(13);
+    pdf.text(`USD $${totalAmount.toFixed(2)}`, 170, yPos);
+    pdf.setTextColor(0, 0, 0);
 
-    // Bank Details
+    // Bank Details with modern box
     if (selectedBankAccount) {
-      yPos += 20;
-      if (yPos > 220) {
+      yPos += 18;
+      if (yPos > 215) {
         pdf.addPage();
         yPos = 30;
       }
 
-      pdf.setFontSize(11);
+      pdf.setDrawColor(0, 51, 102);
+      pdf.setLineWidth(0.5);
+      pdf.setFillColor(248, 249, 250);
+      pdf.roundedRect(15, yPos - 3, pageWidth - 30, 45, 2, 2, 'FD');
+
+      yPos += 2;
+      pdf.setFontSize(10);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('BANK DETAILS FOR PAYMENT:', 20, yPos);
+      pdf.setTextColor(0, 51, 102);
+      pdf.text('BANK DETAILS FOR PAYMENT', 20, yPos);
+      pdf.setTextColor(0, 0, 0);
       
-      yPos += 8;
-      pdf.setFontSize(9);
+      yPos += 7;
+      pdf.setFontSize(8);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(`Bank Name: ${selectedBankAccount.bank_name}`, 20, yPos);
-      yPos += 5;
-      pdf.text(`Account Name: ${selectedBankAccount.account_name}`, 20, yPos);
-      yPos += 5;
-      pdf.text(`Account Number: ${selectedBankAccount.account_number}`, 20, yPos);
-      yPos += 5;
-      if (selectedBankAccount.swift_code) {
-        pdf.text(`SWIFT Code: ${selectedBankAccount.swift_code}`, 20, yPos);
+      
+      const bankDetails = [
+        { label: 'Bank Name', value: selectedBankAccount.bank_name },
+        { label: 'Account Name', value: selectedBankAccount.account_name },
+        { label: 'Account Number', value: selectedBankAccount.account_number },
+        ...(selectedBankAccount.swift_code ? [{ label: 'SWIFT Code', value: selectedBankAccount.swift_code }] : []),
+        ...(selectedBankAccount.iban ? [{ label: 'IBAN', value: selectedBankAccount.iban }] : []),
+        { label: 'Currency', value: selectedBankAccount.currency }
+      ];
+
+      bankDetails.forEach(detail => {
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`${detail.label}:`, 20, yPos);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(detail.value, 60, yPos);
         yPos += 5;
-      }
-      if (selectedBankAccount.iban) {
-        pdf.text(`IBAN: ${selectedBankAccount.iban}`, 20, yPos);
-        yPos += 5;
-      }
-      pdf.text(`Currency: ${selectedBankAccount.currency}`, 20, yPos);
+      });
     }
 
-    // Declaration at bottom
-    const declarationY = pageHeight - 35;
-    pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('DECLARATION', 20, declarationY);
-    pdf.setFont('helvetica', 'italic');
-    pdf.text('We declare that this invoice shows the actual price of the services described', 20, declarationY + 5);
-    pdf.text('and that all particulars are true and correct.', 20, declarationY + 10);
+    // Declaration and footer
+    const declarationY = pageHeight - 40;
     
-    // Footer signature line
+    pdf.setFillColor(248, 249, 250);
+    pdf.rect(0, declarationY - 8, pageWidth, 30, 'F');
+    
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(0, 51, 102);
+    pdf.text('DECLARATION', 20, declarationY);
+    pdf.setTextColor(0, 0, 0);
+    
     pdf.setFont('helvetica', 'normal');
-    pdf.text('Authorized Signature: ________________', 20, declarationY + 20);
+    pdf.setFontSize(7);
+    pdf.text('We declare that this invoice shows the actual price of the services described and that all particulars are true and correct.', 20, declarationY + 5);
+    
+    // Signature and place
+    pdf.setFontSize(8);
+    pdf.text('Authorized Signature: ___________________', 20, declarationY + 15);
     if (selectedBankAccount) {
-      pdf.text(`Place: ${selectedBankAccount.branch_country}`, pageWidth - 60, declarationY + 20);
+      pdf.text(`Place: ${selectedBankAccount.branch_country}`, pageWidth - 55, declarationY + 15);
     }
+    pdf.text(`Date: ${format(today, 'dd/MM/yyyy')}`, pageWidth - 55, declarationY + 20);
+
+    // Footer stripe
+    pdf.setFillColor(200, 161, 92);
+    pdf.rect(0, pageHeight - 10, pageWidth, 10, 'F');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(7);
+    pdf.setFont('helvetica', 'italic');
+    pdf.text('Thank you for choosing Q1 Travel Tours', pageWidth / 2, pageHeight - 5, { align: 'center' });
 
     // Save the PDF
     const fileName = `Invoice_${quote.ticketReference}_${invoiceNo}.pdf`;

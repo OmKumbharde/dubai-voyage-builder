@@ -82,116 +82,166 @@ export const VoucherGenerationDialog: React.FC<VoucherGenerationDialogProps> = (
 
     const pdf = new jsPDF();
     const pageWidth = pdf.internal.pageSize.width;
-    let yPos = 20;
+    const pageHeight = pdf.internal.pageSize.height;
+    let yPos = 15;
 
-    // Header
-    pdf.setFontSize(20);
+    // Header with brand colors
+    pdf.setFillColor(0, 51, 102); // Dubai Navy
+    pdf.rect(0, 0, pageWidth, 35, 'F');
+    
+    pdf.setFontSize(22);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Hotel / Tour Voucher', pageWidth / 2, yPos, { align: 'center' });
+    pdf.setTextColor(255, 255, 255);
+    pdf.text('Hotel / Tour Voucher', pageWidth / 2, 15, { align: 'center' });
+    
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Q1 Travel Tours - Your Premium Travel Partner', pageWidth / 2, 25, { align: 'center' });
+
+    // Reset text color
+    pdf.setTextColor(0, 0, 0);
+    yPos = 45;
+
+    // Booking Reference - Highlighted
+    pdf.setFillColor(200, 161, 92); // Dubai Gold
+    pdf.rect(15, yPos - 6, pageWidth - 30, 12, 'F');
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(255, 255, 255);
+    pdf.text(`BOOKING REF: TKT ${quote.ticketReference}`, pageWidth / 2, yPos, { align: 'center' });
+    pdf.setTextColor(0, 0, 0);
 
     yPos += 15;
-    pdf.setFontSize(11);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(`BOOKING REF: TKT ${quote.ticketReference}`, 20, yPos);
 
-    yPos += 10;
+    // Guest Information Section
+    pdf.setFillColor(245, 245, 245);
+    pdf.rect(15, yPos - 5, pageWidth - 30, 25, 'F');
+    
+    yPos += 2;
     pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(`NAME OF GUEST: ${leadPaxName}`, 20, yPos);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('GUEST DETAILS', 20, yPos);
 
     yPos += 7;
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Name: ${leadPaxName}`, 20, yPos);
+    
     const totalPax = quoteAny.adults + (quoteAny.cwb || 0) + (quoteAny.cnb || 0) + (quoteAny.infants || 0);
-    pdf.text(`PAX: ${String(totalPax).padStart(2, '0')}`, 20, yPos);
+    pdf.text(`Total PAX: ${String(totalPax).padStart(2, '0')}`, pageWidth - 80, yPos);
 
-    // Hotel Details
+    yPos += 6;
+    pdf.text(`Emergency Contact: ${emergencyContact}`, 20, yPos);
+
+    // Hotel Details Section
     if (selectedHotel) {
-      yPos += 10;
+      yPos += 15;
       pdf.setFont('helvetica', 'bold');
-      pdf.text(`HOTEL: ${selectedHotel.name}`, 20, yPos);
+      pdf.setFontSize(11);
+      pdf.setTextColor(0, 51, 102);
+      pdf.text('ACCOMMODATION DETAILS', 20, yPos);
+      pdf.setTextColor(0, 0, 0);
 
-      yPos += 7;
+      yPos += 8;
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`Hotel: ${selectedHotel.name}`, 20, yPos);
+
+      yPos += 6;
       pdf.setFont('helvetica', 'normal');
-      pdf.text(`Hotel Address: ${selectedHotel.location}`, 20, yPos);
+      pdf.setFontSize(9);
+      pdf.text(`Address: ${selectedHotel.location}`, 20, yPos);
 
-      yPos += 7;
-      pdf.text(`Hotel Confirmation Number: ${hotelConfirmationNumber}`, 20, yPos);
+      yPos += 5;
+      pdf.text(`Confirmation Number: ${hotelConfirmationNumber}`, 20, yPos);
 
-      yPos += 7;
+      yPos += 5;
       const checkIn = new Date(quoteAny.travel_dates_from);
       const checkOut = new Date(quoteAny.travel_dates_to);
-      pdf.text(`CHECK IN (Standard Check in Time is 14.00 Hrs.): ${format(checkIn, 'do MMMM yyyy')}`, 20, yPos);
+      pdf.text(`CHECK IN (Standard time: 14:00 hrs): ${format(checkIn, 'do MMMM yyyy')}`, 20, yPos);
 
-      yPos += 7;
-      pdf.text(`CHECK OUT (Standard Check Out Time is 12.00 Noon): ${format(checkOut, 'do MMMM yyyy')}`, 20, yPos);
+      yPos += 5;
+      pdf.text(`CHECK OUT (Standard time: 12:00 noon): ${format(checkOut, 'do MMMM yyyy')}`, 20, yPos);
 
-      yPos += 7;
-      pdf.text(`TOURISM DHIRAM: ${tourismDirhamPaid ? 'Paid' : 'Not Paid'}`, 20, yPos);
-
-      yPos += 7;
-      pdf.text(`EMERGENCY CONTACT NUMBER: ${emergencyContact}`, 20, yPos);
+      yPos += 5;
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`Tourism Dirham: ${tourismDirhamPaid ? 'PAID' : 'NOT PAID'}`, 20, yPos);
+      pdf.setFont('helvetica', 'normal');
     }
 
-    // Airport Transfers Table
+    // Airport Transfers Section
     yPos += 12;
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(9);
-    
-    const transferTableY = yPos;
-    pdf.text('AIRPORT TRANSFERS', 20, transferTableY);
-    pdf.text('TYPE', 70, transferTableY);
-    pdf.text('FLIGHT', 105, transferTableY);
-    pdf.text('TIME', 130, transferTableY);
-    pdf.text('PICK-UP TIME', 150, transferTableY);
-    pdf.text('DATE', 180, transferTableY);
+    pdf.setFontSize(11);
+    pdf.setTextColor(0, 51, 102);
+    pdf.text('AIRPORT TRANSFERS', 20, yPos);
+    pdf.setTextColor(0, 0, 0);
 
-    yPos += 5;
-    pdf.line(20, yPos, pageWidth - 20, yPos);
+    yPos += 7;
+    
+    // Table header
+    pdf.setFillColor(245, 245, 245);
+    pdf.rect(15, yPos - 4, pageWidth - 30, 8, 'F');
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('SERVICE', 20, yPos);
+    pdf.text('TYPE', 70, yPos);
+    pdf.text('FLIGHT', 105, yPos);
+    pdf.text('TIME', 130, yPos);
+    pdf.text('PICK-UP', 150, yPos);
+    pdf.text('DATE', 175, yPos);
 
     yPos += 7;
     pdf.setFont('helvetica', 'normal');
     pdf.text('Airport Pick up', 20, yPos);
     pdf.text('Private', 70, yPos);
-    pdf.text('NA', 105, yPos);
-    pdf.text('-', 130, yPos);
-    pdf.text('NA', 150, yPos);
-    pdf.text('NA', 180, yPos);
+    pdf.text('TBA', 105, yPos);
+    pdf.text('TBA', 130, yPos);
+    pdf.text('TBA', 150, yPos);
+    pdf.text('TBA', 175, yPos);
 
-    yPos += 7;
+    yPos += 6;
     pdf.text('Airport Drop Off', 20, yPos);
     pdf.text('Private', 70, yPos);
-    pdf.text('NA', 105, yPos);
-    pdf.text('-', 130, yPos);
-    pdf.text('NA', 150, yPos);
-    pdf.text('NA', 180, yPos);
+    pdf.text('TBA', 105, yPos);
+    pdf.text('TBA', 130, yPos);
+    pdf.text('TBA', 150, yPos);
+    pdf.text('TBA', 175, yPos);
 
     // Important notes for airport
     yPos += 10;
-    pdf.setFontSize(8);
-    pdf.text('• Please connect to free Wi-Fi at Dubai airport for easy WhatsApp communication', 20, yPos);
-    yPos += 5;
-    pdf.text('• Driver will be waiting at arrival hall after baggage reclaim with your name card', 20, yPos);
-    yPos += 5;
-    pdf.text('• Maximum waiting time for airport pick up is 1 hour 30 Mins after flight landing', 20, yPos);
+    pdf.setFontSize(7);
+    pdf.setTextColor(102, 102, 102);
+    pdf.text('• Connect to free Wi-Fi at Dubai airport for WhatsApp communication', 20, yPos);
+    yPos += 4;
+    pdf.text('• Driver will be waiting at arrival hall after baggage claim with name card', 20, yPos);
+    yPos += 4;
+    pdf.text('• Maximum waiting time for airport pickup: 1 hour 30 minutes after landing', 20, yPos);
+    pdf.setTextColor(0, 0, 0);
 
     // Itinerary Section
     yPos += 12;
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('ITINERARY', 20, yPos);
+    pdf.setTextColor(0, 51, 102);
+    pdf.text('TOUR ITINERARY', 20, yPos);
+    pdf.setTextColor(0, 0, 0);
 
     yPos += 7;
-    pdf.setFontSize(9);
-    const itinTableY = yPos;
-    pdf.text('DATE', 20, itinTableY);
-    pdf.text('TOURS', 50, itinTableY);
-    pdf.text('TYPE OF TRANSFER', 120, itinTableY);
-    pdf.text('PICK-UP TIMING', 160, itinTableY);
-
-    yPos += 5;
-    pdf.line(20, yPos, pageWidth - 20, yPos);
+    
+    // Table header
+    pdf.setFillColor(245, 245, 245);
+    pdf.rect(15, yPos - 4, pageWidth - 30, 8, 'F');
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('DATE', 20, yPos);
+    pdf.text('TOUR / ACTIVITY', 45, yPos);
+    pdf.text('TRANSFER', 125, yPos);
+    pdf.text('PICK-UP', 155, yPos);
+    pdf.text('DROP-OFF', 175, yPos);
 
     yPos += 7;
     pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8);
 
     if (itineraryItems.length > 0) {
       itineraryItems.forEach((item) => {
@@ -202,50 +252,54 @@ export const VoucherGenerationDialog: React.FC<VoucherGenerationDialogProps> = (
             yPos = 20;
           }
           
-          pdf.text(format(new Date(item.tour_date), 'dd'), 20, yPos);
-          pdf.text(tour.name, 50, yPos);
-          pdf.text(tour.transferIncluded ? 'SIC' : 'Private', 120, yPos);
-          pdf.text(tour.pickupTime || '09:00 AM', 160, yPos);
-          yPos += 7;
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(format(new Date(item.tour_date), 'dd MMM'), 20, yPos);
+          pdf.setFont('helvetica', 'normal');
+          
+          const tourName = pdf.splitTextToSize(tour.name, 75);
+          pdf.text(tourName, 45, yPos);
+          
+          pdf.text(tour.transferIncluded ? 'SIC' : 'Private', 125, yPos);
+          pdf.text(tour.pickupTime || '09:00 AM', 155, yPos);
+          pdf.text(tour.dropTime || '05:00 PM', 175, yPos);
+          yPos += Math.max(7, tourName.length * 4);
         }
       });
     } else {
-      pdf.text('NA', 20, yPos);
-      pdf.text('NA', 50, yPos);
-      pdf.text('NA', 120, yPos);
-      pdf.text('NA', 160, yPos);
+      pdf.text('No tours scheduled', 45, yPos);
       yPos += 7;
     }
 
     yPos += 5;
-    pdf.setFontSize(8);
-    pdf.text('Kindly carry itinerary and theme park tickets during tour', 20, yPos);
+    pdf.setFontSize(7);
+    pdf.setTextColor(102, 102, 102);
+    pdf.text('* Please carry this voucher and theme park tickets during tours', 20, yPos);
+    pdf.setTextColor(0, 0, 0);
 
     // Special Notes
     yPos += 12;
-    if (yPos > 240) {
+    if (yPos > 220) {
       pdf.addPage();
       yPos = 20;
     }
 
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('SPECIAL NOTES:', 20, yPos);
+    pdf.setTextColor(0, 51, 102);
+    pdf.text('IMPORTANT INFORMATION', 20, yPos);
+    pdf.setTextColor(0, 0, 0);
 
     yPos += 7;
-    pdf.setFontSize(8);
+    pdf.setFontSize(7);
     pdf.setFont('helvetica', 'normal');
     
     const notes = [
-      '1. We will no longer apply Force Majeure conditions for guests seeking to cancel or modify their booking',
-      '   due to the current COVID-19 outbreak. These reservations will be treated like any standard booking.',
-      '2. Please note that your pick-up will be provided within 30 minutes from the indicated pick-up time.',
-      '   In order to avoid undue waiting of other guests and delays in the start of the excursion, our drivers',
-      '   are under order not to wait for more than 05 minutes - starting the arrival of the driver to the pick-up location.',
-      '',
-      'Early Check Out will Attract Full cancellation Charge',
-      '',
-      'Hotel has rights to charge security deposit for any extra or damages.'
+      '• Pickup time may vary by ±30 minutes. Please be ready at the scheduled time.',
+      '• Drivers will wait maximum 5 minutes from arrival time at pickup location.',
+      '• Early check-out will attract full cancellation charges.',
+      '• Hotel reserves the right to charge security deposit for extras or damages.',
+      '• Force Majeure conditions do not apply - standard booking terms apply.',
+      '• Please carry valid ID proof during all tours and hotel check-in.'
     ];
 
     notes.forEach(note => {
@@ -253,15 +307,19 @@ export const VoucherGenerationDialog: React.FC<VoucherGenerationDialogProps> = (
         pdf.addPage();
         yPos = 20;
       }
-      pdf.text(note, 20, yPos);
-      yPos += 5;
+      const lines = pdf.splitTextToSize(note, pageWidth - 40);
+      pdf.text(lines, 20, yPos);
+      yPos += lines.length * 4;
     });
 
     // Footer
-    const footerY = pdf.internal.pageSize.height - 20;
-    pdf.setFontSize(10);
+    const footerY = pageHeight - 15;
+    pdf.setFillColor(200, 161, 92);
+    pdf.rect(0, footerY - 5, pageWidth, 20, 'F');
+    pdf.setFontSize(9);
     pdf.setFont('helvetica', 'italic');
-    pdf.text('Thank you for choosing us. We look forward to serving you soon…', pageWidth / 2, footerY, { align: 'center' });
+    pdf.setTextColor(255, 255, 255);
+    pdf.text('Thank you for choosing Q1 Travel Tours. We look forward to serving you!', pageWidth / 2, footerY, { align: 'center' });
 
     // Save PDF
     const fileName = `Voucher_TKT_${quote.ticketReference}.pdf`;
