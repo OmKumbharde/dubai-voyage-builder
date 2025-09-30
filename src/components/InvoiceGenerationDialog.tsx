@@ -37,21 +37,39 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
   const quoteAny = quote as any;
   let hotelOptions: any[] = [];
   
-  // Parse formatted quote to get hotel options
-  if (quoteAny.formatted_quote) {
+  // Try to extract structured data from notes field
+  if (quoteAny.notes) {
+    try {
+      const quoteDataMatch = quoteAny.notes.match(/---QUOTE_DATA---\n({.*})/s);
+      if (quoteDataMatch && quoteDataMatch[1]) {
+        const quoteData = JSON.parse(quoteDataMatch[1]);
+        if (quoteData.hotelOptions && Array.isArray(quoteData.hotelOptions)) {
+          hotelOptions = quoteData.hotelOptions;
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing structured quote data:', e);
+    }
+  }
+  
+  // Fallback: Check formatted_quote for backward compatibility
+  if (hotelOptions.length === 0 && quoteAny.formatted_quote) {
     try {
       const formatted = JSON.parse(quoteAny.formatted_quote);
       if (formatted.hotelOptions && Array.isArray(formatted.hotelOptions)) {
         hotelOptions = formatted.hotelOptions;
       }
     } catch (e) {
-      console.error('Error parsing formatted quote:', e);
+      // Not JSON, probably HTML - try to use selectedHotels as fallback
     }
   }
   
-  // Fallback: try selectedHotel if it exists
-  if (hotelOptions.length === 0 && quote.selectedHotel) {
-    hotelOptions = [{ hotel: quote.selectedHotel }];
+  // Final fallback: create from selectedHotels if available
+  if (hotelOptions.length === 0 && quoteAny.selectedHotels && Array.isArray(quoteAny.selectedHotels)) {
+    hotelOptions = quoteAny.selectedHotels.map((hotel: any) => ({
+      hotel: hotel,
+      occupancyOptions: [{ occupancyType: 'DBL' }]
+    }));
   }
 
   const generateInvoicePDF = () => {

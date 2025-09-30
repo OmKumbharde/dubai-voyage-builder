@@ -593,6 +593,15 @@ const QuoteTool = () => {
       };
 
       if (editingQuote) {
+        // Save structured quote data as JSON
+        const quoteDataJSON = JSON.stringify({
+          hotelOptions: generatedQuote.hotelOptions,
+          selectedHotels,
+          selectedTours,
+          selectedInclusions,
+          occupancies: selectedOccupancies
+        });
+        
         // Use database field names directly
         const updateData = {
           reference_number: editingQuote.reference_number,
@@ -608,7 +617,7 @@ const QuoteTool = () => {
           currency: 'AED',
           status: 'draft',
           formatted_quote: generatedQuote.formattedText,
-          notes: generatedQuote.breakdown
+          notes: `${generatedQuote.breakdown}\n\n---QUOTE_DATA---\n${quoteDataJSON}`
         };
         
         const { error } = await supabase
@@ -622,6 +631,15 @@ const QuoteTool = () => {
           description: "Quote has been updated successfully"
         });
       } else {
+        // Save structured quote data as JSON
+        const quoteDataJSON = JSON.stringify({
+          hotelOptions: generatedQuote.hotelOptions,
+          selectedHotels,
+          selectedTours,
+          selectedInclusions,
+          occupancies: selectedOccupancies
+        });
+        
         // Use database field names directly  
         const insertData = {
           reference_number: `QT-${Date.now()}`,
@@ -637,7 +655,7 @@ const QuoteTool = () => {
           currency: 'AED',
           status: 'draft',
           formatted_quote: generatedQuote.formattedText,
-          notes: generatedQuote.breakdown
+          notes: `${generatedQuote.breakdown}\n\n---QUOTE_DATA---\n${quoteDataJSON}`
         };
         
         const { error } = await supabase
