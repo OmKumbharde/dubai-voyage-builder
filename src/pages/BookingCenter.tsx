@@ -16,11 +16,15 @@ import { useSupabaseData } from '../hooks/useSupabaseData';
 import { useAuth } from '../context/AuthContext';
 import { format } from 'date-fns';
 import { toast } from '../hooks/use-toast';
+import { VoucherGenerationDialog } from '../components/VoucherGenerationDialog';
+import { supabase } from '../integrations/supabase/client';
 
 const BookingCenter = () => {
   const { quotes, tours, isLoading } = useSupabaseData();
   const { user } = useAuth();
   const [selectedView, setSelectedView] = useState<'calendar' | 'list'>('list');
+  const [voucherDialogOpen, setVoucherDialogOpen] = useState(false);
+  const [selectedBookingForVoucher, setSelectedBookingForVoucher] = useState<any>(null);
 
   // Transform quotes into bookings for display using real database structure
   const bookings = quotes.filter(quote => 
@@ -76,7 +80,7 @@ const BookingCenter = () => {
     });
   };
 
-  const generateVoucher = async (booking: any) => {
+  const generateVoucher = (booking: any) => {
     const fullQuote = quotes.find(q => q.id === booking.id);
     
     if (!fullQuote) {
@@ -88,169 +92,11 @@ const BookingCenter = () => {
       return;
     }
 
-    const jsPDF = (await import('jspdf')).default;
-    const pdf = new jsPDF();
-    const pageWidth = pdf.internal.pageSize.width;
-    
-    // Header with company branding
-    pdf.setFontSize(22);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(0, 102, 204);
-    pdf.text('BOOKING VOUCHER', pageWidth / 2, 25, { align: 'center' });
-    
-    // Voucher number
-    pdf.setFontSize(10);
-    pdf.setTextColor(100, 100, 100);
-    pdf.text(`Voucher #: VCH-${booking.ticketReference}`, pageWidth / 2, 35, { align: 'center' });
-    
-    // Company details
-    pdf.setFontSize(9);
-    pdf.setTextColor(0, 0, 0);
-    let yPos = 50;
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Q1 Travel Tours', 20, yPos);
-    yPos += 5;
-    pdf.setFont('helvetica', 'normal');
-    pdf.text('Dubai, United Arab Emirates', 20, yPos);
-    yPos += 5;
-    pdf.text('Phone: +971 4 XXX XXXX | Email: info@q1travel.com', 20, yPos);
-    
-    // Horizontal line
-    yPos += 8;
-    pdf.setDrawColor(200, 200, 200);
-    pdf.line(20, yPos, pageWidth - 20, yPos);
-    
-    // Guest Information
-    yPos += 10;
-    pdf.setFontSize(12);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('GUEST INFORMATION', 20, yPos);
-    
-    yPos += 8;
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(`Guest Name: ${booking.customerName}`, 20, yPos);
-    yPos += 6;
-    pdf.text(`Booking Reference: ${booking.ticketReference}`, 20, yPos);
-    yPos += 6;
-    if (booking.customerEmail) {
-      pdf.text(`Email: ${booking.customerEmail}`, 20, yPos);
-      yPos += 6;
-    }
-    pdf.text(`No. of Guests: ${booking.pax.adults} Adult(s)${booking.pax.children > 0 ? `, ${booking.pax.children} Child(ren)` : ''}`, 20, yPos);
-    
-    // Travel Details
-    yPos += 12;
-    pdf.setFontSize(12);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('TRAVEL DETAILS', 20, yPos);
-    
-    yPos += 8;
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
-    if (booking.checkIn && booking.checkOut) {
-      pdf.text(`Check-in: ${format(new Date(booking.checkIn), 'EEEE, do MMMM yyyy')}`, 20, yPos);
-      yPos += 6;
-      pdf.text(`Check-out: ${format(new Date(booking.checkOut), 'EEEE, do MMMM yyyy')}`, 20, yPos);
-      yPos += 6;
-      pdf.text(`Duration: ${booking.nights} Night(s)`, 20, yPos);
-      yPos += 6;
-    }
-    
-    // Hotel Information
-    const fullQuoteAny = fullQuote as any;
-    if (fullQuote.selectedHotel || (fullQuoteAny.selectedHotels && fullQuoteAny.selectedHotels.length > 0)) {
-      yPos += 6;
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('ACCOMMODATION', 20, yPos);
-      
-      yPos += 8;
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-      
-      const hotels = fullQuoteAny.selectedHotels || [fullQuote.selectedHotel];
-      hotels.forEach((hotel: any) => {
-        if (hotel) {
-          pdf.text(`Hotel: ${hotel.name}`, 20, yPos);
-          yPos += 6;
-          pdf.text(`Location: ${hotel.location}`, 20, yPos);
-          yPos += 6;
-          pdf.text(`Rating: ${hotel.starRating || 5} Star`, 20, yPos);
-          yPos += 8;
-        }
-      });
-    }
-    
-    // Tours & Activities
-    if (fullQuote.selectedTours && fullQuote.selectedTours.length > 0) {
-      yPos += 2;
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('TOURS & ACTIVITIES', 20, yPos);
-      
-      yPos += 8;
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-      
-      fullQuote.selectedTours.forEach((tour: any, index: number) => {
-        if (yPos > 270) {
-          pdf.addPage();
-          yPos = 20;
-        }
-        pdf.text(`${index + 1}. ${tour.name}`, 25, yPos);
-        yPos += 6;
-        if (tour.duration) {
-          pdf.text(`   Duration: ${tour.duration}`, 25, yPos);
-          yPos += 6;
-        }
-      });
-    }
-    
-    // Important Notes
-    if (yPos > 240) {
-      pdf.addPage();
-      yPos = 20;
-    } else {
-      yPos += 10;
-    }
-    
-    pdf.setFillColor(255, 248, 220);
-    pdf.rect(15, yPos, pageWidth - 30, 40, 'F');
-    yPos += 8;
-    
-    pdf.setFontSize(11);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('IMPORTANT NOTES:', 20, yPos);
-    
-    yPos += 7;
-    pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text('• Please carry a printed copy of this voucher', 20, yPos);
-    yPos += 5;
-    pdf.text('• Carry a valid photo ID proof', 20, yPos);
-    yPos += 5;
-    pdf.text('• Check-in time: 2:00 PM | Check-out time: 12:00 PM', 20, yPos);
-    yPos += 5;
-    pdf.text('• Tourism Dirham charges may apply separately at the hotel', 20, yPos);
-    
-    // Footer
-    const footerY = pdf.internal.pageSize.height - 20;
-    pdf.setFontSize(8);
-    pdf.setTextColor(100, 100, 100);
-    pdf.text('Thank you for choosing Q1 Travel Tours. We wish you a pleasant journey!', pageWidth / 2, footerY, { align: 'center' });
-    pdf.text('For assistance, contact us: +971 4 XXX XXXX | support@q1travel.com', pageWidth / 2, footerY + 5, { align: 'center' });
-    
-    // Save PDF
-    pdf.save(`voucher-${booking.ticketReference}.pdf`);
-    
-    toast({
-      title: "Voucher Generated",
-      description: `Booking voucher for ${booking.customerName} has been downloaded`,
-    });
+    setSelectedBookingForVoucher(fullQuote);
+    setVoucherDialogOpen(true);
   };
 
-  const viewBookingDetails = (booking: any) => {
+  const viewBookingDetails = async (booking: any) => {
     // Find the full quote from quotes
     const fullQuote = quotes.find(q => q.id === booking.id);
     const formattedContent = (fullQuote as any)?.formatted_quote;
@@ -262,6 +108,45 @@ const BookingCenter = () => {
         variant: "destructive"
       });
       return;
+    }
+
+    // Fetch itinerary items
+    const { data: itineraryItems, error } = await supabase
+      .from('itineraries')
+      .select('*')
+      .eq('quote_id', booking.id)
+      .order('tour_date', { ascending: true });
+
+    let itineraryHTML = '';
+    if (itineraryItems && itineraryItems.length > 0) {
+      itineraryHTML = `
+        <div style="margin-top: 20px;">
+          <h3 style="color: #003366; margin-bottom: 15px;">Confirmed Itinerary</h3>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <thead>
+              <tr style="background: #f0f0f0;">
+                <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Date</th>
+                <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Tour</th>
+                <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Pickup Time</th>
+                <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itineraryItems.map(item => {
+                const tour = tours.find(t => t.id === item.tour_id);
+                return `
+                  <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${format(new Date(item.tour_date), 'EEE, do MMM yyyy')}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${tour?.name || 'Unknown Tour'}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${(tour as any)?.pickupTime || '09:00 AM'}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${item.notes || '-'}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
     }
     
     const newWindow = window.open('', '_blank');
@@ -290,6 +175,7 @@ const BookingCenter = () => {
               <strong>Total Amount:</strong> AED ${booking.totalAmount.toLocaleString()}
             </div>
             <div>${formattedContent}</div>
+            ${itineraryHTML}
             <div style="margin-top: 30px; text-align: center;">
               <button onclick="window.print()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">Print</button>
               <button onclick="window.close()" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px;">Close</button>
@@ -627,6 +513,18 @@ const BookingCenter = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Voucher Generation Dialog */}
+      {selectedBookingForVoucher && (
+        <VoucherGenerationDialog
+          isOpen={voucherDialogOpen}
+          onClose={() => {
+            setVoucherDialogOpen(false);
+            setSelectedBookingForVoucher(null);
+          }}
+          quote={selectedBookingForVoucher}
+        />
+      )}
     </div>
   );
 };

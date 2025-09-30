@@ -29,6 +29,8 @@ const ToursManagement = () => {
     description: '',
     type: 'group' as 'group' | 'private',
     duration: '',
+    pickupTime: '09:00 AM',
+    dropTime: '05:00 PM',
     costPerPerson: 0,
     transferIncluded: true,
     privateTransferCost: 0,
@@ -41,6 +43,8 @@ const ToursManagement = () => {
       description: '',
       type: 'group',
       duration: '',
+      pickupTime: '09:00 AM',
+      dropTime: '05:00 PM',
       costPerPerson: 0,
       transferIncluded: true,
       privateTransferCost: 0,
@@ -51,7 +55,7 @@ const ToursManagement = () => {
   };
 
   const handleSave = async () => {
-    if (!formData.name || !formData.duration || formData.costPerPerson <= 0) {
+    if (!formData.name || !formData.duration || formData.costPerPerson <= 0 || !formData.pickupTime || !formData.dropTime) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields",
@@ -66,6 +70,8 @@ const ToursManagement = () => {
         description: formData.description,
         type: formData.type,
         duration: formData.duration,
+        pickupTime: formData.pickupTime,
+        dropTime: formData.dropTime,
         costPerPerson: formData.costPerPerson,
         transferIncluded: formData.transferIncluded,
         privateTransferCost: formData.privateTransferCost,
@@ -91,6 +97,8 @@ const ToursManagement = () => {
       description: tour.description,
       type: tour.type,
       duration: tour.duration,
+      pickupTime: (tour as any).pickupTime || '09:00 AM',
+      dropTime: (tour as any).dropTime || '05:00 PM',
       costPerPerson: tour.costPerPerson,
       transferIncluded: tour.transferIncluded,
       privateTransferCost: tour.privateTransferCost || 0,
@@ -178,6 +186,29 @@ const ToursManagement = () => {
                   value={formData.duration}
                   onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
                   placeholder="e.g., 6 hours, Full day"
+                  className="dubai-input"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="pickupTime">Approx. Pickup Time *</Label>
+                <Input
+                  id="pickupTime"
+                  value={formData.pickupTime}
+                  onChange={(e) => setFormData(prev => ({ ...prev, pickupTime: e.target.value }))}
+                  placeholder="e.g., 09:00 AM"
+                  className="dubai-input"
+                />
+              </div>
+              <div>
+                <Label htmlFor="dropTime">Approx. Drop-off Time *</Label>
+                <Input
+                  id="dropTime"
+                  value={formData.dropTime}
+                  onChange={(e) => setFormData(prev => ({ ...prev, dropTime: e.target.value }))}
+                  placeholder="e.g., 05:00 PM"
                   className="dubai-input"
                 />
               </div>
@@ -328,7 +359,8 @@ const ToursManagement = () => {
                 <tr className="border-b">
                   <th className="text-left p-3">Sr. No</th>
                   <th className="text-left p-3">Tour Name</th>
-                  <th className="text-left p-3">Duration</th>
+                  <th className="text-left p-3">Pickup Time</th>
+                  <th className="text-left p-3">Drop Time</th>
                   <th className="text-left p-3">Type</th>
                   <th className="text-left p-3">Cost Per Person</th>
                   <th className="text-left p-3">Actions</th>
@@ -337,7 +369,7 @@ const ToursManagement = () => {
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-8">Loading tours...</td>
+                    <td colSpan={7} className="text-center py-8">Loading tours...</td>
                   </tr>
                 ) : filteredTours.map((tour, index) => (
                   <tr key={tour.id} className="border-b hover:bg-gray-50">
@@ -348,7 +380,8 @@ const ToursManagement = () => {
                         <p className="text-sm text-muted-foreground truncate">{tour.description}</p>
                       </div>
                     </td>
-                    <td className="p-3">{tour.duration}</td>
+                    <td className="p-3">{(tour as any).pickupTime || '09:00 AM'}</td>
+                    <td className="p-3">{(tour as any).dropTime || '05:00 PM'}</td>
                     <td className="p-3">
                       <Badge variant={tour.type === 'private' ? 'default' : 'secondary'}>
                         {tour.type === 'private' ? 'Private' : 'Sharing'}

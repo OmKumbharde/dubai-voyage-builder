@@ -362,11 +362,13 @@ export type Database = {
           cost_per_person: number
           created_at: string
           description: string | null
+          drop_time: string | null
           duration: string | null
           highlights: string[] | null
           id: string
           images: string[] | null
           name: string
+          pickup_time: string | null
           private_transfer_cost: number | null
           transfer_included: boolean | null
           type: string
@@ -376,11 +378,13 @@ export type Database = {
           cost_per_person: number
           created_at?: string
           description?: string | null
+          drop_time?: string | null
           duration?: string | null
           highlights?: string[] | null
           id?: string
           images?: string[] | null
           name: string
+          pickup_time?: string | null
           private_transfer_cost?: number | null
           transfer_included?: boolean | null
           type?: string
@@ -390,11 +394,13 @@ export type Database = {
           cost_per_person?: number
           created_at?: string
           description?: string | null
+          drop_time?: string | null
           duration?: string | null
           highlights?: string[] | null
           id?: string
           images?: string[] | null
           name?: string
+          pickup_time?: string | null
           private_transfer_cost?: number | null
           transfer_included?: boolean | null
           type?: string
