@@ -9,7 +9,6 @@ import { useSupabaseData } from '../hooks/useSupabaseData';
 import { Quote } from '../hooks/useSupabaseData';
 import { toast } from '../hooks/use-toast';
 import { supabase } from '../integrations/supabase/client';
-import jsPDF from 'jspdf';
 import { format } from 'date-fns';
 import { AlertCircle } from 'lucide-react';
 
@@ -79,256 +78,361 @@ export const VoucherGenerationDialog: React.FC<VoucherGenerationDialogProps> = (
 
     const quoteAny = quote as any;
     const selectedHotel = quoteAny.selectedHotels?.[0] || quoteAny.selectedHotel;
-
-    const pdf = new jsPDF();
-    const pageWidth = pdf.internal.pageSize.width;
-    const pageHeight = pdf.internal.pageSize.height;
-    let yPos = 15;
-
-    // Header with brand colors
-    pdf.setFillColor(0, 51, 102); // Dubai Navy
-    pdf.rect(0, 0, pageWidth, 35, 'F');
-    
-    pdf.setFontSize(22);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(255, 255, 255);
-    pdf.text('Hotel / Tour Voucher', pageWidth / 2, 15, { align: 'center' });
-    
-    pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text('Q1 Travel Tours - Your Premium Travel Partner', pageWidth / 2, 25, { align: 'center' });
-
-    // Reset text color
-    pdf.setTextColor(0, 0, 0);
-    yPos = 45;
-
-    // Booking Reference - Highlighted
-    pdf.setFillColor(200, 161, 92); // Dubai Gold
-    pdf.rect(15, yPos - 6, pageWidth - 30, 12, 'F');
-    pdf.setFontSize(12);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(255, 255, 255);
-    pdf.text(`BOOKING REF: TKT ${quote.ticketReference}`, pageWidth / 2, yPos, { align: 'center' });
-    pdf.setTextColor(0, 0, 0);
-
-    yPos += 15;
-
-    // Guest Information Section
-    pdf.setFillColor(245, 245, 245);
-    pdf.rect(15, yPos - 5, pageWidth - 30, 25, 'F');
-    
-    yPos += 2;
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('GUEST DETAILS', 20, yPos);
-
-    yPos += 7;
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(`Name: ${leadPaxName}`, 20, yPos);
-    
     const totalPax = quoteAny.adults + (quoteAny.cwb || 0) + (quoteAny.cnb || 0) + (quoteAny.infants || 0);
-    pdf.text(`Total PAX: ${String(totalPax).padStart(2, '0')}`, pageWidth - 80, yPos);
+    const checkIn = new Date(quoteAny.travel_dates_from);
+    const checkOut = new Date(quoteAny.travel_dates_to);
 
-    yPos += 6;
-    pdf.text(`Emergency Contact: ${emergencyContact}`, 20, yPos);
+    const newWindow = window.open('', '_blank');
+    if (newWindow) {
+      newWindow.document.write(`
+        <html>
+          <head>
+            <title>Hotel Tour Voucher - TKT ${quote.ticketReference}</title>
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { 
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                padding: 40px; 
+                line-height: 1.6;
+                color: #333;
+                background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+              }
+              .container {
+                max-width: 900px;
+                margin: 0 auto;
+                background: white;
+                padding: 40px;
+                border-radius: 12px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+              }
+              .header { 
+                text-align: center; 
+                margin-bottom: 40px;
+                padding-bottom: 20px;
+                border-bottom: 3px solid #C8A15C;
+              }
+              .header h1 {
+                color: #003366;
+                font-size: 32px;
+                margin-bottom: 10px;
+                letter-spacing: 1px;
+              }
+              .header h2 {
+                color: #C8A15C;
+                font-size: 20px;
+                font-weight: 500;
+              }
+              .section {
+                margin-bottom: 30px;
+              }
+              .section-title {
+                color: #003366;
+                font-size: 18px;
+                font-weight: 600;
+                margin-bottom: 15px;
+                padding-bottom: 8px;
+                border-bottom: 2px solid #f0f0f0;
+              }
+              .info-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+                margin-bottom: 20px;
+              }
+              .info-item {
+                background: #f8f9fa;
+                padding: 15px;
+                border-radius: 8px;
+                border-left: 4px solid #C8A15C;
+              }
+              .info-label {
+                font-weight: 600;
+                color: #003366;
+                font-size: 12px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-bottom: 5px;
+              }
+              .info-value {
+                color: #333;
+                font-size: 16px;
+              }
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 15px;
+                background: white;
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+              }
+              thead {
+                background: linear-gradient(135deg, #003366 0%, #004488 100%);
+                color: white;
+              }
+              th {
+                padding: 12px;
+                text-align: left;
+                font-weight: 600;
+                font-size: 13px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+              td {
+                padding: 12px;
+                border-bottom: 1px solid #f0f0f0;
+              }
+              tr:last-child td {
+                border-bottom: none;
+              }
+              tbody tr:hover {
+                background: #f8f9fa;
+              }
+              .note-box {
+                background: #fff3cd;
+                border-left: 4px solid #ffc107;
+                padding: 15px;
+                margin-top: 20px;
+                border-radius: 4px;
+              }
+              .note-box ul {
+                margin-left: 20px;
+                margin-top: 10px;
+              }
+              .note-box li {
+                margin-bottom: 8px;
+                font-size: 14px;
+              }
+              .important-box {
+                background: #d1ecf1;
+                border-left: 4px solid #0c5460;
+                padding: 15px;
+                margin-top: 20px;
+                border-radius: 4px;
+              }
+              .important-box h4 {
+                color: #0c5460;
+                margin-bottom: 10px;
+              }
+              .important-box ul {
+                margin-left: 20px;
+              }
+              .important-box li {
+                margin-bottom: 8px;
+                font-size: 13px;
+              }
+              .btn-container {
+                margin-top: 40px;
+                text-align: center;
+                padding-top: 20px;
+                border-top: 2px solid #f0f0f0;
+              }
+              button {
+                padding: 12px 30px;
+                margin: 0 10px;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 600;
+                transition: all 0.3s ease;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+              .btn-print {
+                background: linear-gradient(135deg, #003366 0%, #004488 100%);
+                color: white;
+              }
+              .btn-print:hover {
+                box-shadow: 0 4px 15px rgba(0, 51, 102, 0.3);
+                transform: translateY(-2px);
+              }
+              .btn-close {
+                background: #6c757d;
+                color: white;
+              }
+              .btn-close:hover {
+                background: #5a6268;
+              }
+              @media print {
+                body { 
+                  background: white; 
+                  padding: 0; 
+                }
+                .container {
+                  box-shadow: none;
+                  padding: 20px;
+                }
+                .btn-container { 
+                  display: none; 
+                }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>HOTEL / TOUR VOUCHER</h1>
+                <h2>TKT ${quote.ticketReference}</h2>
+              </div>
 
-    // Hotel Details Section
-    if (selectedHotel) {
-      yPos += 15;
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(11);
-      pdf.setTextColor(0, 51, 102);
-      pdf.text('ACCOMMODATION DETAILS', 20, yPos);
-      pdf.setTextColor(0, 0, 0);
+              <div class="section">
+                <div class="section-title">Guest Information</div>
+                <div class="info-grid">
+                  <div class="info-item">
+                    <div class="info-label">Guest Name</div>
+                    <div class="info-value">${leadPaxName}</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="info-label">Total PAX</div>
+                    <div class="info-value">${totalPax} Person${totalPax !== 1 ? 's' : ''}</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="info-label">Emergency Contact</div>
+                    <div class="info-value">${emergencyContact}</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="info-label">Booking Status</div>
+                    <div class="info-value" style="color: #10b981; font-weight: 600;">CONFIRMED</div>
+                  </div>
+                </div>
+              </div>
 
-      yPos += 8;
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(`Hotel: ${selectedHotel.name}`, 20, yPos);
+              ${selectedHotel ? `
+              <div class="section">
+                <div class="section-title">Accommodation Details</div>
+                <div class="info-grid">
+                  <div class="info-item" style="grid-column: 1 / -1;">
+                    <div class="info-label">Hotel Name</div>
+                    <div class="info-value" style="font-size: 18px; font-weight: 600;">${selectedHotel.name}</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="info-label">Address</div>
+                    <div class="info-value">${selectedHotel.location}</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="info-label">Confirmation Number</div>
+                    <div class="info-value" style="font-weight: 600; color: #C8A15C;">${hotelConfirmationNumber}</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="info-label">Check In</div>
+                    <div class="info-value">${format(checkIn, 'EEEE, do MMMM yyyy')} <span style="color: #666; font-size: 14px;">(Standard: 14:00)</span></div>
+                  </div>
+                  <div class="info-item">
+                    <div class="info-label">Check Out</div>
+                    <div class="info-value">${format(checkOut, 'EEEE, do MMMM yyyy')} <span style="color: #666; font-size: 14px;">(Standard: 12:00)</span></div>
+                  </div>
+                  <div class="info-item">
+                    <div class="info-label">Tourism Dirham</div>
+                    <div class="info-value" style="font-weight: 600; color: ${tourismDirhamPaid ? '#10b981' : '#ef4444'};">${tourismDirhamPaid ? 'PAID' : 'NOT PAID'}</div>
+                  </div>
+                </div>
+              </div>
+              ` : ''}
 
-      yPos += 6;
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(9);
-      pdf.text(`Address: ${selectedHotel.location}`, 20, yPos);
+              <div class="section">
+                <div class="section-title">Airport Transfers</div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Service</th>
+                      <th>Type</th>
+                      <th>Flight</th>
+                      <th>Time</th>
+                      <th>Pick-up</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style="font-weight: 600;">Airport Pick-up</td>
+                      <td>Private</td>
+                      <td>TBA</td>
+                      <td>TBA</td>
+                      <td>TBA</td>
+                      <td>TBA</td>
+                    </tr>
+                    <tr>
+                      <td style="font-weight: 600;">Airport Drop-off</td>
+                      <td>Private</td>
+                      <td>TBA</td>
+                      <td>TBA</td>
+                      <td>TBA</td>
+                      <td>TBA</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div class="note-box">
+                  <strong>Airport Transfer Notes:</strong>
+                  <ul>
+                    <li>Connect to free Wi-Fi at Dubai airport for easy WhatsApp communication</li>
+                    <li>Driver will be waiting at arrival hall after baggage claim with your name card</li>
+                    <li>Maximum waiting time for airport pick-up: 1 hour 30 minutes after flight landing</li>
+                  </ul>
+                </div>
+              </div>
 
-      yPos += 5;
-      pdf.text(`Confirmation Number: ${hotelConfirmationNumber}`, 20, yPos);
+              ${itineraryItems && itineraryItems.length > 0 ? `
+              <div class="section">
+                <div class="section-title">Tour Itinerary</div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Tour / Activity</th>
+                      <th>Transfer Type</th>
+                      <th>Pick-up Time</th>
+                      <th>Drop-off Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${itineraryItems.map(item => {
+                      const tour = tours.find(t => t.id === item.tour_id);
+                      return `
+                        <tr>
+                          <td style="font-weight: 600;">${format(new Date(item.tour_date), 'EEE, do MMM')}</td>
+                          <td>${tour?.name || 'Unknown Tour'}</td>
+                          <td>${tour?.transferIncluded ? 'SIC' : 'Private'}</td>
+                          <td>${tour?.pickupTime || '09:00 AM'}</td>
+                          <td>${tour?.dropTime || '05:00 PM'}</td>
+                        </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+                <div class="note-box">
+                  <strong>Important:</strong> Please carry this voucher and theme park tickets during tours
+                </div>
+              </div>
+              ` : ''}
 
-      yPos += 5;
-      const checkIn = new Date(quoteAny.travel_dates_from);
-      const checkOut = new Date(quoteAny.travel_dates_to);
-      pdf.text(`CHECK IN (Standard time: 14:00 hrs): ${format(checkIn, 'do MMMM yyyy')}`, 20, yPos);
+              <div class="important-box">
+                <h4>IMPORTANT INFORMATION</h4>
+                <ul>
+                  <li>Pick-up time may vary by ±30 minutes. Please be ready at the scheduled time.</li>
+                  <li>Drivers will wait maximum 5 minutes from arrival time at pick-up location.</li>
+                  <li>Early check-out will attract full cancellation charges.</li>
+                  <li>Hotel reserves the right to charge security deposit for extras or damages.</li>
+                  <li>Force Majeure conditions do not apply - standard booking terms apply.</li>
+                  <li>Please carry valid ID proof during all tours and hotel check-in.</li>
+                </ul>
+              </div>
 
-      yPos += 5;
-      pdf.text(`CHECK OUT (Standard time: 12:00 noon): ${format(checkOut, 'do MMMM yyyy')}`, 20, yPos);
-
-      yPos += 5;
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(`Tourism Dirham: ${tourismDirhamPaid ? 'PAID' : 'NOT PAID'}`, 20, yPos);
-      pdf.setFont('helvetica', 'normal');
-    }
-
-    // Airport Transfers Section
-    yPos += 12;
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(11);
-    pdf.setTextColor(0, 51, 102);
-    pdf.text('AIRPORT TRANSFERS', 20, yPos);
-    pdf.setTextColor(0, 0, 0);
-
-    yPos += 7;
-    
-    // Table header
-    pdf.setFillColor(245, 245, 245);
-    pdf.rect(15, yPos - 4, pageWidth - 30, 8, 'F');
-    pdf.setFontSize(8);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('SERVICE', 20, yPos);
-    pdf.text('TYPE', 70, yPos);
-    pdf.text('FLIGHT', 105, yPos);
-    pdf.text('TIME', 130, yPos);
-    pdf.text('PICK-UP', 150, yPos);
-    pdf.text('DATE', 175, yPos);
-
-    yPos += 7;
-    pdf.setFont('helvetica', 'normal');
-    pdf.text('Airport Pick up', 20, yPos);
-    pdf.text('Private', 70, yPos);
-    pdf.text('TBA', 105, yPos);
-    pdf.text('TBA', 130, yPos);
-    pdf.text('TBA', 150, yPos);
-    pdf.text('TBA', 175, yPos);
-
-    yPos += 6;
-    pdf.text('Airport Drop Off', 20, yPos);
-    pdf.text('Private', 70, yPos);
-    pdf.text('TBA', 105, yPos);
-    pdf.text('TBA', 130, yPos);
-    pdf.text('TBA', 150, yPos);
-    pdf.text('TBA', 175, yPos);
-
-    // Important notes for airport
-    yPos += 10;
-    pdf.setFontSize(7);
-    pdf.setTextColor(102, 102, 102);
-    pdf.text('• Connect to free Wi-Fi at Dubai airport for WhatsApp communication', 20, yPos);
-    yPos += 4;
-    pdf.text('• Driver will be waiting at arrival hall after baggage claim with name card', 20, yPos);
-    yPos += 4;
-    pdf.text('• Maximum waiting time for airport pickup: 1 hour 30 minutes after landing', 20, yPos);
-    pdf.setTextColor(0, 0, 0);
-
-    // Itinerary Section
-    yPos += 12;
-    pdf.setFontSize(11);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(0, 51, 102);
-    pdf.text('TOUR ITINERARY', 20, yPos);
-    pdf.setTextColor(0, 0, 0);
-
-    yPos += 7;
-    
-    // Table header
-    pdf.setFillColor(245, 245, 245);
-    pdf.rect(15, yPos - 4, pageWidth - 30, 8, 'F');
-    pdf.setFontSize(8);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('DATE', 20, yPos);
-    pdf.text('TOUR / ACTIVITY', 45, yPos);
-    pdf.text('TRANSFER', 125, yPos);
-    pdf.text('PICK-UP', 155, yPos);
-    pdf.text('DROP-OFF', 175, yPos);
-
-    yPos += 7;
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
-
-    if (itineraryItems.length > 0) {
-      itineraryItems.forEach((item) => {
-        const tour = tours.find(t => t.id === item.tour_id);
-        if (tour) {
-          if (yPos > 250) {
-            pdf.addPage();
-            yPos = 20;
-          }
-          
-          pdf.setFont('helvetica', 'bold');
-          pdf.text(format(new Date(item.tour_date), 'dd MMM'), 20, yPos);
-          pdf.setFont('helvetica', 'normal');
-          
-          const tourName = pdf.splitTextToSize(tour.name, 75);
-          pdf.text(tourName, 45, yPos);
-          
-          pdf.text(tour.transferIncluded ? 'SIC' : 'Private', 125, yPos);
-          pdf.text(tour.pickupTime || '09:00 AM', 155, yPos);
-          pdf.text(tour.dropTime || '05:00 PM', 175, yPos);
-          yPos += Math.max(7, tourName.length * 4);
-        }
+              <div class="btn-container">
+                <button onclick="window.print()" class="btn-print">Print Voucher</button>
+                <button onclick="window.close()" class="btn-close">Close</button>
+              </div>
+            </div>
+          </body>
+        </html>
+      `);
+      newWindow.document.close();
+      
+      toast({
+        title: "Voucher Generated",
+        description: "Voucher has been opened in a new window",
       });
-    } else {
-      pdf.text('No tours scheduled', 45, yPos);
-      yPos += 7;
     }
-
-    yPos += 5;
-    pdf.setFontSize(7);
-    pdf.setTextColor(102, 102, 102);
-    pdf.text('* Please carry this voucher and theme park tickets during tours', 20, yPos);
-    pdf.setTextColor(0, 0, 0);
-
-    // Special Notes
-    yPos += 12;
-    if (yPos > 220) {
-      pdf.addPage();
-      yPos = 20;
-    }
-
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(0, 51, 102);
-    pdf.text('IMPORTANT INFORMATION', 20, yPos);
-    pdf.setTextColor(0, 0, 0);
-
-    yPos += 7;
-    pdf.setFontSize(7);
-    pdf.setFont('helvetica', 'normal');
-    
-    const notes = [
-      '• Pickup time may vary by ±30 minutes. Please be ready at the scheduled time.',
-      '• Drivers will wait maximum 5 minutes from arrival time at pickup location.',
-      '• Early check-out will attract full cancellation charges.',
-      '• Hotel reserves the right to charge security deposit for extras or damages.',
-      '• Force Majeure conditions do not apply - standard booking terms apply.',
-      '• Please carry valid ID proof during all tours and hotel check-in.'
-    ];
-
-    notes.forEach(note => {
-      if (yPos > 270) {
-        pdf.addPage();
-        yPos = 20;
-      }
-      const lines = pdf.splitTextToSize(note, pageWidth - 40);
-      pdf.text(lines, 20, yPos);
-      yPos += lines.length * 4;
-    });
-
-    // Footer
-    const footerY = pageHeight - 15;
-    pdf.setFillColor(200, 161, 92);
-    pdf.rect(0, footerY - 5, pageWidth, 20, 'F');
-    pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'italic');
-    pdf.setTextColor(255, 255, 255);
-    pdf.text('Thank you for choosing Q1 Travel Tours. We look forward to serving you!', pageWidth / 2, footerY, { align: 'center' });
-
-    // Save PDF
-    const fileName = `Voucher_TKT_${quote.ticketReference}.pdf`;
-    pdf.save(fileName);
-
-    toast({
-      title: "Voucher Generated",
-      description: `Voucher ${fileName} has been downloaded successfully`,
-    });
 
     onClose();
     setStep(1);

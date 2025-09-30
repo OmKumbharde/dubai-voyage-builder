@@ -8,7 +8,6 @@ import { Card, CardContent } from './ui/card';
 import { useSupabaseData } from '../hooks/useSupabaseData';
 import { Quote } from '../hooks/useSupabaseData';
 import { toast } from '../hooks/use-toast';
-import jsPDF from 'jspdf';
 import { format } from 'date-fns';
 
 interface InvoiceGenerationDialogProps {
@@ -109,264 +108,66 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
       return;
     }
 
-    const pdf = new jsPDF();
-    const pageWidth = pdf.internal.pageSize.width;
-    const pageHeight = pdf.internal.pageSize.height;
-
-    // Modern gradient header
-    pdf.setFillColor(0, 51, 102); // Dubai Navy
-    pdf.rect(0, 0, pageWidth, 45, 'F');
+    const travelDatesFrom = (quote as any).travel_dates_from || quote.travelDates.startDate;
+    const travelDatesTo = (quote as any).travel_dates_to || quote.travelDates.endDate;
+    const nights = Math.ceil((new Date(travelDatesTo).getTime() - new Date(travelDatesFrom).getTime()) / (1000 * 60 * 60 * 24));
     
-    // Accent stripe
-    pdf.setFillColor(200, 161, 92); // Dubai Gold
-    pdf.rect(0, 45, pageWidth, 3, 'F');
-    
-    pdf.setFontSize(26);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(255, 255, 255);
-    pdf.text('SALES INVOICE', pageWidth / 2, 20, { align: 'center' });
-    
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text('Q1 Travel Tours', pageWidth / 2, 30, { align: 'center' });
-    pdf.setFontSize(8);
-    pdf.text('Premium Travel Experiences | Dubai, UAE', pageWidth / 2, 37, { align: 'center' });
-
-    // Reset text color for body
-    pdf.setTextColor(0, 0, 0);
-
-    // Company and Invoice Details in two columns with modern styling
-    let yPos = 60;
-    
-    // Left column box - Company details
-    pdf.setDrawColor(0, 51, 102);
-    pdf.setLineWidth(0.5);
-    pdf.setFillColor(248, 249, 250);
-    pdf.roundedRect(15, yPos - 5, 80, 35, 2, 2, 'FD');
-    
-    pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(0, 51, 102);
-    pdf.text('FROM', 20, yPos);
-    
-    yPos += 6;
-    pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(0, 0, 0);
-    pdf.text('Q1 Travel Tours', 20, yPos);
-    yPos += 5;
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
-    if (selectedBankAccount) {
-      pdf.text(selectedBankAccount.branch_country, 20, yPos);
-      yPos += 4;
-    }
-    pdf.text('Email: info@q1travel.com', 20, yPos);
-    yPos += 4;
-    pdf.text('Tel: +971 4 XXX XXXX', 20, yPos);
-
-    // Right column box - Invoice details
-    yPos = 55;
-    const rightCol = pageWidth - 95;
-    
-    pdf.setDrawColor(200, 161, 92);
-    pdf.setFillColor(255, 253, 245);
-    pdf.roundedRect(rightCol, yPos, 80, 35, 2, 2, 'FD');
-    
-    yPos += 5;
-    pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(200, 161, 92);
-    pdf.text('INVOICE DETAILS', rightCol + 5, yPos);
-    pdf.setTextColor(0, 0, 0);
-    
-    yPos += 6;
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
-    
-    // Generate invoice number: date + reference
     const today = new Date();
     const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
     const invoiceNo = `INV-${dateStr}-${quote.ticketReference}`;
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(`Invoice No.:`, rightCol + 5, yPos);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(invoiceNo, rightCol + 30, yPos);
-    yPos += 5;
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(`Date:`, rightCol + 5, yPos);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(format(today, 'dd MMM yyyy'), rightCol + 30, yPos);
-    yPos += 5;
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(`Ref:`, rightCol + 5, yPos);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(`TKT ${quote.ticketReference}`, rightCol + 30, yPos);
 
-    // Separator line
-    yPos = 102;
-    pdf.setDrawColor(200, 161, 92);
-    pdf.setLineWidth(1);
-    pdf.line(15, yPos, pageWidth - 15, yPos);
-
-    // Bill To section with modern box
-    yPos += 8;
-    pdf.setDrawColor(0, 51, 102);
-    pdf.setLineWidth(0.5);
-    pdf.setFillColor(248, 249, 250);
-    pdf.roundedRect(15, yPos, pageWidth - 30, 20, 2, 2, 'FD');
-    
-    yPos += 5;
-    pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(0, 51, 102);
-    pdf.text('BILL TO', 20, yPos);
-    pdf.setTextColor(0, 0, 0);
-    
-    yPos += 6;
-    pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(leadPaxName, 20, yPos);
-    
-    yPos += 5;
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
-    const travelDatesFrom = (quote as any).travel_dates_from || quote.travelDates.startDate;
-    const travelDatesTo = (quote as any).travel_dates_to || quote.travelDates.endDate;
-    pdf.text(`Travel: ${format(new Date(travelDatesFrom), 'dd MMM yyyy')} - ${format(new Date(travelDatesTo), 'dd MMM yyyy')}`, 20, yPos);
-    
-    // Services table with modern header
-    yPos += 12;
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(0, 51, 102);
-    pdf.text('SERVICES & BREAKDOWN', 20, yPos);
-    pdf.setTextColor(0, 0, 0);
-
-    yPos += 7;
-    
-    // Table headers with gradient
-    pdf.setFillColor(0, 51, 102);
-    pdf.rect(15, yPos - 5, pageWidth - 30, 9, 'F');
-    
-    pdf.setFontSize(8);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(255, 255, 255);
-    pdf.text('#', 18, yPos);
-    pdf.text('DESCRIPTION', 28, yPos);
-    pdf.text('DATES', 105, yPos);
-    pdf.text('PAX', 135, yPos);
-    pdf.text('RATE', 150, yPos);
-    pdf.text('AMOUNT (USD)', 170, yPos);
-    pdf.setTextColor(0, 0, 0);
-
-    yPos += 8;
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
-    
-    const nights = Math.ceil((new Date(travelDatesTo).getTime() - new Date(travelDatesFrom).getTime()) / (1000 * 60 * 60 * 24));
-    let srNo = 1;
-    let totalAmount = 0;
-    
-    // Alternating row colors for better readability
-    let isAlternate = false;
-
-    // Hotel accommodation by occupancy type
+    // Calculate services
     const occupancies = [
       { type: 'Single', pax: singlePax, multiplier: 1 },
       { type: 'Double', pax: doublePax, multiplier: 0.5 },
       { type: 'Triple', pax: triplePax, multiplier: 0.333 }
     ];
 
+    let serviceRows = '';
+    let srNo = 1;
+    let totalAmount = 0;
+
     occupancies.forEach(({ type, pax, multiplier }) => {
       if (pax.adults > 0) {
-        if (yPos > 250) {
-          pdf.addPage();
-          yPos = 30;
-        }
-
-        // Alternating row background
-        if (isAlternate) {
-          pdf.setFillColor(248, 249, 250);
-          pdf.rect(15, yPos - 4, pageWidth - 30, 8, 'F');
-        }
-        isAlternate = !isAlternate;
-
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(String(srNo), 18, yPos);
-        
-        const serviceDesc = `${selectedOption.hotel.name} - ${type} Occupancy`;
-        const splitDesc = pdf.splitTextToSize(serviceDesc, 72);
-        pdf.text(splitDesc, 28, yPos);
-        
-        pdf.setFontSize(7);
-        const travelDates = `${format(new Date(travelDatesFrom), 'dd MMM')} - ${format(new Date(travelDatesTo), 'dd MMM yyyy')}`;
-        pdf.text(travelDates, 105, yPos);
-        pdf.setFontSize(8);
-        
-        pdf.text(String(pax.adults).padStart(2, '0'), 137, yPos);
-        
-        // Calculate cost
         const rooms = Math.ceil(pax.adults * multiplier);
         const hotelRate = selectedOption.hotel.baseRate || 0;
         const extraBedRate = selectedOption.hotel.extraBedRate || 100;
         let lineCost = (rooms * hotelRate + pax.cwb * extraBedRate) * nights;
+        lineCost = lineCost / 3.67; // Convert to USD
         
-        // Convert to USD
-        lineCost = lineCost / 3.67;
-        
-        pdf.text(`$${(lineCost / pax.adults).toFixed(2)}`, 150, yPos);
-        pdf.text(`$${lineCost.toFixed(2)}`, 172, yPos);
-        
+        serviceRows += `
+          <tr>
+            <td style="font-weight: 600;">${srNo}</td>
+            <td>${selectedOption.hotel.name} - ${type} Occupancy</td>
+            <td>${format(new Date(travelDatesFrom), 'dd MMM')} - ${format(new Date(travelDatesTo), 'dd MMM yyyy')}</td>
+            <td>${pax.adults}</td>
+            <td>$${(lineCost / pax.adults).toFixed(2)}</td>
+            <td style="font-weight: 600;">$${lineCost.toFixed(2)}</td>
+          </tr>
+        `;
         totalAmount += lineCost;
-        yPos += Math.max(8, splitDesc.length * 4);
         srNo++;
       }
     });
 
-    // Tours and inclusions
     if (quote.selectedTours && quote.selectedTours.length > 0) {
       quote.selectedTours.forEach((tour) => {
-        if (yPos > 250) {
-          pdf.addPage();
-          yPos = 30;
-        }
-
-        // Alternating row background
-        if (isAlternate) {
-          pdf.setFillColor(248, 249, 250);
-          pdf.rect(15, yPos - 4, pageWidth - 30, 8, 'F');
-        }
-        isAlternate = !isAlternate;
-
-        pdf.text(String(srNo), 18, yPos);
-        const tourDesc = pdf.splitTextToSize(`Tour: ${tour.name}`, 72);
-        pdf.text(tourDesc, 28, yPos);
-        pdf.text('-', 107, yPos);
-        pdf.text(String(totalDistributed).padStart(2, '0'), 137, yPos);
-        
         const tourCost = (tour.costPerPerson * totalDistributed) / 3.67;
-        pdf.text(`$${(tour.costPerPerson / 3.67).toFixed(2)}`, 150, yPos);
-        pdf.text(`$${tourCost.toFixed(2)}`, 172, yPos);
-        
+        serviceRows += `
+          <tr>
+            <td style="font-weight: 600;">${srNo}</td>
+            <td>Tour: ${tour.name}</td>
+            <td>-</td>
+            <td>${totalDistributed}</td>
+            <td>$${(tour.costPerPerson / 3.67).toFixed(2)}</td>
+            <td style="font-weight: 600;">$${tourCost.toFixed(2)}</td>
+          </tr>
+        `;
         totalAmount += tourCost;
-        yPos += Math.max(8, tourDesc.length * 4);
         srNo++;
       });
     }
 
-    // Inclusions section
-    yPos += 8;
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(9);
-    pdf.setTextColor(0, 51, 102);
-    pdf.text('INCLUSIONS:', 18, yPos);
-    pdf.setTextColor(0, 0, 0);
-    yPos += 6;
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(7);
-    
     const inclusionsList = [
       'Daily Breakfast at hotel',
       ...quote.selectedTours.map(t => t.name),
@@ -375,114 +176,358 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
       'All applicable taxes (Tourism Dirham excluded)'
     ];
 
-    inclusionsList.forEach(inc => {
-      if (yPos > 265) {
-        pdf.addPage();
-        yPos = 30;
-      }
-      pdf.text(`• ${inc}`, 22, yPos);
-      yPos += 4;
-    });
+    const newWindow = window.open('', '_blank');
+    if (newWindow) {
+      newWindow.document.write(`
+        <html>
+          <head>
+            <title>Sales Invoice - ${invoiceNo}</title>
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { 
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                padding: 40px; 
+                line-height: 1.6;
+                color: #333;
+                background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+              }
+              .container {
+                max-width: 1000px;
+                margin: 0 auto;
+                background: white;
+                padding: 40px;
+                border-radius: 12px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+              }
+              .header { 
+                text-align: center; 
+                margin-bottom: 40px;
+                padding-bottom: 20px;
+                border-bottom: 3px solid #C8A15C;
+              }
+              .header h1 {
+                color: #003366;
+                font-size: 32px;
+                margin-bottom: 10px;
+                letter-spacing: 1px;
+              }
+              .header h2 {
+                color: #C8A15C;
+                font-size: 18px;
+                font-weight: 500;
+              }
+              .section {
+                margin-bottom: 30px;
+              }
+              .section-title {
+                color: #003366;
+                font-size: 18px;
+                font-weight: 600;
+                margin-bottom: 15px;
+                padding-bottom: 8px;
+                border-bottom: 2px solid #f0f0f0;
+              }
+              .info-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+                margin-bottom: 20px;
+              }
+              .info-item {
+                background: #f8f9fa;
+                padding: 15px;
+                border-radius: 8px;
+                border-left: 4px solid #C8A15C;
+              }
+              .info-label {
+                font-weight: 600;
+                color: #003366;
+                font-size: 12px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-bottom: 5px;
+              }
+              .info-value {
+                color: #333;
+                font-size: 16px;
+              }
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 15px;
+                background: white;
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+              }
+              thead {
+                background: linear-gradient(135deg, #003366 0%, #004488 100%);
+                color: white;
+              }
+              th {
+                padding: 12px;
+                text-align: left;
+                font-weight: 600;
+                font-size: 13px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+              td {
+                padding: 12px;
+                border-bottom: 1px solid #f0f0f0;
+              }
+              tr:last-child td {
+                border-bottom: none;
+              }
+              tbody tr:hover {
+                background: #f8f9fa;
+              }
+              .total-row {
+                background: #fff3cd;
+                font-weight: 700;
+                font-size: 18px;
+                color: #003366;
+              }
+              .inclusions-box {
+                background: #f8f9fa;
+                padding: 15px;
+                border-radius: 8px;
+                margin-top: 20px;
+              }
+              .inclusions-box h4 {
+                color: #003366;
+                margin-bottom: 10px;
+              }
+              .inclusions-box ul {
+                margin-left: 20px;
+                column-count: 2;
+              }
+              .inclusions-box li {
+                margin-bottom: 5px;
+                font-size: 13px;
+              }
+              .bank-details {
+                background: linear-gradient(135deg, #003366 0%, #004488 100%);
+                color: white;
+                padding: 20px;
+                border-radius: 8px;
+                margin-top: 20px;
+              }
+              .bank-details h4 {
+                margin-bottom: 15px;
+                font-size: 16px;
+              }
+              .bank-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+              }
+              .bank-item {
+                display: flex;
+                gap: 10px;
+              }
+              .bank-label {
+                font-weight: 600;
+                min-width: 120px;
+              }
+              .declaration {
+                background: #fff3cd;
+                padding: 15px;
+                border-radius: 8px;
+                margin-top: 30px;
+                border-left: 4px solid #ffc107;
+              }
+              .declaration h4 {
+                color: #856404;
+                margin-bottom: 10px;
+              }
+              .signature-section {
+                display: flex;
+                justify-content: space-between;
+                margin-top: 20px;
+                padding-top: 40px;
+              }
+              .btn-container {
+                margin-top: 40px;
+                text-align: center;
+                padding-top: 20px;
+                border-top: 2px solid #f0f0f0;
+              }
+              button {
+                padding: 12px 30px;
+                margin: 0 10px;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 600;
+                transition: all 0.3s ease;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+              .btn-print {
+                background: linear-gradient(135deg, #003366 0%, #004488 100%);
+                color: white;
+              }
+              .btn-print:hover {
+                box-shadow: 0 4px 15px rgba(0, 51, 102, 0.3);
+                transform: translateY(-2px);
+              }
+              .btn-close {
+                background: #6c757d;
+                color: white;
+              }
+              .btn-close:hover {
+                background: #5a6268;
+              }
+              @media print {
+                body { 
+                  background: white; 
+                  padding: 0; 
+                }
+                .container {
+                  box-shadow: none;
+                  padding: 20px;
+                }
+                .btn-container { 
+                  display: none; 
+                }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>SALES INVOICE</h1>
+                <h2>Invoice No: ${invoiceNo}</h2>
+                <p style="color: #666; margin-top: 10px;">Q1 Travel Tours | Premium Travel Experiences | Dubai, UAE</p>
+              </div>
 
-    // Total with modern styling
-    yPos += 8;
-    pdf.setDrawColor(200, 161, 92);
-    pdf.setLineWidth(0.5);
-    pdf.setFillColor(255, 253, 245);
-    pdf.roundedRect(15, yPos - 5, pageWidth - 30, 12, 2, 2, 'FD');
-    
-    yPos += 2;
-    pdf.setFontSize(11);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(0, 51, 102);
-    pdf.text('TOTAL AMOUNT:', 105, yPos);
-    pdf.setTextColor(200, 161, 92);
-    pdf.setFontSize(13);
-    pdf.text(`USD $${totalAmount.toFixed(2)}`, 170, yPos);
-    pdf.setTextColor(0, 0, 0);
+              <div class="section">
+                <div class="info-grid">
+                  <div class="info-item">
+                    <div class="info-label">From</div>
+                    <div class="info-value">
+                      <strong>Q1 Travel Tours</strong><br>
+                      ${selectedBankAccount ? selectedBankAccount.branch_country + '<br>' : ''}
+                      Email: info@q1travel.com<br>
+                      Tel: +971 4 XXX XXXX
+                    </div>
+                  </div>
+                  <div class="info-item">
+                    <div class="info-label">Invoice Details</div>
+                    <div class="info-value">
+                      <strong>Date:</strong> ${format(today, 'dd MMM yyyy')}<br>
+                      <strong>Reference:</strong> TKT ${quote.ticketReference}
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-    // Bank Details with modern box
-    if (selectedBankAccount) {
-      yPos += 18;
-      if (yPos > 215) {
-        pdf.addPage();
-        yPos = 30;
-      }
+              <div class="section">
+                <div class="section-title">Bill To</div>
+                <div class="info-item" style="border-left: 4px solid #003366;">
+                  <div style="font-size: 18px; font-weight: 600; margin-bottom: 10px;">${leadPaxName}</div>
+                  <div>Travel Period: ${format(new Date(travelDatesFrom), 'dd MMM yyyy')} - ${format(new Date(travelDatesTo), 'dd MMM yyyy')}</div>
+                </div>
+              </div>
 
-      pdf.setDrawColor(0, 51, 102);
-      pdf.setLineWidth(0.5);
-      pdf.setFillColor(248, 249, 250);
-      pdf.roundedRect(15, yPos - 3, pageWidth - 30, 45, 2, 2, 'FD');
+              <div class="section">
+                <div class="section-title">Services & Breakdown</div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width: 5%;">#</th>
+                      <th style="width: 35%;">Description</th>
+                      <th style="width: 20%;">Dates</th>
+                      <th style="width: 10%;">PAX</th>
+                      <th style="width: 15%;">Rate</th>
+                      <th style="width: 15%;">Amount (USD)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${serviceRows}
+                    <tr class="total-row">
+                      <td colspan="5" style="text-align: right; padding-right: 20px;">TOTAL AMOUNT:</td>
+                      <td>USD $${totalAmount.toFixed(2)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                
+                <div class="inclusions-box">
+                  <h4>Inclusions</h4>
+                  <ul>
+                    ${inclusionsList.map(inc => `<li>${inc}</li>`).join('')}
+                  </ul>
+                </div>
+              </div>
 
-      yPos += 2;
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(0, 51, 102);
-      pdf.text('BANK DETAILS FOR PAYMENT', 20, yPos);
-      pdf.setTextColor(0, 0, 0);
+              ${selectedBankAccount ? `
+              <div class="bank-details">
+                <h4>Bank Details for Payment</h4>
+                <div class="bank-grid">
+                  <div class="bank-item">
+                    <span class="bank-label">Bank Name:</span>
+                    <span>${selectedBankAccount.bank_name}</span>
+                  </div>
+                  <div class="bank-item">
+                    <span class="bank-label">Account Name:</span>
+                    <span>${selectedBankAccount.account_name}</span>
+                  </div>
+                  <div class="bank-item">
+                    <span class="bank-label">Account Number:</span>
+                    <span>${selectedBankAccount.account_number}</span>
+                  </div>
+                  <div class="bank-item">
+                    <span class="bank-label">Currency:</span>
+                    <span>${selectedBankAccount.currency}</span>
+                  </div>
+                  ${selectedBankAccount.swift_code ? `
+                  <div class="bank-item">
+                    <span class="bank-label">SWIFT Code:</span>
+                    <span>${selectedBankAccount.swift_code}</span>
+                  </div>
+                  ` : ''}
+                  ${selectedBankAccount.iban ? `
+                  <div class="bank-item">
+                    <span class="bank-label">IBAN:</span>
+                    <span>${selectedBankAccount.iban}</span>
+                  </div>
+                  ` : ''}
+                </div>
+              </div>
+              ` : ''}
+
+              <div class="declaration">
+                <h4>DECLARATION</h4>
+                <p>We declare that this invoice shows the actual price of the services described and that all particulars are true and correct.</p>
+                <div class="signature-section">
+                  <div>
+                    <strong>Authorized Signature:</strong><br>
+                    _________________________
+                  </div>
+                  <div style="text-align: right;">
+                    <strong>Place:</strong> ${selectedBankAccount ? selectedBankAccount.branch_country : 'Dubai'}<br>
+                    <strong>Date:</strong> ${format(today, 'dd/MM/yyyy')}
+                  </div>
+                </div>
+              </div>
+
+              <div class="btn-container">
+                <button onclick="window.print()" class="btn-print">Print Invoice</button>
+                <button onclick="window.close()" class="btn-close">Close</button>
+              </div>
+            </div>
+          </body>
+        </html>
+      `);
+      newWindow.document.close();
       
-      yPos += 7;
-      pdf.setFontSize(8);
-      pdf.setFont('helvetica', 'normal');
-      
-      const bankDetails = [
-        { label: 'Bank Name', value: selectedBankAccount.bank_name },
-        { label: 'Account Name', value: selectedBankAccount.account_name },
-        { label: 'Account Number', value: selectedBankAccount.account_number },
-        ...(selectedBankAccount.swift_code ? [{ label: 'SWIFT Code', value: selectedBankAccount.swift_code }] : []),
-        ...(selectedBankAccount.iban ? [{ label: 'IBAN', value: selectedBankAccount.iban }] : []),
-        { label: 'Currency', value: selectedBankAccount.currency }
-      ];
-
-      bankDetails.forEach(detail => {
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(`${detail.label}:`, 20, yPos);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(detail.value, 60, yPos);
-        yPos += 5;
+      toast({
+        title: "Invoice Generated",
+        description: "Invoice has been opened in a new window",
       });
     }
-
-    // Declaration and footer
-    const declarationY = pageHeight - 40;
-    
-    pdf.setFillColor(248, 249, 250);
-    pdf.rect(0, declarationY - 8, pageWidth, 30, 'F');
-    
-    pdf.setFontSize(8);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(0, 51, 102);
-    pdf.text('DECLARATION', 20, declarationY);
-    pdf.setTextColor(0, 0, 0);
-    
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(7);
-    pdf.text('We declare that this invoice shows the actual price of the services described and that all particulars are true and correct.', 20, declarationY + 5);
-    
-    // Signature and place
-    pdf.setFontSize(8);
-    pdf.text('Authorized Signature: ___________________', 20, declarationY + 15);
-    if (selectedBankAccount) {
-      pdf.text(`Place: ${selectedBankAccount.branch_country}`, pageWidth - 55, declarationY + 15);
-    }
-    pdf.text(`Date: ${format(today, 'dd/MM/yyyy')}`, pageWidth - 55, declarationY + 20);
-
-    // Footer stripe
-    pdf.setFillColor(200, 161, 92);
-    pdf.rect(0, pageHeight - 10, pageWidth, 10, 'F');
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(7);
-    pdf.setFont('helvetica', 'italic');
-    pdf.text('Thank you for choosing Q1 Travel Tours', pageWidth / 2, pageHeight - 5, { align: 'center' });
-
-    // Save the PDF
-    const fileName = `Invoice_${quote.ticketReference}_${invoiceNo}.pdf`;
-    pdf.save(fileName);
-
-    toast({
-      title: "Invoice Generated",
-      description: `Invoice ${fileName} has been downloaded successfully`,
-    });
 
     onClose();
   };
