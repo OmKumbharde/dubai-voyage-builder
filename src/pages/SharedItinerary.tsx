@@ -303,19 +303,29 @@ const SharedItinerary = () => {
           description: "Please select a tour for all days or remove empty days",
           variant: "destructive"
         });
+        setIsSaving(false);
         return;
       }
 
+      console.log('Deleting existing itinerary for quote:', quoteId);
+      
       // Delete existing itinerary items
-      await supabase
+      const { error: deleteError } = await supabase
         .from('itineraries')
         .delete()
         .eq('quote_id', quoteId);
 
+      if (deleteError) {
+        console.error('Delete error:', deleteError);
+        throw new Error(`Delete failed: ${deleteError.message}`);
+      }
+
+      console.log('Preparing items to insert:', itineraryItems.length);
+
       // Insert new itinerary items
-      const itemsToInsert = itineraryItems.map(item => {
+      const itemsToInsert = itineraryItems.map((item, index) => {
         const selectedTour = availableTours.find(t => t.id === item.tour_id);
-        return {
+        const insertItem = {
           quote_id: quoteId,
           tour_id: item.tour_id,
           tour_date: item.tour_date,
@@ -323,13 +333,24 @@ const SharedItinerary = () => {
           end_time: selectedTour?.duration?.split('-')?.[1]?.trim() || '17:00',
           notes: item.notes || null
         };
+        console.log(`Item ${index + 1}:`, insertItem);
+        return insertItem;
       });
 
-      const { error: insertError } = await supabase
-        .from('itineraries')
-        .insert(itemsToInsert);
+      console.log('Inserting items:', itemsToInsert);
 
-      if (insertError) throw insertError;
+      const { data: insertData, error: insertError } = await supabase
+        .from('itineraries')
+        .insert(itemsToInsert)
+        .select();
+
+      if (insertError) {
+        console.error('Insert error:', insertError);
+        console.error('Insert error details:', JSON.stringify(insertError, null, 2));
+        throw new Error(`Insert failed: ${insertError.message} (Code: ${insertError.code})`);
+      }
+
+      console.log('Successfully inserted:', insertData);
 
       toast({
         title: "Success",
@@ -337,11 +358,11 @@ const SharedItinerary = () => {
       });
 
       await loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving itinerary:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save itinerary",
+        description: error?.message || "Failed to save itinerary",
         variant: "destructive"
       });
     } finally {
