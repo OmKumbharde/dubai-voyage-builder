@@ -205,7 +205,7 @@ export const VoucherGenerationDialog: React.FC<VoucherGenerationDialogProps> = (
           pdf.text(format(new Date(item.tour_date), 'dd'), 20, yPos);
           pdf.text(tour.name, 50, yPos);
           pdf.text(tour.transferIncluded ? 'SIC' : 'Private', 120, yPos);
-          pdf.text((tour as any).pickupTime || '09:00 AM', 160, yPos);
+          pdf.text(tour.pickupTime || '09:00 AM', 160, yPos);
           yPos += 7;
         }
       });

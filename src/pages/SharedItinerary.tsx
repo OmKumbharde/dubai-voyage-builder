@@ -38,6 +38,8 @@ interface Tour {
   description: string;
   duration: string;
   type: string;
+  pickup_time?: string;
+  drop_time?: string;
 }
 
 const SortableItineraryItem = ({ 
@@ -112,9 +114,12 @@ const SortableItineraryItem = ({
 
               {tour && (
                 <div className="mt-2 p-3 bg-muted/50 rounded-md text-xs space-y-1">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    <span className="font-medium">{tour.duration || 'Full day'}</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Calendar className="h-3 w-3" />
+                      <span className="font-medium">Pickup: {tour.pickup_time || '09:00 AM'}</span>
+                    </div>
+                    <span className="text-muted-foreground font-medium">Drop: {tour.drop_time || '05:00 PM'}</span>
                   </div>
                   {tour.description && (
                     <p className="text-muted-foreground line-clamp-2">{tour.description}</p>

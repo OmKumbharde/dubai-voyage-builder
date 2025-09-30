@@ -138,7 +138,7 @@ const BookingCenter = () => {
                   <tr>
                     <td style="padding: 10px; border: 1px solid #ddd;">${format(new Date(item.tour_date), 'EEE, do MMM yyyy')}</td>
                     <td style="padding: 10px; border: 1px solid #ddd;">${tour?.name || 'Unknown Tour'}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">${(tour as any)?.pickupTime || '09:00 AM'}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${tour?.pickupTime || '09:00 AM'}</td>
                     <td style="padding: 10px; border: 1px solid #ddd;">${item.notes || '-'}</td>
                   </tr>
                 `;

@@ -105,6 +105,8 @@ export interface Tour {
   description: string;
   type: 'group' | 'private';
   duration: string;
+  pickupTime?: string;
+  dropTime?: string;
   costPerPerson: number;
   transferIncluded: boolean;
   privateTransferCost?: number;
@@ -178,12 +180,14 @@ const adaptDbHotelToHotel = (dbHotel: DbHotel): Hotel => ({
   updatedAt: dbHotel.updated_at,
 });
 
-const adaptDbTourToTour = (dbTour: DbTour): Tour => ({
+const adaptDbTourToTour = (dbTour: any): Tour => ({
   id: dbTour.id,
   name: dbTour.name,
   description: dbTour.description || '',
   type: dbTour.type as 'group' | 'private',
   duration: dbTour.duration || '',
+  pickupTime: dbTour.pickup_time || '09:00 AM',
+  dropTime: dbTour.drop_time || '05:00 PM',
   costPerPerson: Number(dbTour.cost_per_person),
   transferIncluded: Boolean(dbTour.transfer_included),
   privateTransferCost: dbTour.private_transfer_cost ? Number(dbTour.private_transfer_cost) : undefined,
@@ -403,6 +407,8 @@ export const useSupabaseData = () => {
         description: tour.description,
         type: tour.type,
         duration: tour.duration,
+        pickup_time: tour.pickupTime || '09:00 AM',
+        drop_time: tour.dropTime || '05:00 PM',
         cost_per_person: tour.costPerPerson,
         transfer_included: tour.transferIncluded,
         private_transfer_cost: tour.privateTransferCost || 0,
@@ -446,6 +452,8 @@ export const useSupabaseData = () => {
       if (updates.description) updateData.description = updates.description;
       if (updates.type) updateData.type = updates.type;
       if (updates.duration) updateData.duration = updates.duration;
+      if (updates.pickupTime) updateData.pickup_time = updates.pickupTime;
+      if (updates.dropTime) updateData.drop_time = updates.dropTime;
       if (updates.costPerPerson !== undefined) updateData.cost_per_person = updates.costPerPerson;
       if (updates.transferIncluded !== undefined) updateData.transfer_included = updates.transferIncluded;
       if (updates.privateTransferCost !== undefined) updateData.private_transfer_cost = updates.privateTransferCost;

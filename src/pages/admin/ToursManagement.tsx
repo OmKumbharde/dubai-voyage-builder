@@ -380,8 +380,8 @@ const ToursManagement = () => {
                         <p className="text-sm text-muted-foreground truncate">{tour.description}</p>
                       </div>
                     </td>
-                    <td className="p-3">{(tour as any).pickupTime || '09:00 AM'}</td>
-                    <td className="p-3">{(tour as any).dropTime || '05:00 PM'}</td>
+                    <td className="p-3">{tour.pickupTime || '09:00 AM'}</td>
+                    <td className="p-3">{tour.dropTime || '05:00 PM'}</td>
                     <td className="p-3">
                       <Badge variant={tour.type === 'private' ? 'default' : 'secondary'}>
                         {tour.type === 'private' ? 'Private' : 'Sharing'}
