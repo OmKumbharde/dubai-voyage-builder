@@ -150,7 +150,9 @@ export interface Quote {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
-  // Additional properties for compatibility with database
+  // Raw database fields for compatibility
+  notes?: string | null;
+  formatted_quote?: string | null;
   reference_number?: string;
   client_name?: string;
   ticket_reference?: string;
@@ -227,6 +229,17 @@ const adaptDbQuoteToQuote = (dbQuote: DbQuote): Quote => ({
   createdBy: 'system', // Default value
   createdAt: dbQuote.created_at,
   updatedAt: dbQuote.updated_at,
+  // Preserve raw database fields
+  notes: dbQuote.notes,
+  formatted_quote: dbQuote.formatted_quote,
+  reference_number: dbQuote.reference_number,
+  client_name: dbQuote.client_name,
+  ticket_reference: dbQuote.ticket_reference,
+  adults: dbQuote.adults,
+  infants: dbQuote.infants || 0,
+  cnb: dbQuote.cnb || 0,
+  cwb: dbQuote.cwb || 0,
+  total_amount: Number(dbQuote.total_amount),
 });
 
 export const useSupabaseData = () => {

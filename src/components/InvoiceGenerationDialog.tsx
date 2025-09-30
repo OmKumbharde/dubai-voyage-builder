@@ -43,48 +43,35 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
       // More flexible regex to match the JSON data
       const quoteDataMatch = quoteAny.notes.match(/---QUOTE_DATA---\s*\n\s*({[\s\S]*})\s*$/);
       if (quoteDataMatch && quoteDataMatch[1]) {
-        console.log('Found QUOTE_DATA, attempting to parse...');
         const quoteData = JSON.parse(quoteDataMatch[1]);
-        console.log('Successfully parsed quote data:', quoteData);
         if (quoteData.hotelOptions && Array.isArray(quoteData.hotelOptions)) {
           hotelOptions = quoteData.hotelOptions;
-          console.log('Extracted', hotelOptions.length, 'hotel options');
         }
-      } else {
-        console.log('No QUOTE_DATA marker match in notes field');
       }
     } catch (e) {
       console.error('Error parsing structured quote data:', e);
     }
-  } else {
-    console.log('No notes field in quote');
   }
   
   // Fallback: Check formatted_quote for backward compatibility
   if (hotelOptions.length === 0 && quoteAny.formatted_quote) {
-    console.log('Trying formatted_quote fallback');
     try {
       const formatted = JSON.parse(quoteAny.formatted_quote);
       if (formatted.hotelOptions && Array.isArray(formatted.hotelOptions)) {
         hotelOptions = formatted.hotelOptions;
-        console.log('Found hotel options in formatted_quote');
       }
     } catch (e) {
       // Not JSON, probably HTML - try to use selectedHotels as fallback
-      console.log('formatted_quote is not JSON (likely HTML)');
     }
   }
   
   // Final fallback: create from selectedHotels if available
   if (hotelOptions.length === 0 && quoteAny.selectedHotels && Array.isArray(quoteAny.selectedHotels)) {
-    console.log('Using selectedHotels fallback');
     hotelOptions = quoteAny.selectedHotels.map((hotel: any) => ({
       hotel: hotel,
       occupancyOptions: [{ occupancyType: 'DBL' }]
     }));
   }
-  
-  console.log('Final hotel options available:', hotelOptions.length);
 
   const generateInvoicePDF = () => {
     if (!selectedBankAccountId || !selectedHotelOption || !leadPaxName.trim()) {
