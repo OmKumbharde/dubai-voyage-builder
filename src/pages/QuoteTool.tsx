@@ -204,6 +204,57 @@ const QuoteTool = () => {
     }
   };
 
+  // Generate quote text
+  const generateQuoteText = (quote: any) => {
+    const { nights, paxDetails, accommodationType } = quote;
+    const { adults, cwb, cnb, infants } = paxDetails;
+    
+    let quoteText = `Dubai Holiday Package\n\n`;
+    quoteText += `Customer: ${quote.customerName}\n`;
+    if (quote.ticketReference) quoteText += `TKT Reference: ${quote.ticketReference}\n`;
+    quoteText += `Travel Dates: ${format(new Date(quote.checkInDate), 'dd MMM yyyy')} to ${format(new Date(quote.checkOutDate), 'dd MMM yyyy')} (${nights} Nights)\n`;
+    quoteText += `Passengers: ${adults} Adult${adults > 1 ? 's' : ''}`;
+    if (cwb > 0) quoteText += `, ${cwb} Child${cwb > 1 ? 'ren' : ''} with Bed`;
+    if (cnb > 0) quoteText += `, ${cnb} Child${cnb > 1 ? 'ren' : ''} without Bed`;
+    if (infants > 0) quoteText += `, ${infants} Infant${infants > 1 ? 's' : ''}`;
+    quoteText += `\n\n`;
+    
+    // Inclusions
+    quoteText += `INCLUSIONS:\n`;
+    if (accommodationType === 'hotel') {
+      quoteText += `• Hotel Accommodation (${nights} Nights)\n`;
+    } else {
+      quoteText += `• Apartment Accommodation (${nights} Nights)\n`;
+    }
+    if (includeAirportTransfer) {
+      quoteText += `• Airport Transfers\n`;
+    }
+    if (includeVisa) {
+      quoteText += `• UAE Visa\n`;
+    }
+    selectedTours.forEach(tour => {
+      quoteText += `• ${tour.name}\n`;
+    });
+    selectedInclusions.forEach(inc => {
+      quoteText += `• ${inc.name}\n`;
+    });
+    
+    // Transfers
+    quoteText += `\nTRANSFERS:\n`;
+    const hasPrivateTour = selectedTours.some(t => t.type === 'private');
+    if (hasPrivateTour) {
+      quoteText += `• All transfers on SIC basis except where private tour specified\n`;
+    } else {
+      quoteText += `• All transfers on SIC basis\n`;
+    }
+    
+    // Taxes
+    quoteText += `\nTAXES:\n`;
+    quoteText += `• All taxes except Tourism Dirham\n`;
+    
+    return quoteText;
+  };
+
   // Filter functions
   const filteredHotels = hotelSearch.length > 0 ? hotels.filter(hotel => 
     (hotel.name.toLowerCase().includes(hotelSearch.toLowerCase()) ||
@@ -347,7 +398,17 @@ const QuoteTool = () => {
         hotelOptions,
         includeVisa,
         includeAirportTransfer,
-        totalPax
+        totalPax,
+        quoteText: generateQuoteText({ 
+          accommodationType: 'apartment', 
+          apartmentType, 
+          customerName, 
+          ticketReference: referenceNumber, 
+          checkInDate, 
+          checkOutDate, 
+          nights, 
+          paxDetails: { adults, infants, cnb, cwb } 
+        })
       };
       
       setGeneratedQuote(quote);
@@ -443,7 +504,16 @@ const QuoteTool = () => {
       hotelOptions,
       includeVisa,
       includeAirportTransfer,
-      totalPax
+      totalPax,
+      quoteText: generateQuoteText({ 
+        accommodationType: 'hotel', 
+        customerName, 
+        ticketReference: referenceNumber, 
+        checkInDate, 
+        checkOutDate, 
+        nights, 
+        paxDetails: { adults, infants, cnb, cwb } 
+      })
     };
 
     setGeneratedQuote(quote);
@@ -976,15 +1046,81 @@ const QuoteTool = () => {
                 Generated Quote
               </span>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    const quoteElement = document.getElementById('quote-preview');
+                    if (quoteElement) {
+                      navigator.clipboard.writeText(quoteElement.innerText);
+                      toast({ title: "Copied!", description: "Quote copied to clipboard" });
+                    }
+                  }}
+                >
                   <Copy className="h-4 w-4 mr-2" />
                   Copy
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    const element = document.getElementById('quote-preview');
+                    if (element) {
+                      html2pdf()
+                        .from(element)
+                        .set({
+                          margin: 1,
+                          filename: `quote-${generatedQuote.customerName.replace(/\s+/g, '-')}.pdf`,
+                          html2canvas: { scale: 2 },
+                          jsPDF: { orientation: 'portrait', unit: 'in', format: 'letter' }
+                        })
+                        .save();
+                    }
+                  }}
+                >
                   <Download className="h-4 w-4 mr-2" />
                   PDF
                 </Button>
-                <Button size="sm">
+                <Button 
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const { data, error } = await supabase.from('quotes').insert([{
+                        reference_number: `QT-${Date.now()}`,
+                        client_name: generatedQuote.customerName,
+                        ticket_reference: generatedQuote.ticketReference,
+                        travel_dates_from: generatedQuote.checkInDate,
+                        travel_dates_to: generatedQuote.checkOutDate,
+                        adults: generatedQuote.paxDetails.adults,
+                        infants: generatedQuote.paxDetails.infants,
+                        cnb: generatedQuote.paxDetails.cnb,
+                        cwb: generatedQuote.paxDetails.cwb,
+                        total_amount: generatedQuote.accommodationType === 'hotel' 
+                          ? generatedQuote.hotelOptions[0]?.occupancyOptions[0]?.totalCostUSD || 0
+                          : generatedQuote.hotelOptions[0]?.occupancyOptions[0]?.adults?.totalUSD || 0,
+                        currency: 'USD',
+                        status: 'draft',
+                        formatted_quote: generatedQuote.quoteText
+                      }]).select();
+                      
+                      if (error) throw error;
+                      
+                      toast({
+                        title: "Quote Saved!",
+                        description: "Quote has been saved to the database"
+                      });
+                      
+                      navigate('/quote-management');
+                    } catch (error) {
+                      console.error('Error saving quote:', error);
+                      toast({
+                        title: "Error",
+                        description: "Failed to save quote",
+                        variant: "destructive"
+                      });
+                    }
+                  }}
+                >
                   <Save className="h-4 w-4 mr-2" />
                   Save
                 </Button>
@@ -992,10 +1128,201 @@ const QuoteTool = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="bg-background p-6 rounded-lg border">
-              <p className="text-center text-muted-foreground">
-                Quote preview will be displayed here
-              </p>
+            <div id="quote-preview" className="bg-background p-8 rounded-lg border space-y-6">
+              {/* Header */}
+              <div className="text-center border-b pb-4">
+                <h2 className="text-2xl font-bold text-primary mb-2">Dubai Holiday Package</h2>
+                <p className="text-sm text-muted-foreground">
+                  {format(new Date(generatedQuote.checkInDate), 'dd MMM yyyy')} - {format(new Date(generatedQuote.checkOutDate), 'dd MMM yyyy')}
+                </p>
+              </div>
+
+              {/* Customer Details */}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Customer Name</p>
+                  <p className="font-semibold">{generatedQuote.customerName}</p>
+                </div>
+                {generatedQuote.ticketReference && (
+                  <div>
+                    <p className="text-muted-foreground">TKT Reference</p>
+                    <p className="font-semibold">{generatedQuote.ticketReference}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-muted-foreground">Duration</p>
+                  <p className="font-semibold">{generatedQuote.nights} Nights</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Total Passengers</p>
+                  <p className="font-semibold">{generatedQuote.totalPax}</p>
+                </div>
+              </div>
+
+              {/* Pricing Tables */}
+              <div className="space-y-4">
+                {generatedQuote.hotelOptions.map((hotelOption: any, idx: number) => (
+                  <div key={idx} className="border rounded-lg p-4">
+                    <h3 className="font-bold text-lg mb-2">{hotelOption.hotel.name}</h3>
+                    <p className="text-sm text-muted-foreground mb-4">{hotelOption.hotel.location}</p>
+                    
+                    {generatedQuote.accommodationType === 'hotel' ? (
+                      <div className="space-y-4">
+                        {hotelOption.occupancyOptions.map((occ: any, occIdx: number) => (
+                          <div key={occIdx} className="bg-muted/30 rounded p-4">
+                            <h4 className="font-semibold mb-3">
+                              {occ.occupancyType === 'SGL' && 'Single Occupancy'}
+                              {occ.occupancyType === 'DBL' && 'Double Occupancy'}
+                              {occ.occupancyType === 'TPL' && 'Triple Occupancy'}
+                            </h4>
+                            
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <p className="text-muted-foreground">Adults ({generatedQuote.paxDetails.adults})</p>
+                                <p className="font-bold text-primary">
+                                  ${occ.perPersonUSD} x {generatedQuote.paxDetails.adults} = ${occ.perPersonUSD * generatedQuote.paxDetails.adults}
+                                </p>
+                              </div>
+                              
+                              {generatedQuote.paxDetails.cwb > 0 && (
+                                <div>
+                                  <p className="text-muted-foreground">CWB ({generatedQuote.paxDetails.cwb})</p>
+                                  <p className="font-bold text-primary">
+                                    ${occ.cwbPerPersonUSD} x {generatedQuote.paxDetails.cwb} = ${occ.cwbPerPersonUSD * generatedQuote.paxDetails.cwb}
+                                  </p>
+                                </div>
+                              )}
+                              
+                              {generatedQuote.paxDetails.cnb > 0 && (
+                                <div>
+                                  <p className="text-muted-foreground">CNB ({generatedQuote.paxDetails.cnb})</p>
+                                  <p className="font-bold text-primary">
+                                    ${occ.cnbPerPersonUSD} x {generatedQuote.paxDetails.cnb} = ${occ.cnbPerPersonUSD * generatedQuote.paxDetails.cnb}
+                                  </p>
+                                </div>
+                              )}
+                              
+                              {generatedQuote.paxDetails.infants > 0 && (
+                                <div>
+                                  <p className="text-muted-foreground">Infants ({generatedQuote.paxDetails.infants})</p>
+                                  <p className="font-bold text-primary">
+                                    $20 x {generatedQuote.paxDetails.infants} = ${20 * generatedQuote.paxDetails.infants}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div className="mt-4 pt-4 border-t">
+                              <p className="text-lg font-bold text-primary">
+                                Total: ${Math.ceil(occ.totalCostUSD)}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {hotelOption.occupancyOptions.map((apt: any, aptIdx: number) => (
+                          <div key={aptIdx} className="bg-muted/30 rounded p-4">
+                            <h4 className="font-semibold mb-3">{apt.occupancyType} Apartment</h4>
+                            
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              {apt.adults && (
+                                <div>
+                                  <p className="text-muted-foreground">Adults ({apt.adults.count})</p>
+                                  <p className="font-bold text-primary">
+                                    ${apt.adults.perPersonUSD} x {apt.adults.count} = ${apt.adults.totalUSD}
+                                  </p>
+                                </div>
+                              )}
+                              
+                              {apt.cwbWithoutBed && (
+                                <div>
+                                  <p className="text-muted-foreground">CWB ({apt.cwbWithoutBed.count})</p>
+                                  <p className="font-bold text-primary">
+                                    ${apt.cwbWithoutBed.perPersonUSD} x {apt.cwbWithoutBed.count} = ${apt.cwbWithoutBed.totalUSD}
+                                  </p>
+                                </div>
+                              )}
+                              
+                              {apt.cwbWithBed && (
+                                <div>
+                                  <p className="text-muted-foreground">CWB + Extra Bed ({apt.cwbWithBed.count})</p>
+                                  <p className="font-bold text-primary">
+                                    ${apt.cwbWithBed.perPersonUSD} x {apt.cwbWithBed.count} = ${apt.cwbWithBed.totalUSD}
+                                  </p>
+                                </div>
+                              )}
+                              
+                              {apt.cnb && (
+                                <div>
+                                  <p className="text-muted-foreground">CNB ({apt.cnb.count})</p>
+                                  <p className="font-bold text-primary">
+                                    ${apt.cnb.perPersonUSD} x {apt.cnb.count} = ${apt.cnb.totalUSD}
+                                  </p>
+                                </div>
+                              )}
+                              
+                              {apt.infants && (
+                                <div>
+                                  <p className="text-muted-foreground">Infants ({apt.infants.count})</p>
+                                  <p className="font-bold text-primary">
+                                    ${apt.infants.perPersonUSD} x {apt.infants.count} = ${apt.infants.totalUSD}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div className="mt-4 pt-4 border-t">
+                              <p className="text-lg font-bold text-primary">
+                                Total: ${
+                                  (apt.adults?.totalUSD || 0) + 
+                                  (apt.cwbWithoutBed?.totalUSD || 0) + 
+                                  (apt.cwbWithBed?.totalUSD || 0) + 
+                                  (apt.cnb?.totalUSD || 0) + 
+                                  (apt.infants?.totalUSD || 0)
+                                }
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Inclusions */}
+              <div className="space-y-2">
+                <h3 className="font-bold text-lg">Inclusions</h3>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>{generatedQuote.accommodationType === 'hotel' ? 'Hotel' : 'Apartment'} Accommodation ({generatedQuote.nights} Nights)</li>
+                  {includeAirportTransfer && <li>Airport Transfers</li>}
+                  {includeVisa && <li>UAE Visa</li>}
+                  {selectedTours.map(tour => (
+                    <li key={tour.id}>{tour.name}</li>
+                  ))}
+                  {selectedInclusions.map(inc => (
+                    <li key={inc.id}>{inc.name}</li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Transfer & Tax Notes */}
+              <div className="space-y-2 text-sm">
+                <div>
+                  <p className="font-semibold">Transfers:</p>
+                  <p className="text-muted-foreground">
+                    {selectedTours.some(t => t.type === 'private')
+                      ? 'All transfers on SIC basis except where private tour specified'
+                      : 'All transfers on SIC basis'}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-semibold">Taxes:</p>
+                  <p className="text-muted-foreground">All taxes except Tourism Dirham</p>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
