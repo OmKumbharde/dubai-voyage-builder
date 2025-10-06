@@ -143,7 +143,7 @@ const HotelsManagement = () => {
   }
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
@@ -166,88 +166,119 @@ const HotelsManagement = () => {
       {/* Hotel Form */}
       {(editingId === 'new' || editingId) && (
         <Card className="dubai-card">
-          <CardHeader>
-            <CardTitle>
+          <CardHeader className="p-6 border-b">
+            <CardTitle className="text-xl">
               {editingId === 'new' ? 'Add New Hotel' : 'Edit Hotel'}
             </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              {editingId === 'new' ? 'Add a new hotel property with rates and details' : 'Update hotel information and pricing'}
+            </p>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <Label htmlFor="name">Hotel Name</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Enter hotel name"
-                  className="dubai-input"
-                />
+          <CardContent className="p-6 space-y-8">
+            {/* Basic Information */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b">
+                <div className="h-1 w-1 rounded-full bg-dubai-gold" />
+                <h3 className="text-base font-semibold text-foreground">Basic Information</h3>
               </div>
-              <div>
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                  placeholder="Enter location"
-                  className="dubai-input"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <Label htmlFor="starRating">Star Rating</Label>
-                <select
-                  id="starRating"
-                  value={formData.starRating}
-                  onChange={(e) => setFormData(prev => ({ ...prev, starRating: Number(e.target.value) }))}
-                  className="dubai-input"
-                >
-                  {[1, 2, 3, 4, 5].map(star => (
-                    <option key={star} value={star}>{star} Star</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="baseRate">Base Rate (AED per night)</Label>
-                <Input
-                  id="baseRate"
-                  type="number"
-                  value={formData.baseRate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, baseRate: Number(e.target.value) }))}
-                  placeholder="Enter base rate"
-                  className="dubai-input"
-                />
-              </div>
-              <div>
-                <Label htmlFor="extraBedRate">Extra Bed Rate (AED per night)</Label>
-                <Input
-                  id="extraBedRate"
-                  type="number"
-                  value={formData.extraBedRate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, extraBedRate: Number(e.target.value) }))}
-                  placeholder="Enter extra bed rate"
-                  className="dubai-input"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-sm font-semibold">Hotel Name *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g., Burj Al Arab"
+                    className="dubai-input h-11"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="location" className="text-sm font-semibold">Location *</Label>
+                  <Input
+                    id="location"
+                    value={formData.location}
+                    onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                    placeholder="e.g., Jumeirah, Dubai"
+                    className="dubai-input h-11"
+                  />
+                </div>
               </div>
             </div>
 
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Enter hotel description"
-                className="dubai-input"
-                rows={3}
-              />
+            {/* Rating & Pricing */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b">
+                <div className="h-1 w-1 rounded-full bg-dubai-gold" />
+                <h3 className="text-base font-semibold text-foreground">Category & Pricing</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="starRating" className="text-sm font-semibold">Star Rating *</Label>
+                  <select
+                    id="starRating"
+                    value={formData.starRating}
+                    onChange={(e) => setFormData(prev => ({ ...prev, starRating: Number(e.target.value) }))}
+                    className="dubai-input h-11"
+                  >
+                    {[1, 2, 3, 4, 5].map(star => (
+                      <option key={star} value={star}>{star} Star</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="baseRate" className="text-sm font-semibold">Base Rate (AED/night) *</Label>
+                  <Input
+                    id="baseRate"
+                    type="number"
+                    value={formData.baseRate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, baseRate: Number(e.target.value) }))}
+                    placeholder="0"
+                    className="dubai-input h-11"
+                  />
+                  <p className="text-xs text-muted-foreground">Rate per room per night</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="extraBedRate" className="text-sm font-semibold">Extra Bed (AED/night) *</Label>
+                  <Input
+                    id="extraBedRate"
+                    type="number"
+                    value={formData.extraBedRate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, extraBedRate: Number(e.target.value) }))}
+                    placeholder="0"
+                    className="dubai-input h-11"
+                  />
+                  <p className="text-xs text-muted-foreground">Additional bed charge</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b">
+                <div className="h-1 w-1 rounded-full bg-dubai-gold" />
+                <h3 className="text-base font-semibold text-foreground">Description</h3>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description" className="text-sm font-semibold">Hotel Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Describe the hotel's features, location advantages, and what makes it special..."
+                  className="dubai-input min-h-[100px]"
+                  rows={4}
+                />
+                <p className="text-xs text-muted-foreground">Provide details that will help guests choose this hotel</p>
+              </div>
             </div>
 
             {/* Amenities */}
-            <div>
-              <Label>Amenities</Label>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b">
+                <div className="h-1 w-1 rounded-full bg-dubai-gold" />
+                <h3 className="text-base font-semibold text-foreground">Amenities</h3>
+              </div>
+              <Label className="text-sm font-semibold">Hotel Amenities</Label>
               <div className="space-y-3">
                 <div className="flex gap-2">
                   <Input
@@ -286,15 +317,17 @@ const HotelsManagement = () => {
               </div>
             </div>
 
-            <div className="flex justify-end space-x-4">
+            <div className="flex justify-end gap-3">
               <Button 
-                variant="outline" 
+                variant="outline"
+                size="default"
                 onClick={cancelEdit}
               >
                 Cancel
               </Button>
               <Button 
-                onClick={handleSave} 
+                onClick={handleSave}
+                size="default"
                 className="dubai-button-primary"
                 disabled={!formData.name || !formData.location}
               >
@@ -308,7 +341,7 @@ const HotelsManagement = () => {
 
       {/* Search and Filter */}
       <Card className="dubai-card">
-        <CardContent className="p-4">
+        <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-4">
             <Input
               placeholder="Search hotels..."
@@ -342,28 +375,28 @@ const HotelsManagement = () => {
 
       {/* Hotels List - Table View */}
       <Card className="dubai-card">
-        <CardHeader>
+        <CardHeader className="p-6">
           <CardTitle>Hotels List</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-3">Sr. No</th>
-                  <th className="text-left p-3">Hotel Name</th>
-                  <th className="text-left p-3">Category</th>
-                  <th className="text-left p-3">Location</th>
-                  <th className="text-left p-3">Base Rate</th>
-                  <th className="text-left p-3">Extra Bed Rate</th>
-                  <th className="text-left p-3">Actions</th>
+                  <th className="text-left p-4">Sr. No</th>
+                  <th className="text-left p-4">Hotel Name</th>
+                  <th className="text-left p-4">Category</th>
+                  <th className="text-left p-4">Location</th>
+                  <th className="text-left p-4">Base Rate</th>
+                  <th className="text-left p-4">Extra Bed Rate</th>
+                  <th className="text-left p-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredHotels.map((hotel, index) => (
-                  <tr key={hotel.id} className="border-b hover:bg-gray-50">
-                    <td className="p-3">{index + 1}</td>
-                    <td className="p-3">
+                  <tr key={hotel.id} className="border-b hover:bg-muted/50 transition-colors">
+                    <td className="p-4">{index + 1}</td>
+                    <td className="p-4">
                       <div>
                         <p className="font-semibold">{hotel.name}</p>
                         <div className="flex items-center mt-1">
@@ -373,12 +406,12 @@ const HotelsManagement = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="p-3">{hotel.starRating} Star</td>
-                    <td className="p-3">{hotel.location}</td>
-                    <td className="p-3">AED {hotel.baseRate}</td>
-                    <td className="p-3">AED {hotel.extraBedRate}</td>
-                    <td className="p-3">
-                      <div className="flex space-x-2">
+                    <td className="p-4">{hotel.starRating} Star</td>
+                    <td className="p-4">{hotel.location}</td>
+                    <td className="p-4">AED {hotel.baseRate}</td>
+                    <td className="p-4">AED {hotel.extraBedRate}</td>
+                    <td className="p-4">
+                      <div className="flex gap-2">
                         <Button
                           variant="outline"
                           size="sm"

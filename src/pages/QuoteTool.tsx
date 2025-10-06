@@ -5,10 +5,10 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Checkbox } from '../components/ui/checkbox';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { toast } from '../hooks/use-toast';
+import { cn } from '../lib/utils';
 import { 
-  Calculator, 
+  Calculator,
   Copy, 
   Download, 
   Save, 
@@ -16,45 +16,39 @@ import {
   Minus, 
   Search, 
   MapPin,
-  FileText,
-  Hotel,
-  Building2,
-  Users
+  FileText
 } from 'lucide-react';
 import { format } from 'date-fns';
 import html2pdf from 'html2pdf.js';
 import { useSupabaseData } from '../hooks/useSupabaseData';
 import { supabase } from '../integrations/supabase/client';
-
-// Constants
-const AED_TO_USD = 3.65;
-
-type AccommodationType = 'hotel' | 'apartment';
-type ApartmentType = '01BR' | '02BR' | '03BR';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 const QuoteTool = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { hotels, tours, inclusions } = useSupabaseData();
+  const { hotels, tours, inclusions, addQuote, updateQuote } = useSupabaseData();
 
-  // Core booking details
+  // State for form data
   const [customerName, setCustomerName] = useState('');
   const [referenceNumber, setReferenceNumber] = useState('');
   const [checkInDate, setCheckInDate] = useState('');
   const [checkOutDate, setCheckOutDate] = useState('');
-  
-  // Pax details
   const [adults, setAdults] = useState(2);
   const [infants, setInfants] = useState(0);
   const [cnb, setCnb] = useState(0);
   const [cwb, setCwb] = useState(0);
   
-  // Accommodation type
-  const [accommodationType, setAccommodationType] = useState<AccommodationType>('hotel');
-  const [apartmentType, setApartmentType] = useState<ApartmentType>('01BR');
+  // Occupancy selection state
   const [selectedOccupancies, setSelectedOccupancies] = useState<string[]>(['DBL']);
+  const occupancyTypes = [
+    { id: 'SGL', label: 'Single Occupancy', description: 'One person per room' },
+    { id: 'DBL', label: 'Double Occupancy', description: 'Two people per room' },
+    { id: 'TPL', label: 'Triple Occupancy', description: 'Three people per room' },
+  ];
   
-  // Selections
+  // Selection states
   const [selectedHotels, setSelectedHotels] = useState<any[]>([]);
   const [selectedTours, setSelectedTours] = useState<any[]>([]);
   const [selectedInclusions, setSelectedInclusions] = useState<any[]>([]);
@@ -65,195 +59,73 @@ const QuoteTool = () => {
   const [tourSearch, setTourSearch] = useState('');
   const [inclusionSearch, setInclusionSearch] = useState('');
   
-  // Visa and transfer
-  const [includeVisa, setIncludeVisa] = useState(true);
-  const [includeAirportTransfer, setIncludeAirportTransfer] = useState(true);
-  const [manualAirportTransfer, setManualAirportTransfer] = useState<number | null>(null);
-  
-  // Generated quote
+  // Generated quote and editing
   const [generatedQuote, setGeneratedQuote] = useState<any>(null);
   const [editingQuote, setEditingQuote] = useState<any>(null);
 
-  const totalPax = adults + cnb + cwb;
-
-  const occupancyTypes = [
-    { id: 'SGL', label: 'Single', description: '1 person/room' },
-    { id: 'DBL', label: 'Double', description: '2 people/room' },
-    { id: 'TPL', label: 'Triple', description: '3 people/room' },
-  ];
-
-  // Get visa cost from inclusions or fallback
-  const getVisaCost = (type: 'adult' | 'child') => {
-    const visaInclusion = inclusions.find(inc => 
-      inc.type === 'visa' && inc.name.toLowerCase().includes(type)
-    );
-    return visaInclusion?.cost || (type === 'adult' ? 310 : 73);
-  };
-
-  // Get airport transfer cost
-  const getAirportTransferCost = () => {
-    if (manualAirportTransfer !== null) return manualAirportTransfer;
-    
-    const paxForTransfer = adults + cnb + cwb;
-    if (paxForTransfer <= 5) return 250;
-    if (paxForTransfer <= 10) return 500;
-    if (paxForTransfer <= 17) return 1000;
-    return 0;
-  };
-
-  // Calculate tours cost per person
-  const calcToursTotalPerPersonAED = () => {
-    return selectedTours.reduce((total, tour) => {
-      const rateKey = `tour_${tour.id}`;
-      const baseRate = editableRates[rateKey] ?? tour.costPerPerson;
+  // Effects for editing
+  useEffect(() => {
+    if (location.state?.editQuote) {
+      const quote = location.state.editQuote;
+      setEditingQuote(quote);
+      setCustomerName(quote.client_name || '');
+      setReferenceNumber(quote.reference_number || '');
+      setCheckInDate(quote.travel_dates_from || '');
+      setCheckOutDate(quote.travel_dates_to || '');
+      setAdults(quote.adults || 2);
+      setInfants(quote.infants || 0);
+      setCnb(quote.cnb || 0);
+      setCwb(quote.cwb || 0);
       
-      let transferCost = 0;
-      if (tour.type === 'private' && tour.privateTransferCost) {
-        transferCost = tour.privateTransferCost / totalPax;
+      // Load existing hotel selection
+      if (quote.selectedHotels && Array.isArray(quote.selectedHotels)) {
+        const existingHotels = quote.selectedHotels.map(hotelData => 
+          hotels.find(h => h.id === hotelData.id) || hotelData
+        ).filter(Boolean);
+        setSelectedHotels(existingHotels);
+      } else if (quote.selectedHotel) {
+        // Backward compatibility for old quotes with single hotel
+        const existingHotel = hotels.find(h => h.id === quote.selectedHotel.id) || quote.selectedHotel;
+        if (existingHotel) {
+          setSelectedHotels([existingHotel]);
+        }
       }
       
-      return total + baseRate + transferCost;
-    }, 0);
-  };
-
-  // Calculate visa cost
-  const calcVisaCostAED = () => {
-    if (!includeVisa) return 0;
-    const adultVisa = getVisaCost('adult');
-    const childVisa = getVisaCost('child');
-    return (adults * adultVisa) + ((cnb + cwb) * childVisa);
-  };
-
-  // Calculate airport transfer
-  const calcAirportTransferCostAED = () => {
-    if (!includeAirportTransfer) return 0;
-    return getAirportTransferCost();
-  };
-
-  // Hotel cost per person
-  const calcHotelCostPerPersonAED = (rate: number, nights: number, occupancyType: string) => {
-    const total = rate * nights;
-    let divisor = 1;
-    if (occupancyType === 'DBL') divisor = 2;
-    else if (occupancyType === 'TPL') divisor = 3;
-    return Math.ceil(total / divisor);
-  };
-
-  // Total per person for hotel mode
-  const calcTotalPerPersonAED = (hotelCostPerPerson: number) => {
-    const toursCost = calcToursTotalPerPersonAED();
-    const airportTransferTotal = calcAirportTransferCostAED();
-    const perPersonTransfer = adults > 0 ? airportTransferTotal / adults : 0;
-    
-    let total = hotelCostPerPerson + toursCost;
-    if (includeVisa) total += getVisaCost('adult');
-    if (includeAirportTransfer) total += perPersonTransfer;
-    
-    return Math.ceil(total);
-  };
-
-  // Add/remove handlers
-  const addHotel = (hotel: any) => {
-    if (!selectedHotels.find(h => h.id === hotel.id)) {
-      setSelectedHotels([...selectedHotels, hotel]);
-      setEditableRates(prev => ({
-        ...prev,
-        [`hotel_${hotel.id}`]: hotel.baseRate
-      }));
+      // Load existing tours selection
+      if (quote.selectedTours && Array.isArray(quote.selectedTours)) {
+        const existingTours = quote.selectedTours.map(tourData => 
+          tours.find(t => t.id === tourData.id) || tourData
+        ).filter(Boolean);
+        setSelectedTours(existingTours);
+      }
+      
+      // Load existing inclusions selection
+      if (quote.selectedInclusions && Array.isArray(quote.selectedInclusions)) {
+        const existingInclusions = quote.selectedInclusions.map(incData => 
+          inclusions.find(i => i.id === incData.id) || incData
+        ).filter(Boolean);
+        setSelectedInclusions(existingInclusions);
+      }
+      
+      // Load existing occupancy selections
+      if (quote.selectedOccupancies && Array.isArray(quote.selectedOccupancies)) {
+        setSelectedOccupancies(quote.selectedOccupancies);
+      }
+      
+      // Load editable rates if they exist
+      if (quote.editableRates) {
+        setEditableRates(quote.editableRates);
+      }
+      
+      // Restore the generated quote preview if it exists
+      if (quote.formattedText || quote.calculations) {
+        setGeneratedQuote(quote);
+      }
+      
+      // Clear the location state to prevent re-loading on refresh
+      window.history.replaceState({}, document.title);
     }
-    setHotelSearch('');
-  };
-
-  const removeHotel = (hotelId: string) => {
-    setSelectedHotels(selectedHotels.filter(h => h.id !== hotelId));
-    const newRates = { ...editableRates };
-    delete newRates[`hotel_${hotelId}`];
-    setEditableRates(newRates);
-  };
-
-  const addTour = (tour: any) => {
-    if (!selectedTours.find(t => t.id === tour.id)) {
-      setSelectedTours([...selectedTours, tour]);
-      setEditableRates(prev => ({
-        ...prev,
-        [`tour_${tour.id}`]: tour.costPerPerson
-      }));
-    }
-    setTourSearch('');
-  };
-
-  const removeTour = (tourId: string) => {
-    setSelectedTours(selectedTours.filter(t => t.id !== tourId));
-    const newRates = { ...editableRates };
-    delete newRates[`tour_${tourId}`];
-    setEditableRates(newRates);
-  };
-
-  const toggleInclusion = (inclusion: any) => {
-    if (selectedInclusions.find(i => i.id === inclusion.id)) {
-      setSelectedInclusions(selectedInclusions.filter(i => i.id !== inclusion.id));
-      const newRates = { ...editableRates };
-      delete newRates[`inclusion_${inclusion.id}`];
-      setEditableRates(newRates);
-    } else {
-      setSelectedInclusions([...selectedInclusions, inclusion]);
-      setEditableRates(prev => ({
-        ...prev,
-        [`inclusion_${inclusion.id}`]: inclusion.cost
-      }));
-    }
-  };
-
-  // Generate quote text
-  const generateQuoteText = (quote: any) => {
-    const { nights, paxDetails, accommodationType } = quote;
-    const { adults, cwb, cnb, infants } = paxDetails;
-    
-    let quoteText = `Dubai Holiday Package\n\n`;
-    quoteText += `Customer: ${quote.customerName}\n`;
-    if (quote.ticketReference) quoteText += `TKT Reference: ${quote.ticketReference}\n`;
-    quoteText += `Travel Dates: ${format(new Date(quote.checkInDate), 'dd MMM yyyy')} to ${format(new Date(quote.checkOutDate), 'dd MMM yyyy')} (${nights} Nights)\n`;
-    quoteText += `Passengers: ${adults} Adult${adults > 1 ? 's' : ''}`;
-    if (cwb > 0) quoteText += `, ${cwb} Child${cwb > 1 ? 'ren' : ''} with Bed`;
-    if (cnb > 0) quoteText += `, ${cnb} Child${cnb > 1 ? 'ren' : ''} without Bed`;
-    if (infants > 0) quoteText += `, ${infants} Infant${infants > 1 ? 's' : ''}`;
-    quoteText += `\n\n`;
-    
-    // Inclusions
-    quoteText += `INCLUSIONS:\n`;
-    if (accommodationType === 'hotel') {
-      quoteText += `• Hotel Accommodation (${nights} Nights)\n`;
-    } else {
-      quoteText += `• Apartment Accommodation (${nights} Nights)\n`;
-    }
-    if (includeAirportTransfer) {
-      quoteText += `• Airport Transfers\n`;
-    }
-    if (includeVisa) {
-      quoteText += `• UAE Visa\n`;
-    }
-    selectedTours.forEach(tour => {
-      quoteText += `• ${tour.name}\n`;
-    });
-    selectedInclusions.forEach(inc => {
-      quoteText += `• ${inc.name}\n`;
-    });
-    
-    // Transfers
-    quoteText += `\nTRANSFERS:\n`;
-    const hasPrivateTour = selectedTours.some(t => t.type === 'private');
-    if (hasPrivateTour) {
-      quoteText += `• All transfers on SIC basis except where private tour specified\n`;
-    } else {
-      quoteText += `• All transfers on SIC basis\n`;
-    }
-    
-    // Taxes
-    quoteText += `\nTAXES:\n`;
-    quoteText += `• All taxes except Tourism Dirham\n`;
-    
-    return quoteText;
-  };
+  }, [location.state, hotels, tours, inclusions]);
 
   // Filter functions
   const filteredHotels = hotelSearch.length > 0 ? hotels.filter(hotel => 
@@ -272,12 +144,84 @@ const QuoteTool = () => {
     !selectedInclusions.find(selected => selected.id === inclusion.id)
   ) : [];
 
-  // Calculate quote
+  const totalPax = adults + cnb + cwb;
+
+  // Tour management functions
+  const addTour = (tour: any) => {
+    if (!selectedTours.find(t => t.id === tour.id)) {
+      setSelectedTours([...selectedTours, tour]);
+      // Set default rate for the tour
+      const rateKey = `tour_${tour.id}`;
+      setEditableRates(prevRates => ({
+        ...prevRates,
+        [rateKey]: tour.costPerPerson
+      }));
+    }
+  };
+
+  const removeTour = (tourId: string) => {
+    setSelectedTours(selectedTours.filter(tour => tour.id !== tourId));
+    // Remove rate from editable rates
+    const rateKey = `tour_${tourId}`;
+    setEditableRates(prevRates => {
+      const newRates = { ...prevRates };
+      delete newRates[rateKey];
+      return newRates;
+    });
+  };
+
+  // Toggle inclusion function
+  const toggleInclusion = (inclusion: any) => {
+    if (selectedInclusions.find(i => i.id === inclusion.id)) {
+      setSelectedInclusions(selectedInclusions.filter(i => i.id !== inclusion.id));
+      // Remove rate from editable rates
+      const rateKey = `inclusion_${inclusion.id}`;
+      setEditableRates(prevRates => {
+        const newRates = { ...prevRates };
+        delete newRates[rateKey];
+        return newRates;
+      });
+    } else {
+      setSelectedInclusions([...selectedInclusions, inclusion]);
+      // Set default rate for the inclusion
+      const rateKey = `inclusion_${inclusion.id}`;
+      setEditableRates(prevRates => ({
+        ...prevRates,
+        [rateKey]: inclusion.cost
+      }));
+    }
+  };
+
+  // Add/remove hotel functions
+  const addHotel = (hotel: any) => {
+    if (!selectedHotels.find(h => h.id === hotel.id)) {
+      setSelectedHotels([...selectedHotels, hotel]);
+      // Set default rate for the hotel
+      const rateKey = `hotel_${hotel.id}`;
+      setEditableRates(prevRates => ({
+        ...prevRates,
+        [rateKey]: hotel.baseRate
+      }));
+    }
+  };
+
+  const removeHotel = (hotelId: string) => {
+    setSelectedHotels(selectedHotels.filter(hotel => hotel.id !== hotelId));
+    // Remove rate from editable rates
+    const rateKey = `hotel_${hotelId}`;
+    setEditableRates(prevRates => {
+      const newRates = { ...prevRates };
+      delete newRates[rateKey];
+      return newRates;
+    });
+  };
+
+  // Calculate quote function with multiple occupancy options
   const calculateQuote = () => {
-    if ((accommodationType === 'hotel' && selectedHotels.length === 0) || !checkInDate || !checkOutDate || !customerName) {
+    if (selectedHotels.length === 0 || !checkInDate || !checkOutDate) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all required fields",
+        description: "Please select at least one hotel and dates",
         variant: "destructive"
       });
       return;
@@ -293,194 +237,62 @@ const QuoteTool = () => {
       return;
     }
 
-    if (accommodationType === 'apartment') {
-      // Apartment mode calculation
-      const apartmentCapacities: Record<ApartmentType, { adults: number, cnb: number, cwb: number }> = {
-        '01BR': { adults: 2, cnb: 1, cwb: 1 },
-        '02BR': { adults: 4, cnb: 2, cwb: 2 },
-        '03BR': { adults: 6, cnb: 3, cwb: 3 }
-      };
-      
-      const capacity = apartmentCapacities[apartmentType];
-      const hotelOptions = selectedHotels.map(hotel => {
-        const hotelRateKey = `hotel_${hotel.id}`;
-        const rate = editableRates[hotelRateKey] ?? hotel.baseRate ?? 0;
-        const extraBedRate = hotel.extraBedRate || 0;
-        
-        const totalApartmentCostAED = rate * nights;
-        
-        // Calculate CWB distribution
-        const cwbsWithoutExtraBed = Math.min(cwb, capacity.cwb);
-        const cwbsWithExtraBed = cwb - cwbsWithoutExtraBed;
-        
-        const perPersonAptCost = totalApartmentCostAED / (adults + cwbsWithoutExtraBed);
-        
-        // Adult calculation
-        const adultToursCost = calcToursTotalPerPersonAED();
-        const adultVisaCost = includeVisa ? getVisaCost('adult') : 0;
-        const airportTransferTotal = calcAirportTransferCostAED();
-        const adultTransferCost = adults > 0 ? airportTransferTotal / adults : 0;
-        const adultTotalAED = perPersonAptCost + adultToursCost + adultVisaCost + adultTransferCost;
-        const adultTotalUSD = adultTotalAED / AED_TO_USD;
-        
-        // CWB without extra bed
-        const childToursCost = calcToursTotalPerPersonAED();
-        const childVisaCost = includeVisa ? getVisaCost('child') : 0;
-        const cwbWithoutExtraBedTotalAED = perPersonAptCost + childToursCost + childVisaCost;
-        const cwbWithoutExtraBedTotalUSD = cwbWithoutExtraBedTotalAED / AED_TO_USD;
-        
-        // CWB with extra bed
-        const extraBedTotalCost = extraBedRate * nights;
-        const cwbWithExtraBedTotalAED = extraBedTotalCost + childToursCost + childVisaCost;
-        const cwbWithExtraBedTotalUSD = cwbWithExtraBedTotalAED / AED_TO_USD;
-        
-        // CNB calculation
-        const cnbTotalAED = childToursCost + childVisaCost;
-        const cnbTotalUSD = cnbTotalAED / AED_TO_USD;
-        
-        // Infant calculation (20 USD visa only)
-        const infantTotalUSD = 20;
-        
-        return {
-          hotel,
-          apartmentType,
-          occupancyOptions: [{
-            occupancyType: apartmentType,
-            adults: {
-              count: adults,
-              perPersonAED: Math.ceil(adultTotalAED),
-              perPersonUSD: Math.ceil(adultTotalUSD),
-              totalAED: Math.ceil(adultTotalAED * adults),
-              totalUSD: Math.ceil(adultTotalUSD * adults)
-            },
-            cwbWithoutBed: cwbsWithoutExtraBed > 0 ? {
-              count: cwbsWithoutExtraBed,
-              perPersonAED: Math.ceil(cwbWithoutExtraBedTotalAED),
-              perPersonUSD: Math.ceil(cwbWithoutExtraBedTotalUSD),
-              totalAED: Math.ceil(cwbWithoutExtraBedTotalAED * cwbsWithoutExtraBed),
-              totalUSD: Math.ceil(cwbWithoutExtraBedTotalUSD * cwbsWithoutExtraBed)
-            } : null,
-            cwbWithBed: cwbsWithExtraBed > 0 ? {
-              count: cwbsWithExtraBed,
-              perPersonAED: Math.ceil(cwbWithExtraBedTotalAED),
-              perPersonUSD: Math.ceil(cwbWithExtraBedTotalUSD),
-              totalAED: Math.ceil(cwbWithExtraBedTotalAED * cwbsWithExtraBed),
-              totalUSD: Math.ceil(cwbWithExtraBedTotalUSD * cwbsWithExtraBed)
-            } : null,
-            cnb: cnb > 0 ? {
-              count: cnb,
-              perPersonAED: Math.ceil(cnbTotalAED),
-              perPersonUSD: Math.ceil(cnbTotalUSD),
-              totalAED: Math.ceil(cnbTotalAED * cnb),
-              totalUSD: Math.ceil(cnbTotalUSD * cnb)
-            } : null,
-            infants: infants > 0 ? {
-              count: infants,
-              perPersonUSD: infantTotalUSD,
-              totalUSD: infantTotalUSD * infants
-            } : null
-          }]
-        };
-      });
-      
-      const quote = {
-        accommodationType: 'apartment',
-        apartmentType,
-        customerName,
-        ticketReference: referenceNumber,
-        checkInDate,
-        checkOutDate,
-        nights,
-        paxDetails: { adults, infants, cnb, cwb },
-        selectedHotels,
-        selectedTours,
-        selectedInclusions,
-        hotelOptions,
-        includeVisa,
-        includeAirportTransfer,
-        totalPax,
-        quoteText: generateQuoteText({ 
-          accommodationType: 'apartment', 
-          apartmentType, 
-          customerName, 
-          ticketReference: referenceNumber, 
-          checkInDate, 
-          checkOutDate, 
-          nights, 
-          paxDetails: { adults, infants, cnb, cwb } 
-        })
-      };
-      
-      setGeneratedQuote(quote);
-      toast({
-        title: "Quote Generated",
-        description: "Your quote has been calculated successfully"
-      });
-      return;
-    }
+    const exchangeRate = 3.67;
     
-    // Hotel mode calculation (existing logic but improved)
+    // Calculate for each hotel and occupancy type combination
     const hotelOptions = selectedHotels.map(hotel => {
       const occupancyOptions = selectedOccupancies.map(occupancyType => {
-        const hotelRateKey = `hotel_${hotel.id}`;
-        const rate = editableRates[hotelRateKey] ?? hotel.baseRate ?? 0;
-        const extraBedRate = hotel.extraBedRate || 0;
-        
-        const hotelCostPerPerson = calcHotelCostPerPersonAED(rate, nights, occupancyType);
-        const totalPerPersonAED = calcTotalPerPersonAED(hotelCostPerPerson);
-        const totalPerPersonUSD = totalPerPersonAED / AED_TO_USD;
-        
-        // Special case: double occupancy family
-        const isDoubleOccupancyFamily = 
-          (adults === cwb && cnb === 0) || 
-          (adults === 1 && cwb === 1 && cnb === 0);
-        
         let roomsNeeded = 1;
-        if (occupancyType === 'SGL') roomsNeeded = adults;
-        else if (occupancyType === 'DBL') roomsNeeded = Math.ceil(adults / 2);
-        else if (occupancyType === 'TPL') roomsNeeded = Math.ceil(adults / 3);
-        
-        const extraBeds = cwb;
-        const hotelCost = (roomsNeeded * rate + extraBeds * extraBedRate) * nights;
-        
-        // Calculate CWB cost
-        let cwbPerPersonAED = 0;
-        let cwbPerPersonUSD = 0;
-        if (cwb > 0) {
-          const extraBedCostAED = (extraBedRate * nights);
-          const toursCost = calcToursTotalPerPersonAED();
-          const childVisaCost = includeVisa ? getVisaCost('child') : 0;
-          cwbPerPersonAED = Math.ceil(extraBedCostAED + toursCost + childVisaCost);
-          cwbPerPersonUSD = Math.ceil(cwbPerPersonAED / AED_TO_USD);
+        let extraBeds = 0;
+        let hotelRate = hotel.baseRate || 0;
+        let extraBedRate = hotel.extraBedRate || 0;
+
+        // Calculate rooms and extra beds based on occupancy type
+        // Use editable rate for hotel if available
+        const hotelRateKey = `hotel_${hotel.id}`;
+        hotelRate = editableRates[hotelRateKey] ?? hotel.baseRate ?? 0;
+        if (occupancyType === 'SGL') {
+          roomsNeeded = adults;
+          extraBeds = cwb > 0 ? cwb : 0; // Extra bed only for CWB
+        } else if (occupancyType === 'DBL') {
+          roomsNeeded = Math.ceil(adults / 2);
+          extraBeds = cwb > 0 ? cwb : 0; // Extra bed only for CWB
+        } else if (occupancyType === 'TPL') {
+          roomsNeeded = Math.ceil(adults / 3);
+          extraBeds = cwb > 0 ? cwb : 0; // Extra bed only for CWB
         }
+
+        const hotelCost = (roomsNeeded * hotelRate + extraBeds * extraBedRate) * nights;
         
-        // Calculate CNB cost
-        let cnbPerPersonAED = 0;
-        let cnbPerPersonUSD = 0;
-        if (cnb > 0) {
-          const toursCost = calcToursTotalPerPersonAED();
-          const childVisaCost = includeVisa ? getVisaCost('child') : 0;
-          cnbPerPersonAED = Math.ceil(toursCost + childVisaCost);
-          cnbPerPersonUSD = Math.ceil(cnbPerPersonAED / AED_TO_USD);
-        }
+        // Tours and inclusions cost using editable rates
+        const toursCost = selectedTours.reduce((total, tour) => {
+          const rateKey = `tour_${tour.id}`;
+          const rate = editableRates[rateKey] ?? tour.costPerPerson;
+          return total + (rate * totalPax);
+        }, 0);
         
-        const totalCostAED = (totalPerPersonAED * adults) + (cwbPerPersonAED * cwb) + (cnbPerPersonAED * cnb);
-        const totalCostUSD = totalCostAED / AED_TO_USD;
+        const inclusionsCost = selectedInclusions.reduce((total, inclusion) => {
+          const rateKey = `inclusion_${inclusion.id}`;
+          const rate = editableRates[rateKey] ?? inclusion.cost;
+          return total + (rate * totalPax);
+        }, 0);
+        
+        const totalCostAED = hotelCost + toursCost + inclusionsCost;
+        const totalCostUSD = totalCostAED / exchangeRate;
+        const perPersonAED = totalCostAED / totalPax;
+        const perPersonUSD = totalCostUSD / totalPax;
 
         return {
           occupancyType,
           roomsNeeded,
           extraBeds,
           hotelCost,
+          toursCost,
+          inclusionsCost,
           totalCostAED,
           totalCostUSD,
-          perPersonAED: totalPerPersonAED,
-          perPersonUSD: Math.ceil(totalPerPersonUSD),
-          cwbPerPersonAED,
-          cwbPerPersonUSD,
-          cnbPerPersonAED,
-          cnbPerPersonUSD,
-          isDoubleOccupancyFamily
+          perPersonAED,
+          perPersonUSD
         };
       });
       
@@ -491,7 +303,6 @@ const QuoteTool = () => {
     });
 
     const quote = {
-      accommodationType: 'hotel',
       customerName,
       ticketReference: referenceNumber,
       checkInDate,
@@ -502,756 +313,1001 @@ const QuoteTool = () => {
       selectedTours,
       selectedInclusions,
       hotelOptions,
-      includeVisa,
-      includeAirportTransfer,
-      totalPax,
-      quoteText: generateQuoteText({ 
-        accommodationType: 'hotel', 
-        customerName, 
-        ticketReference: referenceNumber, 
-        checkInDate, 
-        checkOutDate, 
-        nights, 
-        paxDetails: { adults, infants, cnb, cwb } 
-      })
+      exchangeRate,
+      totalPax
     };
 
     setGeneratedQuote(quote);
-    toast({
-      title: "Quote Generated",
-      description: "Your quote has been calculated successfully"
+    generateQuoteText(quote);
+  };
+
+  // Generate quote text function matching user's exact format with multiple hotels
+  const generateQuoteText = (quote: any) => {
+    const { hotelOptions, paxDetails, nights, totalPax } = quote;
+    
+    // Format exactly like the user's example
+    let quoteHTML = `<div style="font-family: Arial, sans-serif; line-height: 1.3; font-size: 13px;">`;
+    quoteHTML += `Dear Partner,<br /><br />`;
+    quoteHTML += `Greetings for the day…!!!<br /><br />`;
+    quoteHTML += `Pleased to quote you as below :<br /><br />`;
+    quoteHTML += `Kindly check the rate / hotel availability with us when your client is ready to book<br /><br />`;
+    
+    // Pax summary
+    let paxSummary = '';
+    if (paxDetails.adults > 0) {
+      paxSummary += `${paxDetails.adults} Adult${paxDetails.adults > 1 ? 's' : ''}`;
+    }
+    if (paxDetails.cwb > 0) {
+      if (paxSummary) paxSummary += ', ';
+      paxSummary += `${paxDetails.cwb} Child${paxDetails.cwb > 1 ? 'ren' : ''} with Bed`;
+    }
+    if (paxDetails.cnb > 0) {
+      if (paxSummary) paxSummary += ', ';
+      paxSummary += `${paxDetails.cnb} Child${paxDetails.cnb > 1 ? 'ren' : ''} without Bed`;
+    }
+    if (paxDetails.infants > 0) {
+      if (paxSummary) paxSummary += ', ';
+      paxSummary += `${paxDetails.infants} Infant${paxDetails.infants > 1 ? 's' : ''}`;
+    }
+    
+    quoteHTML += `<strong>No of Pax:</strong> ${paxSummary}<br />`;
+    quoteHTML += `<strong>Check-in:</strong> ${format(new Date(checkInDate), 'do MMMM yyyy')}<br />`;
+    quoteHTML += `<strong>Check-out:</strong> ${format(new Date(checkOutDate), 'do MMMM yyyy')}<br /><br />`;
+
+    // Hotel pricing table exactly like user's format with multiple hotels
+    quoteHTML += `<table border="1" cellpadding="4" cellspacing="0" style="border-collapse: collapse; width: 100%; max-width: 800px; font-size: 11px;">`;
+    quoteHTML += `<tr>`;
+    quoteHTML += `<td><strong>Hotel Name</strong></td>`;
+    
+    // Add headers based on selected occupancies
+    if (selectedOccupancies.includes('DBL')) {
+      quoteHTML += `<td style="padding: 4px;"><strong>Adult Price (Double Occupancy)</strong></td>`;
+    }
+    if (selectedOccupancies.includes('SGL')) {
+      quoteHTML += `<td style="padding: 4px;"><strong>Adult Price (Single Occupancy)</strong></td>`;
+    }
+    if (selectedOccupancies.includes('TPL')) {
+      quoteHTML += `<td style="padding: 4px;"><strong>Adult Price (Triple Occupancy)</strong></td>`;
+    }
+    if (paxDetails.cwb > 0) {
+      quoteHTML += `<td style="padding: 4px;"><strong>Price (Child with Bed)</strong></td>`;
+    }
+    if (paxDetails.cnb > 0) {
+      quoteHTML += `<td style="padding: 4px;"><strong>Price (Child without Bed)</strong></td>`;
+    }
+    
+    quoteHTML += `</tr>`;
+    quoteHTML += `<tbody>`;
+    
+    // Add row for each hotel
+    hotelOptions.forEach((hotelOption: any) => {
+      quoteHTML += `<tr><td style="padding: 4px;">${hotelOption.hotel.name}</td>`;
+      
+      // Add pricing for each occupancy type for this hotel
+      hotelOption.occupancyOptions.forEach((option: any) => {
+        const perPersonUSD = Math.round(option.perPersonUSD);
+        quoteHTML += `<td style="padding: 4px;">USD ${perPersonUSD} per person with BB</td>`;
+      });
+      
+      // Add child prices if applicable for this hotel
+      if (paxDetails.cwb > 0) {
+        const extraBedUSD = Math.round((hotelOption.hotel.extraBedRate * nights) / quote.exchangeRate);
+        const toursCost = selectedTours.reduce((total, tour) => total + tour.costPerPerson, 0) / quote.exchangeRate;
+        const inclusionsCost = selectedInclusions.reduce((total, inclusion) => total + inclusion.cost, 0) / quote.exchangeRate;
+        const totalCwbUSD = Math.round(extraBedUSD + toursCost + inclusionsCost);
+        quoteHTML += `<td style="padding: 4px;">USD ${totalCwbUSD} per person with BB</td>`;
+      }
+      
+      if (paxDetails.cnb > 0) {
+        const toursCost = selectedTours.reduce((total, tour) => total + tour.costPerPerson, 0) / quote.exchangeRate;
+        const inclusionsCost = selectedInclusions.reduce((total, inclusion) => total + inclusion.cost, 0) / quote.exchangeRate;
+        const totalCnbUSD = Math.round(toursCost + inclusionsCost);
+        quoteHTML += `<td style="padding: 4px;">USD ${totalCnbUSD} per person</td>`;
+      }
+      
+      quoteHTML += `</tr>`;
     });
+    
+    quoteHTML += `</tbody></table><br /><br />`;
+
+    // Inclusions section exactly like user's format - include all services here
+    quoteHTML += `<strong><u>Inclusions:</u></strong><br /><br />`;
+    quoteHTML += `<ul class="list-disc list-inside space-y-1">`;
+    quoteHTML += `<li><strong>${String(nights).padStart(2, '0')}</strong> Night${nights > 1 ? "'s" : ""} accommodation in above specified hotel(s)</li>`;
+    quoteHTML += `<li>Daily Breakfast</li>`;
+    
+    // Add selected tours
+    selectedTours.forEach((tour: any) => {
+      quoteHTML += `<li>${tour.name}</li>`;
+    });
+    
+    // Add ALL selected inclusions (not just visa/transfer)
+    selectedInclusions.forEach((inclusion: any) => {
+      quoteHTML += `<li>${inclusion.name}</li>`;
+    });
+    
+    // Standard inclusions
+    quoteHTML += `<li>All transfers on a SIC basis</li>`;
+    quoteHTML += `<li>All taxes except Tourism Dirham</li>`;
+    quoteHTML += `</ul><br /><br />`;
+    
+    // Note: Removed the "Optional Cost" section as requested - all services are now part of inclusions
+
+    quoteHTML += `<strong>Note: Rates and rooms are subject to change at the time of confirmation. / Rates quoted are fully nonrefundable</strong><br /><br />`;
+    quoteHTML += `Should you need any clarifications on the above or require further assistance, please feel free to contact me at any time.<br />`;
+    quoteHTML += `Looking forward to your earliest reply...<br /><br />`;
+    quoteHTML += `<em style="color: red;">`;
+    quoteHTML += `Note: As per the Dubai Executive Council Resolution No. (2) of 2014, a "Tourism Dirham (TD)" charge of AED 10 to AED 20 per room per night (depending on the Hotel Classification category) will apply for hotel rooms and Suites. For Apartments, charges apply.`;
+    quoteHTML += `</em><br /><br /><br />`;
+    quoteHTML += `</div>`;
+
+    quote.formattedText = quoteHTML;
+    
+    // Generate breakdown
+    quote.breakdown = generateBreakdown(quote);
+    
+    setGeneratedQuote(quote);
+  };
+
+  // Generate breakdown following the exact format from the old quote tool
+  const generateBreakdown = (quote: any) => {
+    const { hotelOptions, selectedTours, selectedInclusions, totalPax, nights } = quote;
+    
+    const checkInFormatted = new Date(checkInDate).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+    });
+    const checkOutFormatted = new Date(checkOutDate).toLocaleDateString("en-GB", {
+      day: "2-digit",  
+      month: "short",
+    });
+
+    let breakdownText = `${checkInFormatted} - ${checkOutFormatted}\n`;
+    breakdownText += `${String(nights).padStart(2, '0')} Nights\n`;
+    
+    // Pax text - show all possible cases
+    let paxText = `${adults} Adults`;
+    if (cwb > 0) paxText += ` + ${cwb} Child with Bed`;
+    if (cnb > 0) paxText += ` + ${cnb} Child without Bed`;
+    if (infants > 0) paxText += ` + ${infants} Infant`;
+    breakdownText += `${paxText}\n\n`;
+    
+    // Hotels - showing rate per room per night
+    hotelOptions.forEach((hotelOption: any) => {
+      const hotelRateKey = `hotel_${hotelOption.hotel.id}`;
+      const rate = editableRates[hotelRateKey] ?? hotelOption.hotel.baseRate;
+      
+      const hasExtraBed = cwb > 0;
+      if (hasExtraBed && hotelOption.hotel.extraBedRate) {
+        const extraBedRateKey = `hotel_${hotelOption.hotel.id}_extrabed`;
+        const extraBedRate = editableRates[extraBedRateKey] ?? hotelOption.hotel.extraBedRate;
+        breakdownText += `${hotelOption.hotel.name} - ${rate}/night | ${extraBedRate} EB/night\n`;
+      } else {
+        breakdownText += `${hotelOption.hotel.name} - ${rate}/night\n`;
+      }
+    });
+    
+    breakdownText += `\n`;
+    
+    // Tours - showing per person price from actual selected rates
+    let toursAndInclusionsTotal = 0;
+    selectedTours.forEach((tour: any) => {
+      const rateKey = `tour_${tour.id}`;
+      const perPersonRate = editableRates[rateKey] ?? tour.costPerPerson;
+      breakdownText += `${tour.name} - ${perPersonRate}\n`;
+      toursAndInclusionsTotal += perPersonRate;
+    });
+    
+    // Inclusions - showing per person price from actual selected rates
+    selectedInclusions.forEach((inclusion: any) => {
+      const rateKey = `inclusion_${inclusion.id}`;
+      const perPersonRate = editableRates[rateKey] ?? inclusion.cost;
+      breakdownText += `${inclusion.name} - ${perPersonRate}\n`;
+      toursAndInclusionsTotal += perPersonRate;
+    });
+    
+    // Total per person for tours and inclusions
+    breakdownText += `Total - ${toursAndInclusionsTotal} | per person\n`;
+    
+    return breakdownText;
+  };
+
+  // Copy formatted text with proper table formatting - copies exactly as visible
+  const copyFormattedText = () => {
+    if (!generatedQuote?.formattedText) return;
+    
+    // Copy the rendered HTML content as formatted text
+    const quotePreview = document.querySelector('[data-quote-preview]');
+    if (quotePreview) {
+      const range = document.createRange();
+      range.selectNodeContents(quotePreview);
+
+      const selection = window.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        try {
+          document.execCommand("copy");
+          selection.removeAllRanges();
+          toast({ title: "Copied!", description: "Formatted quote copied to clipboard" });
+        } catch (err) {
+          console.error("Copy failed:", err);
+          toast({ title: "Error", description: "Failed to copy formatted quote" });
+        }
+      }
+    }
+  };
+
+  // Copy breakdown
+  const copyBreakdown = () => {
+    if (!generatedQuote?.breakdown) return;
+    
+    navigator.clipboard.writeText(generatedQuote.breakdown);
+    toast({ title: "Copied!", description: "Breakdown copied to clipboard" });
+  };
+
+  // Download PDF
+  const downloadPDF = () => {
+    if (!generatedQuote) return;
+
+    const element = document.createElement('div');
+    element.innerHTML = `
+      <div style="padding: 40px; font-family: Arial, sans-serif; line-height: 1.6;">
+        <h1 style="color: #b8860b; text-align: center; margin-bottom: 30px;">DUBAI TOUR PACKAGE QUOTE</h1>
+        <div style="white-space: pre-line; font-size: 14px;">${generatedQuote.formattedText}</div>
+      </div>
+    `;
+
+    const opt = {
+      margin: 1,
+      filename: `quote-${customerName || 'customer'}-${Date.now()}.pdf`,
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' as const }
+    };
+
+    html2pdf().set(opt).from(element).save();
+  };
+
+  // Save quote
+  const saveQuote = async () => {
+    if (!generatedQuote) {
+      toast({
+        title: "No Quote Generated",
+        description: "Please generate a quote first",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const firstHotel = generatedQuote.hotelOptions[0];
+      const dblOption = firstHotel?.occupancyOptions?.find((opt: any) => opt.occupancyType === 'DBL') || firstHotel?.occupancyOptions?.[0];
+      const quoteData = {
+        ticketReference: referenceNumber || editingQuote?.reference_number || `QT-${Date.now()}`,
+        customerName,
+        travelDates: {
+          startDate: checkInDate,
+          endDate: checkOutDate
+        },
+        paxDetails: { adults, infants, cnb, cwb },
+        selectedHotels,
+        selectedTours,
+        calculations: {
+          totalCostAED: dblOption ? dblOption.totalCostAED : 0,
+          totalCostUSD: dblOption ? dblOption.totalCostUSD : 0,
+          exchangeRate: generatedQuote.exchangeRate || 3.67
+        },
+        status: 'draft' as const,
+        createdBy: 'system'
+      };
+
+      if (editingQuote) {
+        // Save structured quote data as JSON
+        const quoteDataJSON = JSON.stringify({
+          hotelOptions: generatedQuote.hotelOptions,
+          selectedHotels,
+          selectedTours,
+          selectedInclusions,
+          occupancies: selectedOccupancies,
+          editableRates
+        });
+        
+        // Use database field names directly
+        const updateData = {
+          reference_number: editingQuote.reference_number,
+          client_name: customerName,
+          ticket_reference: referenceNumber,
+          travel_dates_from: checkInDate,
+          travel_dates_to: checkOutDate,
+          adults,
+          infants,
+          cnb,
+          cwb,
+          total_amount: dblOption ? dblOption.totalCostAED : 0,
+          currency: 'AED',
+          status: 'draft',
+          formatted_quote: generatedQuote.formattedText,
+          notes: `${generatedQuote.breakdown}\n\n---QUOTE_DATA---\n${quoteDataJSON}`
+        };
+        
+        const { error } = await supabase
+          .from('quotes')
+          .update(updateData)
+          .eq('id', editingQuote.id);
+          
+        if (error) throw error;
+        toast({
+          title: "Quote Updated",
+          description: "Quote has been updated successfully"
+        });
+      } else {
+        // Save structured quote data as JSON
+        const quoteDataJSON = JSON.stringify({
+          hotelOptions: generatedQuote.hotelOptions,
+          selectedHotels,
+          selectedTours,
+          selectedInclusions,
+          occupancies: selectedOccupancies,
+          editableRates
+        });
+        
+        // Use database field names directly  
+        const insertData = {
+          reference_number: `QT-${Date.now()}`,
+          client_name: customerName,
+          ticket_reference: referenceNumber,
+          travel_dates_from: checkInDate,
+          travel_dates_to: checkOutDate,
+          adults,
+          infants,
+          cnb,
+          cwb,
+          total_amount: dblOption ? dblOption.totalCostAED : 0,
+          currency: 'AED',
+          status: 'draft',
+          formatted_quote: generatedQuote.formattedText,
+          notes: `${generatedQuote.breakdown}\n\n---QUOTE_DATA---\n${quoteDataJSON}`
+        };
+        
+        const { error } = await supabase
+          .from('quotes')
+          .insert([insertData]);
+          
+        if (error) throw error;
+        toast({
+          title: "Quote Saved",
+          description: "Quote has been saved successfully"
+        });
+      }
+
+      // Navigate to quotes management
+      navigate('/quotes');
+    } catch (error) {
+      toast({
+        title: "Error Saving Quote",
+        description: "Failed to save quote. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
-    <div className="container mx-auto p-4 md:p-8 space-y-6">
-      {/* Header */}
+    <div className="p-8 space-y-8">
       <div className="text-center">
-        <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-          Quote Generator
+        <h1 className="text-4xl font-bold text-foreground mb-2">
+          {editingQuote ? 'Edit Quote' : 'Quote Generator'}
         </h1>
-        <p className="text-muted-foreground">Create professional Dubai tour package quotes</p>
+        <p className="text-muted-foreground">
+          {editingQuote ? 'Modify existing quote details' : 'Create professional tour package quotes'}
+        </p>
       </div>
 
-      {/* Main Form Card */}
-      <Card className="shadow-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calculator className="h-5 w-5 text-primary" />
-            Package Configuration
+      {/* Input Form */}
+      <Card className="dubai-card">
+        <CardHeader className="p-6 border-b">
+          <CardTitle className="flex items-center gap-2 text-xl">
+            <Calculator className="h-6 w-6 text-dubai-gold" />
+            Package Details
           </CardTitle>
+          <p className="text-sm text-muted-foreground mt-2">Enter all required information to generate a professional quote</p>
         </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="details" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="details">Details</TabsTrigger>
-              <TabsTrigger value="accommodation">Accommodation</TabsTrigger>
-              <TabsTrigger value="tours">Tours</TabsTrigger>
-              <TabsTrigger value="services">Services</TabsTrigger>
-            </TabsList>
+        <CardContent className="p-6 space-y-8">
+          {/* Customer Information Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b">
+              <div className="h-1 w-1 rounded-full bg-dubai-gold" />
+              <h3 className="text-base font-semibold text-foreground">Customer Information</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="customerName" className="text-sm font-semibold">Customer Name *</Label>
+                <Input
+                  id="customerName"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="Enter full name"
+                  className="dubai-input h-11"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="referenceNumber" className="text-sm font-semibold">TKT Reference Number</Label>
+                <Input
+                  id="referenceNumber"
+                  value={referenceNumber}
+                  onChange={(e) => setReferenceNumber(e.target.value)}
+                  placeholder="Enter reference number"
+                  className="dubai-input h-11"
+                />
+              </div>
+            </div>
+          </div>
 
-            {/* Tab 1: Basic Details */}
-            <TabsContent value="details" className="space-y-6 mt-6">
-              {/* Customer Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="customerName">Customer Name *</Label>
-                  <Input
-                    id="customerName"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Enter customer name"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="referenceNumber">TKT Reference</Label>
-                  <Input
-                    id="referenceNumber"
-                    value={referenceNumber}
-                    onChange={(e) => setReferenceNumber(e.target.value)}
-                    placeholder="Enter ticket reference"
-                  />
+          {/* Travel Dates Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b">
+              <div className="h-1 w-1 rounded-full bg-dubai-gold" />
+              <h3 className="text-base font-semibold text-foreground">Travel Dates</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="checkin" className="text-sm font-semibold">Check-in Date *</Label>
+                <Input
+                  id="checkin"
+                  type="date"
+                  value={checkInDate}
+                  onChange={(e) => setCheckInDate(e.target.value)}
+                  className="dubai-input h-11"
+                />
+                <p className="text-xs text-muted-foreground">Start date of the trip</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="checkout" className="text-sm font-semibold">Check-out Date *</Label>
+                <Input
+                  id="checkout"
+                  type="date"
+                  value={checkOutDate}
+                  onChange={(e) => setCheckOutDate(e.target.value)}
+                  className="dubai-input h-11"
+                />
+                <p className="text-xs text-muted-foreground">End date of the trip</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Passenger Details Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b">
+              <div className="h-1 w-1 rounded-full bg-dubai-gold" />
+              <h3 className="text-base font-semibold text-foreground">Passenger Details</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">Specify the number of passengers for each category</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="adults" className="text-sm font-semibold">Adults *</Label>
+                <div className="flex items-center justify-center gap-2 p-2 border rounded-lg bg-background h-11">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setAdults(Math.max(1, adults - 1))}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="min-w-[50px] text-center font-semibold text-lg">{adults}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setAdults(adults + 1)}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
-
-              {/* Dates */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="checkin">Check-in Date *</Label>
-                  <Input
-                    id="checkin"
-                    type="date"
-                    value={checkInDate}
-                    onChange={(e) => setCheckInDate(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="checkout">Check-out Date *</Label>
-                  <Input
-                    id="checkout"
-                    type="date"
-                    value={checkOutDate}
-                    onChange={(e) => setCheckOutDate(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* Pax Details */}
-              <div>
-                <Label className="flex items-center gap-2 mb-3">
-                  <Users className="h-4 w-4" />
-                  Passenger Details
-                </Label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs">Adults</Label>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setAdults(Math.max(1, adults - 1))}
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <span className="w-12 text-center font-semibold">{adults}</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setAdults(adults + 1)}
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs">CWB</Label>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCwb(Math.max(0, cwb - 1))}
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <span className="w-12 text-center font-semibold">{cwb}</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCwb(cwb + 1)}
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs">CNB</Label>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCnb(Math.max(0, cnb - 1))}
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <span className="w-12 text-center font-semibold">{cnb}</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCnb(cnb + 1)}
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs">Infants</Label>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setInfants(Math.max(0, infants - 1))}
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <span className="w-12 text-center font-semibold">{infants}</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setInfants(infants + 1)}
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
+              <div className="space-y-2">
+                <Label htmlFor="infants" className="text-sm font-semibold">Infants</Label>
+                <div className="flex items-center justify-center gap-2 p-2 border rounded-lg bg-background h-11">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setInfants(Math.max(0, infants - 1))}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="min-w-[50px] text-center font-semibold text-lg">{infants}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setInfants(infants + 1)}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
-
-              {/* Visa & Transfer Options */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="includeVisa"
-                    checked={includeVisa}
-                    onCheckedChange={(checked) => setIncludeVisa(!!checked)}
-                  />
-                  <Label htmlFor="includeVisa" className="text-sm font-normal cursor-pointer">
-                    Include Visa (Adult: AED {getVisaCost('adult')}, Child: AED {getVisaCost('child')})
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="includeTransfer"
-                    checked={includeAirportTransfer}
-                    onCheckedChange={(checked) => setIncludeAirportTransfer(!!checked)}
-                  />
-                  <Label htmlFor="includeTransfer" className="text-sm font-normal cursor-pointer">
-                    Include Airport Transfer (Auto: AED {getAirportTransferCost()})
-                  </Label>
+              <div className="space-y-2">
+                <Label htmlFor="cnb" className="text-sm font-semibold">Child (No Bed)</Label>
+                <div className="flex items-center justify-center gap-2 p-2 border rounded-lg bg-background h-11">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCnb(Math.max(0, cnb - 1))}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="min-w-[50px] text-center font-semibold text-lg">{cnb}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCnb(cnb + 1)}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
-              {includeAirportTransfer && (
-                <div>
-                  <Label htmlFor="manualTransfer" className="text-sm">Manual Transfer Cost (AED)</Label>
-                  <Input
-                    id="manualTransfer"
-                    type="number"
-                    placeholder="Leave empty for auto-calculation"
-                    value={manualAirportTransfer || ''}
-                    onChange={(e) => setManualAirportTransfer(e.target.value ? Number(e.target.value) : null)}
-                    className="w-full md:w-64"
-                  />
+              <div className="space-y-2">
+                <Label htmlFor="cwb" className="text-sm font-semibold">Child (With Bed)</Label>
+                <div className="flex items-center justify-center gap-2 p-2 border rounded-lg bg-background h-11">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCwb(Math.max(0, cwb - 1))}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="min-w-[50px] text-center font-semibold text-lg">{cwb}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCwb(cwb + 1)}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </div>
-              )}
-            </TabsContent>
+              </div>
+            </div>
+          </div>
 
-            {/* Tab 2: Accommodation */}
-            <TabsContent value="accommodation" className="space-y-6 mt-6">
-              {/* Accommodation Type Toggle */}
-              <div className="flex gap-4">
-                <Button
-                  type="button"
-                  variant={accommodationType === 'hotel' ? 'default' : 'outline'}
-                  onClick={() => setAccommodationType('hotel')}
-                  className="flex-1"
+          {/* Occupancy Selection Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b">
+              <div className="h-1 w-1 rounded-full bg-dubai-gold" />
+              <h3 className="text-base font-semibold text-foreground">Occupancy Types</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Select which occupancy types to display in the quote
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {occupancyTypes.map(occupancy => (
+                <div 
+                  key={occupancy.id}
+                  className={cn(
+                    "flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all",
+                    selectedOccupancies.includes(occupancy.id) 
+                      ? "border-dubai-gold bg-dubai-gold/5 shadow-sm" 
+                      : "border-border hover:border-dubai-gold/50 hover:bg-muted/30"
+                  )}
+                  onClick={() => {
+                    if (selectedOccupancies.includes(occupancy.id)) {
+                      setSelectedOccupancies(selectedOccupancies.filter(o => o !== occupancy.id));
+                    } else {
+                      setSelectedOccupancies([...selectedOccupancies, occupancy.id]);
+                    }
+                  }}
                 >
-                  <Hotel className="h-4 w-4 mr-2" />
-                  Hotel
-                </Button>
-                <Button
-                  type="button"
-                  variant={accommodationType === 'apartment' ? 'default' : 'outline'}
-                  onClick={() => setAccommodationType('apartment')}
-                  className="flex-1"
-                >
-                  <Building2 className="h-4 w-4 mr-2" />
-                  Apartment
-                </Button>
-              </div>
-
-              {/* Hotel Mode - Occupancy Selection */}
-              {accommodationType === 'hotel' && (
-                <div>
-                  <Label className="mb-3 block">Select Occupancy Types *</Label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {occupancyTypes.map(occupancy => (
-                      <div 
-                        key={occupancy.id}
-                        className="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => {
-                          if (selectedOccupancies.includes(occupancy.id)) {
-                            setSelectedOccupancies(selectedOccupancies.filter(o => o !== occupancy.id));
-                          } else {
-                            setSelectedOccupancies([...selectedOccupancies, occupancy.id]);
-                          }
-                        }}
-                      >
-                        <Checkbox 
-                          checked={selectedOccupancies.includes(occupancy.id)}
-                          onCheckedChange={() => {}}
-                        />
-                        <div>
-                          <p className="font-medium text-sm">{occupancy.label}</p>
-                          <p className="text-xs text-muted-foreground">{occupancy.description}</p>
-                        </div>
-                      </div>
-                    ))}
+                  <Checkbox 
+                    checked={selectedOccupancies.includes(occupancy.id)}
+                    onChange={() => {}}
+                  />
+                  <div className="flex-1">
+                    <p className="font-semibold text-sm text-foreground">{occupancy.label}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{occupancy.description}</p>
                   </div>
                 </div>
-              )}
+              ))}
+            </div>
+          </div>
 
-              {/* Apartment Mode - Type Selection */}
-              {accommodationType === 'apartment' && (
-                <div>
-                  <Label className="mb-3 block">Select Apartment Type *</Label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {(['01BR', '02BR', '03BR'] as ApartmentType[]).map(type => (
+          {/* Hotel Selection Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b">
+              <div className="h-1 w-1 rounded-full bg-dubai-gold" />
+              <h3 className="text-base font-semibold text-foreground">Hotel Selection</h3>
+            </div>
+            <Label htmlFor="hotelSearch" className="text-sm font-semibold">Select Hotels *</Label>
+            <div className="space-y-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="hotelSearch"
+                  placeholder="Search hotels..."
+                  value={hotelSearch}
+                  onChange={(e) => setHotelSearch(e.target.value)}
+                  className="dubai-input pl-10"
+                />
+              </div>
+              
+              {/* Selected Hotels */}
+              {selectedHotels.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Selected Hotels:</p>
+                  {selectedHotels.map(hotel => (
+                    <Card key={hotel.id} className="p-4 border-dubai-gold">
+                      <div className="flex justify-between items-start">
+                         <div>
+                           <h3 className="font-medium">{hotel.name}</h3>
+                           <p className="text-sm text-muted-foreground flex items-center gap-1">
+                             <MapPin className="h-3 w-3" />
+                             {hotel.location}
+                           </p>
+                           <div className="flex items-center gap-2 mt-2">
+                             <Label className="text-xs">Rate/night:</Label>
+                             <Input
+                               type="number"
+                               value={editableRates[`hotel_${hotel.id}`] ?? hotel.baseRate}
+                               onChange={(e) => setEditableRates(prev => ({
+                                 ...prev,
+                                 [`hotel_${hotel.id}`]: Number(e.target.value)
+                               }))}
+                               className="w-20 h-7 text-xs"
+                             />
+                             <span className="text-xs text-muted-foreground">AED</span>
+                           </div>
+                           <p className="text-xs text-muted-foreground">
+                             Extra Bed: AED {hotel.extraBedRate}/night
+                           </p>
+                         </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeHotel(hotel.id)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+              
+              {/* Available Hotels */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
+                {filteredHotels.map(hotel => (
+                  <Card 
+                    key={hotel.id} 
+                    className="p-3 cursor-pointer hover:border-dubai-gold transition-colors"
+                    onClick={() => {
+                      addHotel(hotel);
+                      setHotelSearch('');
+                    }}
+                  >
+                    <h4 className="font-medium text-sm">{hotel.name}</h4>
+                    <p className="text-xs text-muted-foreground">{hotel.location}</p>
+                    <p className="text-xs mt-1">AED {hotel.baseRate}/night</p>
+                  </Card>
+                ))}
+                {hotelSearch.length > 0 && filteredHotels.length === 0 && (
+                  <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
+                    No hotels found matching your search.
+                  </p>
+                )}
+                {hotelSearch.length === 0 && (
+                  <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
+                    Start typing to search for hotels...
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Tours Selection */}
+          <div>
+            <Label>Select Tours & Activities</Label>
+            <div className="space-y-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search tours..."
+                  value={tourSearch}
+                  onChange={(e) => setTourSearch(e.target.value)}
+                  className="dubai-input pl-10"
+                />
+              </div>
+              
+              {/* Selected Tours */}
+              {selectedTours.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Selected Tours:</p>
+                  {selectedTours.map(tour => (
+                    <div key={tour.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                       <div className="flex-1">
+                         <span className="font-medium">{tour.name}</span>
+                         <div className="flex items-center gap-2 mt-1">
+                           <Label className="text-xs">Rate/person:</Label>
+                           <Input
+                             type="number"
+                             value={editableRates[`tour_${tour.id}`] ?? tour.costPerPerson}
+                             onChange={(e) => setEditableRates(prev => ({
+                               ...prev,
+                               [`tour_${tour.id}`]: Number(e.target.value)
+                             }))}
+                             className="w-20 h-7 text-xs"
+                           />
+                           <span className="text-xs text-muted-foreground">
+                             AED × {totalPax} pax = AED {((editableRates[`tour_${tour.id}`] ?? tour.costPerPerson) * totalPax).toLocaleString()}
+                           </span>
+                         </div>
+                       </div>
                       <Button
-                        key={type}
-                        type="button"
-                        variant={apartmentType === type ? 'default' : 'outline'}
-                        onClick={() => setApartmentType(type)}
-                        className="h-auto py-3 flex-col"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeTour(tour.id)}
                       >
-                        <span className="font-bold">{type}</span>
-                        <span className="text-xs opacity-80">
-                          {type === '01BR' && '2 Adults + 1 CNB + 1 CWB'}
-                          {type === '02BR' && '4 Adults + 2 CNB + 2 CWB'}
-                          {type === '03BR' && '6 Adults + 3 CNB + 3 CWB'}
-                        </span>
+                        Remove
                       </Button>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
               )}
-
-              {/* Hotel/Apartment Search */}
-              <div>
-                <Label htmlFor="hotelSearch">Search {accommodationType === 'hotel' ? 'Hotels' : 'Apartments'} *</Label>
-                <div className="relative mt-2">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="hotelSearch"
-                    placeholder={`Search ${accommodationType}...`}
-                    value={hotelSearch}
-                    onChange={(e) => setHotelSearch(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                
-                {/* Selected */}
-                {selectedHotels.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    <p className="text-sm font-medium">Selected:</p>
-                    {selectedHotels.map(hotel => (
-                      <div key={hotel.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                        <div className="flex-1">
-                          <p className="font-medium">{hotel.name}</p>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {hotel.location}
-                          </p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <Input
-                              type="number"
-                              value={editableRates[`hotel_${hotel.id}`] ?? hotel.baseRate}
-                              onChange={(e) => setEditableRates(prev => ({
-                                ...prev,
-                                [`hotel_${hotel.id}`]: Number(e.target.value)
-                              }))}
-                              className="w-24 h-8 text-sm"
-                            />
-                            <span className="text-xs text-muted-foreground">AED/night</span>
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => removeHotel(hotel.id)}>
-                          Remove
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
+              
+              {/* Available Tours */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
+                {filteredTours.map(tour => (
+                  <Card 
+                    key={tour.id} 
+                    className="p-3 cursor-pointer hover:border-dubai-gold transition-colors"
+                    onClick={() => addTour(tour)}
+                  >
+                    <h4 className="font-medium text-sm">{tour.name}</h4>
+                    <p className="text-xs text-muted-foreground">{tour.type}</p>
+                    <p className="text-xs mt-1">AED {tour.costPerPerson}/person</p>
+                  </Card>
+                ))}
+                {tourSearch.length > 0 && filteredTours.length === 0 && (
+                  <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
+                    No tours found matching your search.
+                  </p>
                 )}
-                
-                {/* Available */}
-                {hotelSearch && (
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
-                    {filteredHotels.map(hotel => (
-                      <Card 
-                        key={hotel.id} 
-                        className="p-3 cursor-pointer hover:border-primary transition-colors"
-                        onClick={() => addHotel(hotel)}
-                      >
-                        <h4 className="font-medium text-sm">{hotel.name}</h4>
-                        <p className="text-xs text-muted-foreground">{hotel.location}</p>
-                        <p className="text-xs mt-1 font-semibold">AED {hotel.baseRate}/night</p>
-                      </Card>
-                    ))}
-                    {filteredHotels.length === 0 && (
-                      <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
-                        No results found
-                      </p>
-                    )}
-                  </div>
+                {tourSearch.length === 0 && (
+                  <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
+                    Start typing to search for tours...
+                  </p>
                 )}
               </div>
-            </TabsContent>
+            </div>
+          </div>
 
-            {/* Tab 3: Tours */}
-            <TabsContent value="tours" className="space-y-6 mt-6">
-              <div>
-                <Label htmlFor="tourSearch">Search Tours & Activities</Label>
-                <div className="relative mt-2">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="tourSearch"
-                    placeholder="Search tours..."
-                    value={tourSearch}
-                    onChange={(e) => setTourSearch(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                
-                {/* Selected Tours */}
-                {selectedTours.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    <p className="text-sm font-medium">Selected Tours:</p>
-                    {selectedTours.map(tour => (
-                      <div key={tour.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                        <div className="flex-1">
-                          <p className="font-medium">{tour.name}</p>
-                          <p className="text-xs text-muted-foreground">{tour.type}</p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <Input
-                              type="number"
-                              value={editableRates[`tour_${tour.id}`] ?? tour.costPerPerson}
-                              onChange={(e) => setEditableRates(prev => ({
-                                ...prev,
-                                [`tour_${tour.id}`]: Number(e.target.value)
-                              }))}
-                              className="w-24 h-8 text-sm"
-                            />
-                            <span className="text-xs text-muted-foreground">AED/person</span>
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => removeTour(tour.id)}>
-                          Remove
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                {/* Available Tours */}
-                {tourSearch && (
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
-                    {filteredTours.map(tour => (
-                      <Card 
-                        key={tour.id} 
-                        className="p-3 cursor-pointer hover:border-primary transition-colors"
-                        onClick={() => addTour(tour)}
-                      >
-                        <h4 className="font-medium text-sm">{tour.name}</h4>
-                        <p className="text-xs text-muted-foreground">{tour.type}</p>
-                        <p className="text-xs mt-1 font-semibold">AED {tour.costPerPerson}/person</p>
-                      </Card>
-                    ))}
-                    {filteredTours.length === 0 && (
-                      <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
-                        No results found
-                      </p>
-                    )}
-                  </div>
-                )}
+          {/* Inclusions Selection */}
+          <div>
+            <Label>Additional Services</Label>
+            <div className="space-y-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search additional services..."
+                  value={inclusionSearch}
+                  onChange={(e) => setInclusionSearch(e.target.value)}
+                  className="dubai-input pl-10"
+                />
               </div>
-            </TabsContent>
-
-            {/* Tab 4: Additional Services */}
-            <TabsContent value="services" className="space-y-6 mt-6">
-              <div>
-                <Label htmlFor="inclusionSearch">Search Additional Services</Label>
-                <div className="relative mt-2">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="inclusionSearch"
-                    placeholder="Search services..."
-                    value={inclusionSearch}
-                    onChange={(e) => setInclusionSearch(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                
-                {/* Selected Services */}
-                {selectedInclusions.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    <p className="text-sm font-medium">Selected Services:</p>
-                    {selectedInclusions.map(inclusion => (
-                      <div key={inclusion.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                        <div className="flex-1">
-                          <p className="font-medium">{inclusion.name}</p>
-                          <p className="text-xs text-muted-foreground">{inclusion.type}</p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <Input
-                              type="number"
-                              value={editableRates[`inclusion_${inclusion.id}`] ?? inclusion.cost}
-                              onChange={(e) => setEditableRates(prev => ({
-                                ...prev,
-                                [`inclusion_${inclusion.id}`]: Number(e.target.value)
-                              }))}
-                              className="w-24 h-8 text-sm"
-                            />
-                            <span className="text-xs text-muted-foreground">AED/person</span>
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => toggleInclusion(inclusion)}>
-                          Remove
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                {/* Available Services */}
-                {inclusionSearch && (
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
-                    {filteredInclusions.map(inclusion => (
-                      <Card 
-                        key={inclusion.id} 
-                        className="p-3 cursor-pointer hover:border-primary transition-colors"
+              
+              {/* Selected Inclusions */}
+              {selectedInclusions.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Selected Services:</p>
+                  {selectedInclusions.map(inclusion => (
+                    <div key={inclusion.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                       <div className="flex-1">
+                         <span className="font-medium">{inclusion.name}</span>
+                         <div className="flex items-center gap-2 mt-1">
+                           <Label className="text-xs">Rate/person:</Label>
+                           <Input
+                             type="number"
+                             value={editableRates[`inclusion_${inclusion.id}`] ?? inclusion.cost}
+                             onChange={(e) => setEditableRates(prev => ({
+                               ...prev,
+                               [`inclusion_${inclusion.id}`]: Number(e.target.value)
+                             }))}
+                             className="w-20 h-7 text-xs"
+                           />
+                           <span className="text-xs text-muted-foreground">
+                             AED × {totalPax} pax = AED {((editableRates[`inclusion_${inclusion.id}`] ?? inclusion.cost) * totalPax).toLocaleString()}
+                           </span>
+                         </div>
+                       </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => toggleInclusion(inclusion)}
                       >
-                        <h4 className="font-medium text-sm">{inclusion.name}</h4>
-                        <p className="text-xs text-muted-foreground">{inclusion.type}</p>
-                        <p className="text-xs mt-1 font-semibold">AED {inclusion.cost}/person</p>
-                      </Card>
-                    ))}
-                    {filteredInclusions.length === 0 && (
-                      <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
-                        No results found
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Available Inclusions */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
+                {filteredInclusions.map(inclusion => (
+                  <div 
+                    key={inclusion.id}
+                    className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
+                    onClick={() => toggleInclusion(inclusion)}
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{inclusion.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        AED {inclusion.cost}/person × {totalPax} pax = AED {(inclusion.cost * totalPax).toLocaleString()}
                       </p>
-                    )}
+                    </div>
                   </div>
+                ))}
+                {inclusionSearch.length > 0 && filteredInclusions.length === 0 && (
+                  <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
+                    No services found matching your search.
+                  </p>
+                )}
+                {inclusionSearch.length === 0 && (
+                  <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
+                    Start typing to search for additional services...
+                  </p>
                 )}
               </div>
-            </TabsContent>
-          </Tabs>
+            </div>
+          </div>
 
-          {/* Generate Button */}
-          <div className="flex justify-center mt-8">
+          {/* Generate Quote Button */}
+          <div className="flex justify-center">
             <Button 
               onClick={calculateQuote}
-              size="lg"
-              className="shadow-card hover:shadow-hover transition-shadow"
+              className="dubai-button-primary"
+              disabled={selectedHotels.length === 0 || !customerName || !checkInDate || !checkOutDate || selectedOccupancies.length === 0}
             >
-              <Calculator className="mr-2 h-5 w-5" />
+              <Calculator className="mr-2 h-4 w-4" />
               Generate Quote
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Quote Preview */}
-      {generatedQuote && (
-        <Card className="shadow-card">
+      {/* Quote Preview with HTML rendering */}
+      {generatedQuote && generatedQuote.formattedText && (
+        <Card className="dubai-card">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                Generated Quote
+              <span className="flex items-center">
+                <FileText className="mr-2 h-5 w-5 text-dubai-gold" />
+                Generated Quote Preview
               </span>
               <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    const quoteElement = document.getElementById('quote-preview');
-                    if (quoteElement) {
-                      navigator.clipboard.writeText(quoteElement.innerText);
-                      toast({ title: "Copied!", description: "Quote copied to clipboard" });
-                    }
-                  }}
-                >
+                 <Button variant="outline" size="sm" onClick={copyFormattedText}>
+                   <Copy className="h-4 w-4 mr-2" />
+                   Copy Quote
+                 </Button>
+                <Button variant="outline" size="sm" onClick={copyBreakdown}>
                   <Copy className="h-4 w-4 mr-2" />
-                  Copy
+                  Copy Breakdown
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    const element = document.getElementById('quote-preview');
-                    if (element) {
-                      html2pdf()
-                        .from(element)
-                        .set({
-                          margin: 1,
-                          filename: `quote-${generatedQuote.customerName.replace(/\s+/g, '-')}.pdf`,
-                          html2canvas: { scale: 2 },
-                          jsPDF: { orientation: 'portrait', unit: 'in', format: 'letter' }
-                        })
-                        .save();
-                    }
-                  }}
-                >
+                <Button variant="outline" size="sm" onClick={downloadPDF}>
                   <Download className="h-4 w-4 mr-2" />
-                  PDF
+                  Download PDF
                 </Button>
-                <Button 
-                  size="sm"
-                  onClick={async () => {
-                    try {
-                      const { data, error } = await supabase.from('quotes').insert([{
-                        reference_number: `QT-${Date.now()}`,
-                        client_name: generatedQuote.customerName,
-                        ticket_reference: generatedQuote.ticketReference,
-                        travel_dates_from: generatedQuote.checkInDate,
-                        travel_dates_to: generatedQuote.checkOutDate,
-                        adults: generatedQuote.paxDetails.adults,
-                        infants: generatedQuote.paxDetails.infants,
-                        cnb: generatedQuote.paxDetails.cnb,
-                        cwb: generatedQuote.paxDetails.cwb,
-                        total_amount: generatedQuote.accommodationType === 'hotel' 
-                          ? generatedQuote.hotelOptions[0]?.occupancyOptions[0]?.totalCostUSD || 0
-                          : generatedQuote.hotelOptions[0]?.occupancyOptions[0]?.adults?.totalUSD || 0,
-                        currency: 'USD',
-                        status: 'draft',
-                        formatted_quote: generatedQuote.quoteText
-                      }]).select();
-                      
-                      if (error) throw error;
-                      
-                      toast({
-                        title: "Quote Saved!",
-                        description: "Quote has been saved to the database"
-                      });
-                      
-                      navigate('/quote-management');
-                    } catch (error) {
-                      console.error('Error saving quote:', error);
-                      toast({
-                        title: "Error",
-                        description: "Failed to save quote",
-                        variant: "destructive"
-                      });
-                    }
-                  }}
-                >
+                <Button onClick={saveQuote} className="dubai-button-primary">
                   <Save className="h-4 w-4 mr-2" />
-                  Save
+                  {editingQuote ? 'Update Quote' : 'Save Quote'}
                 </Button>
               </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div id="quote-preview" className="bg-background p-6 rounded-lg border space-y-4">
-              {/* Header */}
-              <div className="text-center mb-4">
-                <h2 className="text-2xl font-bold">Dubai Holiday Package Quote</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {format(new Date(generatedQuote.checkInDate), 'dd MMM yyyy')} - {format(new Date(generatedQuote.checkOutDate), 'dd MMM yyyy')} ({generatedQuote.nights} Nights)
-                </p>
+            {/* HTML Preview with proper borders and copy functionality */}
+            <div className="bg-white p-6 rounded-lg border-2 border-gray-200 shadow-sm mb-6">
+              <style dangerouslySetInnerHTML={{
+                __html: `
+                  [data-quote-preview] table {
+                    border-collapse: collapse;
+                    width: 100%;
+                    margin: 10px 0;
+                  }
+                  [data-quote-preview] table, 
+                  [data-quote-preview] th, 
+                  [data-quote-preview] td {
+                    border: 1px solid #000 !important;
+                  }
+                  [data-quote-preview] th, 
+                  [data-quote-preview] td {
+                    padding: 8px;
+                    text-align: left;
+                  }
+                  [data-quote-preview] th {
+                    background-color: #f5f5f5;
+                    font-weight: bold;
+                  }
+                `
+              }} />
+              <div 
+                data-quote-preview
+                dangerouslySetInnerHTML={{ __html: generatedQuote.formattedText || '' }}
+                className="prose max-w-none"
+                style={{ 
+                  fontFamily: 'Arial, sans-serif',
+                  lineHeight: '1.3',
+                  fontSize: '13px'
+                }}
+              />
+            </div>
+            
+            {/* Breakdown Preview */}
+            {generatedQuote.breakdown && (
+              <div className="bg-gray-50 p-6 rounded-lg border mb-6">
+                <h3 className="text-lg font-semibold mb-4">Cost Breakdown</h3>
+                <pre className="whitespace-pre-line font-mono text-sm">
+                  {generatedQuote.breakdown}
+                </pre>
               </div>
+            )}
 
-              {/* Pricing Tables for Each Hotel */}
-              {generatedQuote.hotelOptions.map((hotelOption: any, idx: number) => (
-                <div key={idx} className="mb-6">
-                  <h3 className="font-bold text-lg mb-3 text-primary">{hotelOption.hotel.name}</h3>
-                  
-                  {generatedQuote.accommodationType === 'hotel' ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse border">
-                        <thead>
-                          <tr className="bg-muted">
-                            <th className="border p-2 text-left">Occupancy</th>
-                            <th className="border p-2 text-center">Per Person (USD) - BB</th>
-                            {generatedQuote.paxDetails.cwb > 0 && <th className="border p-2 text-center">CWB (USD)</th>}
-                            {generatedQuote.paxDetails.cnb > 0 && <th className="border p-2 text-center">CNB (USD)</th>}
-                            {generatedQuote.paxDetails.infants > 0 && <th className="border p-2 text-center">Infant (USD)</th>}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {hotelOption.occupancyOptions.map((occ: any, occIdx: number) => (
-                            <tr key={occIdx}>
-                              <td className="border p-2 font-medium">
-                                {occ.occupancyType === 'SGL' && 'Single'}
-                                {occ.occupancyType === 'DBL' && 'Double'}
-                                {occ.occupancyType === 'TPL' && 'Triple'}
-                              </td>
-                              <td className="border p-2 text-center font-bold text-primary">
-                                ${occ.perPersonUSD}
-                              </td>
-                              {generatedQuote.paxDetails.cwb > 0 && (
-                                <td className="border p-2 text-center font-bold text-primary">
-                                  ${occ.cwbPerPersonUSD}
-                                </td>
-                              )}
-                              {generatedQuote.paxDetails.cnb > 0 && (
-                                <td className="border p-2 text-center font-bold text-primary">
-                                  ${occ.cnbPerPersonUSD}
-                                </td>
-                              )}
-                              {generatedQuote.paxDetails.infants > 0 && (
-                                <td className="border p-2 text-center font-bold text-primary">
-                                  $20
-                                </td>
-                              )}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse border">
-                        <thead>
-                          <tr className="bg-muted">
-                            <th className="border p-2 text-left">Apartment Type</th>
-                            <th className="border p-2 text-center">Adult (USD)</th>
-                            {generatedQuote.paxDetails.cwb > 0 && <th className="border p-2 text-center">CWB (USD)</th>}
-                            {generatedQuote.paxDetails.cnb > 0 && <th className="border p-2 text-center">CNB (USD)</th>}
-                            {generatedQuote.paxDetails.infants > 0 && <th className="border p-2 text-center">Infant (USD)</th>}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {hotelOption.occupancyOptions.map((apt: any, aptIdx: number) => (
-                            <tr key={aptIdx}>
-                              <td className="border p-2 font-medium">{apt.occupancyType}</td>
-                              <td className="border p-2 text-center font-bold text-primary">
-                                ${apt.adults?.perPersonUSD || 0}
-                              </td>
-                              {generatedQuote.paxDetails.cwb > 0 && (
-                                <td className="border p-2 text-center font-bold text-primary">
-                                  ${apt.cwbWithoutBed?.perPersonUSD || apt.cwbWithBed?.perPersonUSD || 0}
-                                </td>
-                              )}
-                              {generatedQuote.paxDetails.cnb > 0 && (
-                                <td className="border p-2 text-center font-bold text-primary">
-                                  ${apt.cnb?.perPersonUSD || 0}
-                                </td>
-                              )}
-                              {generatedQuote.paxDetails.infants > 0 && (
-                                <td className="border p-2 text-center font-bold text-primary">
-                                  $20
-                                </td>
-                              )}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              ))}
-
-              {/* Inclusions */}
-              <div className="mt-6">
-                <h3 className="font-bold text-lg mb-2">Package Inclusions:</h3>
-                <ul className="list-disc list-inside space-y-1 text-sm">
-                  <li>{generatedQuote.nights} Nights Accommodation (BB Basis)</li>
-                  {includeAirportTransfer && <li>Airport Transfers (SIC)</li>}
-                  {includeVisa && <li>UAE Visa</li>}
-                  {selectedTours.map(tour => (
-                    <li key={tour.id}>{tour.name}</li>
-                  ))}
-                  {selectedInclusions.map(inc => (
-                    <li key={inc.id}>{inc.name}</li>
-                  ))}
-                </ul>
+            {/* Detailed Pricing Table for Reference */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold mb-4 text-gray-900">Detailed Pricing (All Hotels & Occupancy Types)</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-gray-300 text-sm">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="border border-gray-300 px-3 py-2 text-left">Hotel</th>
+                      <th className="border border-gray-300 px-3 py-2 text-left">Occupancy</th>
+                      <th className="border border-gray-300 px-3 py-2 text-center">Rooms</th>
+                      {cwb > 0 && <th className="border border-gray-300 px-3 py-2 text-center">Extra Beds</th>}
+                      <th className="border border-gray-300 px-3 py-2 text-right">Hotel Cost (AED)</th>
+                      <th className="border border-gray-300 px-3 py-2 text-right">Total AED</th>
+                      <th className="border border-gray-300 px-3 py-2 text-right">Total USD</th>
+                      <th className="border border-gray-300 px-3 py-2 text-right font-semibold">Per Person USD</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {generatedQuote?.hotelOptions?.map((hotelOption: any, hotelIndex: number) => 
+                      hotelOption.occupancyOptions?.map((option: any, optionIndex: number) => (
+                        <tr key={`${hotelIndex}-${optionIndex}`} className={option.occupancyType === 'DBL' ? 'bg-blue-50' : 'bg-white'}>
+                          <td className="border border-gray-300 px-3 py-2 font-medium">
+                            {hotelOption.hotel?.name || 'Hotel'}
+                          </td>
+                          <td className="border border-gray-300 px-3 py-2 font-medium">
+                            {option.occupancyType} 
+                            {option.occupancyType === 'DBL' && ' (Recommended)'}
+                          </td>
+                          <td className="border border-gray-300 px-3 py-2 text-center">{option.roomsNeeded}</td>
+                          {cwb > 0 && <td className="border border-gray-300 px-3 py-2 text-center">{option.extraBeds}</td>}
+                          <td className="border border-gray-300 px-3 py-2 text-right">AED {option.hotelCost?.toLocaleString() || '0'}</td>
+                          <td className="border border-gray-300 px-3 py-2 text-right">AED {option.totalCostAED?.toLocaleString() || '0'}</td>
+                          <td className="border border-gray-300 px-3 py-2 text-right">USD {Math.round(option.totalCostUSD || 0).toLocaleString()}</td>
+                          <td className="border border-gray-300 px-3 py-2 text-right font-bold text-blue-600">
+                            USD {Math.round(option.perPersonUSD || 0)}
+                          </td>
+                        </tr>
+                      )) || []
+                    ) || []}
+                  </tbody>
+                </table>
               </div>
-
-              {/* Footer Notes */}
-              <div className="mt-4 text-xs text-muted-foreground border-t pt-3">
-                <p><strong>Transfers:</strong> {selectedTours.some(t => t.type === 'private') 
-                  ? 'All transfers on SIC basis except where private tour specified' 
-                  : 'All transfers on SIC basis'}</p>
-                <p><strong>Taxes:</strong> All taxes except Tourism Dirham</p>
-                <p><strong>BB:</strong> Bed & Breakfast basis</p>
-              </div>
+              <p className="text-xs text-gray-600 mt-3">
+                * Double occupancy (DBL) is highlighted as the most commonly selected option
+              </p>
             </div>
           </CardContent>
         </Card>
