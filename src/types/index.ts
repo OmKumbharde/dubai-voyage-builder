@@ -19,6 +19,7 @@ export interface Hotel {
   extraBedRate: number;
   amenities: string[];
   starRating: number;
+  category: 'hotel' | 'apartment';
   createdAt: string;
   updatedAt: string;
 }
@@ -61,6 +62,8 @@ export interface Inclusion {
   name: string;
   type: 'visa' | 'transfer' | 'insurance' | 'other';
   cost: number;
+  adultCost?: number;
+  childCost?: number;
   description: string;
   isOptional: boolean;
 }

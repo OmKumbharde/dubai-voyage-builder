@@ -14,6 +14,7 @@ export interface DbHotel {
   extra_bed_rate: number | null;
   amenities: string[] | null;
   images: string[] | null;
+  category: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -99,6 +100,7 @@ export interface Hotel {
   images: string[];
   baseRate: number;
   extraBedRate: number;
+  category: 'hotel' | 'apartment';
   createdAt: string;
   updatedAt: string;
 }
@@ -127,6 +129,8 @@ export interface Inclusion {
   name: string;
   type: 'visa' | 'transfer' | 'insurance' | 'other';
   cost: number;
+  adultCost?: number;
+  childCost?: number;
   description: string;
   isOptional: boolean;
 }
@@ -182,6 +186,7 @@ const adaptDbHotelToHotel = (dbHotel: DbHotel): Hotel => ({
   images: dbHotel.images || ['/api/placeholder/400/300'],
   baseRate: Number(dbHotel.base_rate) || 500,
   extraBedRate: Number(dbHotel.extra_bed_rate) || 100,
+  category: (dbHotel.category || 'hotel') as 'hotel' | 'apartment',
   createdAt: dbHotel.created_at,
   updatedAt: dbHotel.updated_at,
 });
