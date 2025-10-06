@@ -168,124 +168,104 @@ const ToursManagement = () => {
 
       {isCreating && (
         <Card className="dubai-card">
-          <CardHeader className="p-6 border-b">
+          <CardHeader className="p-4 border-b">
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-xl">{editingTour ? 'Edit Tour' : 'Add New Tour'}</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {editingTour ? 'Update tour details and pricing' : 'Create a new tour package with all details'}
-                </p>
-              </div>
+              <CardTitle className="text-lg">{editingTour ? 'Edit Tour' : 'Add New Tour'}</CardTitle>
               <Button variant="ghost" size="sm" onClick={resetForm}>
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="p-6 space-y-8">
+          <CardContent className="p-4 space-y-4">
             {/* Basic Information */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b">
-                <div className="h-1 w-1 rounded-full bg-dubai-gold" />
-                <h3 className="text-base font-semibold text-foreground">Basic Information</h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-sm font-semibold">Tour Name *</Label>
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground border-b pb-1">Basic Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="name" className="text-xs font-medium">Tour Name *</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                     placeholder="e.g., Dubai City Tour"
-                    className="dubai-input h-11"
+                    className="dubai-input h-9"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="duration" className="text-sm font-semibold">Duration *</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="duration" className="text-xs font-medium">Duration *</Label>
                   <Input
                     id="duration"
                     value={formData.duration}
                     onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
-                    placeholder="e.g., 6 hours, Full day"
-                    className="dubai-input h-11"
+                    placeholder="e.g., 6 hours"
+                    className="dubai-input h-9"
                   />
                 </div>
               </div>
             </div>
 
             {/* Timing Information */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b">
-                <div className="h-1 w-1 rounded-full bg-dubai-gold" />
-                <h3 className="text-base font-semibold text-foreground">Timing</h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="pickupTime" className="text-sm font-semibold">Approx. Pickup Time *</Label>
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground border-b pb-1">Timing</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="pickupTime" className="text-xs font-medium">Pickup Time *</Label>
                   <Input
                     id="pickupTime"
                     value={formData.pickupTime}
                     onChange={(e) => setFormData(prev => ({ ...prev, pickupTime: e.target.value }))}
-                    placeholder="e.g., 09:00 AM"
-                    className="dubai-input h-11"
+                    placeholder="09:00 AM"
+                    className="dubai-input h-9"
                   />
-                  <p className="text-xs text-muted-foreground">Approximate pickup time from hotel</p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="dropTime" className="text-sm font-semibold">Approx. Drop-off Time *</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="dropTime" className="text-xs font-medium">Drop-off Time *</Label>
                   <Input
                     id="dropTime"
                     value={formData.dropTime}
                     onChange={(e) => setFormData(prev => ({ ...prev, dropTime: e.target.value }))}
-                    placeholder="e.g., 05:00 PM"
-                    className="dubai-input h-11"
+                    placeholder="05:00 PM"
+                    className="dubai-input h-9"
                   />
-                  <p className="text-xs text-muted-foreground">Approximate drop-off time at hotel</p>
                 </div>
               </div>
             </div>
 
             {/* Description */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b">
-                <div className="h-1 w-1 rounded-full bg-dubai-gold" />
-                <h3 className="text-base font-semibold text-foreground">Description</h3>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description" className="text-sm font-semibold">Tour Description</Label>
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground border-b pb-1">Description</h3>
+              <div className="space-y-1">
+                <Label htmlFor="description" className="text-xs font-medium">Tour Description</Label>
                 <textarea
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Provide a detailed description of what the tour includes..."
-                  className="dubai-input min-h-[120px] resize-none"
-                  rows={5}
+                  placeholder="Tour description..."
+                  className="dubai-input min-h-[80px] resize-none text-sm"
+                  rows={3}
                 />
-                <p className="text-xs text-muted-foreground">Describe what guests can expect from this tour</p>
               </div>
             </div>
 
             {/* Pricing & Type */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b">
-                <div className="h-1 w-1 rounded-full bg-dubai-gold" />
-                <h3 className="text-base font-semibold text-foreground">Pricing & Type</h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="type" className="text-sm font-semibold">Tour Type</Label>
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground border-b pb-1">Pricing & Type</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="type" className="text-xs font-medium">Tour Type</Label>
                   <select
                     id="type"
                     value={formData.type}
                     onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'group' | 'private' }))}
-                    className="dubai-input h-11"
+                    className="dubai-input h-9"
                   >
                     <option value="group">Sharing Tour</option>
                     <option value="private">Private Tour</option>
                   </select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="costPerPerson" className="text-sm font-semibold">
-                    {formData.type === 'private' ? 'Ticket Price Per Person (AED) *' : 'Cost Per Person (AED) *'}
+                <div className="space-y-1">
+                  <Label htmlFor="costPerPerson" className="text-xs font-medium">
+                    {formData.type === 'private' ? 'Ticket Price (AED) *' : 'Cost/Person (AED) *'}
                   </Label>
                   <Input
                     id="costPerPerson"
@@ -293,56 +273,51 @@ const ToursManagement = () => {
                     value={formData.costPerPerson}
                     onChange={(e) => setFormData(prev => ({ ...prev, costPerPerson: Number(e.target.value) }))}
                     placeholder="0"
-                    className="dubai-input h-11"
+                    className="dubai-input h-9"
                   />
-                  {formData.type === 'private' && (
-                    <p className="text-xs text-muted-foreground">
-                      Ticket/entrance price per person
-                    </p>
-                  )}
                 </div>
               </div>
               
               {/* Private Tour Transfer Pricing */}
               {formData.type === 'private' && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 border rounded-lg bg-muted/30">
-                  <div className="space-y-2">
-                    <Label htmlFor="transferPrice1to5" className="text-sm font-semibold">Transfer (1-5 PAX) AED</Label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 border rounded-lg bg-muted/30">
+                  <div className="space-y-1">
+                    <Label htmlFor="transferPrice1to5" className="text-xs font-medium">Transfer (1-5 PAX)</Label>
                     <Input
                       id="transferPrice1to5"
                       type="number"
                       value={formData.transferPrice1to5Pax}
                       onChange={(e) => setFormData(prev => ({ ...prev, transferPrice1to5Pax: Number(e.target.value) }))}
                       placeholder="300"
-                      className="dubai-input h-11"
+                      className="dubai-input h-9"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="transferPrice6to12" className="text-sm font-semibold">Transfer (6-12 PAX) AED</Label>
+                  <div className="space-y-1">
+                    <Label htmlFor="transferPrice6to12" className="text-xs font-medium">Transfer (6-12 PAX)</Label>
                     <Input
                       id="transferPrice6to12"
                       type="number"
                       value={formData.transferPrice6to12Pax}
                       onChange={(e) => setFormData(prev => ({ ...prev, transferPrice6to12Pax: Number(e.target.value) }))}
                       placeholder="600"
-                      className="dubai-input h-11"
+                      className="dubai-input h-9"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="transferPrice13to22" className="text-sm font-semibold">Transfer (13-22 PAX) AED</Label>
+                  <div className="space-y-1">
+                    <Label htmlFor="transferPrice13to22" className="text-xs font-medium">Transfer (13-22 PAX)</Label>
                     <Input
                       id="transferPrice13to22"
                       type="number"
                       value={formData.transferPrice13to22Pax}
                       onChange={(e) => setFormData(prev => ({ ...prev, transferPrice13to22Pax: Number(e.target.value) }))}
                       placeholder="1200"
-                      className="dubai-input h-11"
+                      className="dubai-input h-9"
                     />
                   </div>
                 </div>
               )}
               
-              <div className="flex items-center gap-3 p-4 border rounded-lg bg-muted/30">
+              <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
                 <Checkbox
                   id="transferIncluded"
                   checked={formData.transferIncluded}
@@ -355,35 +330,31 @@ const ToursManagement = () => {
             </div>
 
             {/* Tour Highlights */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b">
-                <div className="flex items-center gap-2">
-                  <div className="h-1 w-1 rounded-full bg-dubai-gold" />
-                  <h3 className="text-base font-semibold text-foreground">Tour Highlights</h3>
-                </div>
-                <Button variant="outline" size="sm" onClick={addHighlight}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Highlight
+            <div className="space-y-3">
+              <div className="flex items-center justify-between border-b pb-1">
+                <h3 className="text-sm font-semibold text-foreground">Highlights</h3>
+                <Button variant="outline" size="sm" onClick={addHighlight} className="h-8">
+                  <Plus className="mr-1 h-3 w-3" />
+                  Add
                 </Button>
               </div>
-              <p className="text-sm text-muted-foreground">Add key highlights and attractions included in this tour</p>
               
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {formData.highlights.map((highlight, index) => (
-                  <div key={index} className="flex gap-3">
+                  <div key={index} className="flex gap-2">
                     <Input
                       value={highlight}
                       onChange={(e) => updateHighlight(index, e.target.value)}
-                      placeholder="e.g., Visit Burj Khalifa observation deck"
-                      className="dubai-input h-11"
+                      placeholder="e.g., Visit Burj Khalifa"
+                      className="dubai-input h-9 text-sm"
                     />
                     <Button
                       variant="outline"
-                      size="default"
+                      size="sm"
                       onClick={() => removeHighlight(index)}
-                      className="px-3"
+                      className="px-2"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
                 ))}

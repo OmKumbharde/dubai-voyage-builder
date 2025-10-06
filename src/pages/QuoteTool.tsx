@@ -758,13 +758,13 @@ const QuoteTool = () => {
 
       {/* Input Form */}
       <Card className="shadow-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calculator className="h-5 w-5 text-primary" />
+        <CardHeader className="p-4">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Calculator className="h-4 w-4 text-primary" />
             Package Configuration
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4">
           <Tabs defaultValue="details" className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="details">Details</TabsTrigger>
@@ -774,141 +774,153 @@ const QuoteTool = () => {
             </TabsList>
 
             {/* Tab 1: Basic Details */}
-            <TabsContent value="details" className="space-y-6 mt-6">
+            <TabsContent value="details" className="space-y-4 mt-4">
               {/* Customer Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="customerName">Customer Name *</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="customerName" className="text-xs font-medium">Customer Name *</Label>
                   <Input
                     id="customerName"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
                     placeholder="Enter customer name"
+                    className="h-9"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="referenceNumber">TKT Reference</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="referenceNumber" className="text-xs font-medium">TKT Reference</Label>
                   <Input
                     id="referenceNumber"
                     value={referenceNumber}
                     onChange={(e) => setReferenceNumber(e.target.value)}
                     placeholder="Enter ticket reference"
+                    className="h-9"
                   />
                 </div>
               </div>
 
               {/* Dates */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="checkin">Check-in Date *</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="checkin" className="text-xs font-medium">Check-in Date *</Label>
                   <Input
                     id="checkin"
                     type="date"
                     value={checkInDate}
                     onChange={(e) => setCheckInDate(e.target.value)}
+                    className="h-9"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="checkout">Check-out Date *</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="checkout" className="text-xs font-medium">Check-out Date *</Label>
                   <Input
                     id="checkout"
                     type="date"
                     value={checkOutDate}
                     onChange={(e) => setCheckOutDate(e.target.value)}
+                    className="h-9"
                   />
                 </div>
               </div>
 
               {/* Pax Details */}
-              <div>
-                <Label className="flex items-center gap-2 mb-3">
-                  <Users className="h-4 w-4" />
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-xs font-medium">
+                  <Users className="h-3 w-3" />
                   Passenger Details
                 </Label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs">Adults</Label>
-                    <div className="flex items-center gap-2">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-medium">Adults</Label>
+                    <div className="flex items-center gap-1">
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => setAdults(Math.max(1, adults - 1))}
+                        className="h-7 w-7 p-0"
                       >
                         <Minus className="h-3 w-3" />
                       </Button>
-                      <span className="w-12 text-center font-semibold">{adults}</span>
+                      <span className="w-8 text-center text-sm font-semibold">{adults}</span>
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => setAdults(adults + 1)}
+                        className="h-7 w-7 p-0"
                       >
                         <Plus className="h-3 w-3" />
                       </Button>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs">CWB</Label>
-                    <div className="flex items-center gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-medium">CWB</Label>
+                    <div className="flex items-center gap-1">
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => setCwb(Math.max(0, cwb - 1))}
+                        className="h-7 w-7 p-0"
                       >
                         <Minus className="h-3 w-3" />
                       </Button>
-                      <span className="w-12 text-center font-semibold">{cwb}</span>
+                      <span className="w-8 text-center text-sm font-semibold">{cwb}</span>
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => setCwb(cwb + 1)}
+                        className="h-7 w-7 p-0"
                       >
                         <Plus className="h-3 w-3" />
                       </Button>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs">CNB</Label>
-                    <div className="flex items-center gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-medium">CNB</Label>
+                    <div className="flex items-center gap-1">
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => setCnb(Math.max(0, cnb - 1))}
+                        className="h-7 w-7 p-0"
                       >
                         <Minus className="h-3 w-3" />
                       </Button>
-                      <span className="w-12 text-center font-semibold">{cnb}</span>
+                      <span className="w-8 text-center text-sm font-semibold">{cnb}</span>
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => setCnb(cnb + 1)}
+                        className="h-7 w-7 p-0"
                       >
                         <Plus className="h-3 w-3" />
                       </Button>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs">Infants</Label>
-                    <div className="flex items-center gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-medium">Infants</Label>
+                    <div className="flex items-center gap-1">
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => setInfants(Math.max(0, infants - 1))}
+                        className="h-7 w-7 p-0"
                       >
                         <Minus className="h-3 w-3" />
                       </Button>
-                      <span className="w-12 text-center font-semibold">{infants}</span>
+                      <span className="w-8 text-center text-sm font-semibold">{infants}</span>
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => setInfants(infants + 1)}
+                        className="h-7 w-7 p-0"
                       >
                         <Plus className="h-3 w-3" />
                       </Button>
@@ -919,47 +931,47 @@ const QuoteTool = () => {
             </TabsContent>
 
             {/* Tab 2: Accommodation */}
-            <TabsContent value="accommodation" className="space-y-6 mt-6">
+            <TabsContent value="accommodation" className="space-y-4 mt-4">
               {/* Occupancy Selection */}
-              <div>
-                <Label className="mb-3 block">Select Occupancy Types *</Label>
-                <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-2">
+                <Label className="text-xs font-medium">Select Occupancy Types *</Label>
+                <div className="grid grid-cols-3 gap-2">
                   {occupancyTypes.map(occupancy => (
-                    <div 
-                      key={occupancy.id}
-                      className="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
-                      onClick={() => {
-                        if (selectedOccupancies.includes(occupancy.id)) {
-                          setSelectedOccupancies(selectedOccupancies.filter(o => o !== occupancy.id));
-                        } else {
-                          setSelectedOccupancies([...selectedOccupancies, occupancy.id]);
-                        }
-                      }}
-                    >
-                      <Checkbox 
-                        checked={selectedOccupancies.includes(occupancy.id)}
-                        onCheckedChange={() => {}}
-                      />
-                      <div>
-                        <p className="font-medium text-sm">{occupancy.label}</p>
-                        <p className="text-xs text-muted-foreground">{occupancy.description}</p>
-                      </div>
+                  <div 
+                    key={occupancy.id}
+                    className="flex items-center space-x-2 p-2 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => {
+                      if (selectedOccupancies.includes(occupancy.id)) {
+                        setSelectedOccupancies(selectedOccupancies.filter(o => o !== occupancy.id));
+                      } else {
+                        setSelectedOccupancies([...selectedOccupancies, occupancy.id]);
+                      }
+                    }}
+                  >
+                    <Checkbox 
+                      checked={selectedOccupancies.includes(occupancy.id)}
+                      onCheckedChange={() => {}}
+                    />
+                    <div>
+                      <p className="font-medium text-xs">{occupancy.label}</p>
+                      <p className="text-[10px] text-muted-foreground">{occupancy.description}</p>
                     </div>
+                  </div>
                   ))}
                 </div>
               </div>
 
               {/* Hotel Search */}
-              <div>
-                <Label htmlFor="hotelSearch">Search Hotels *</Label>
-                <div className="relative mt-2">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <div className="space-y-2">
+                <Label htmlFor="hotelSearch" className="text-xs font-medium">Search Hotels *</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-2.5 h-3 w-3 text-muted-foreground" />
                   <Input
                     id="hotelSearch"
                     placeholder="Search hotels..."
                     value={hotelSearch}
                     onChange={(e) => setHotelSearch(e.target.value)}
-                    className="pl-10"
+                    className="pl-9 h-9 text-sm"
                   />
                 </div>
                 
@@ -1042,40 +1054,40 @@ const QuoteTool = () => {
             </TabsContent>
 
             {/* Tab 3: Tours */}
-            <TabsContent value="tours" className="space-y-6 mt-6">
-              <div>
-                <Label htmlFor="tourSearch">Search Tours & Activities</Label>
-                <div className="relative mt-2">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <TabsContent value="tours" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="tourSearch" className="text-xs font-medium">Search Tours & Activities</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-2.5 h-3 w-3 text-muted-foreground" />
                   <Input
                     id="tourSearch"
                     placeholder="Search tours..."
                     value={tourSearch}
                     onChange={(e) => setTourSearch(e.target.value)}
-                    className="pl-10"
+                    className="pl-9 h-9 text-sm"
                   />
                 </div>
                 
                 {/* Selected Tours - List Format with Categories */}
                 {selectedTours.length > 0 && (
-                  <div className="mt-4 space-y-4">
-                    <p className="text-sm font-semibold">Selected Tours:</p>
+                  <div className="mt-3 space-y-3">
+                    <p className="text-xs font-semibold">Selected Tours:</p>
                     
                     {/* Sharing Tours */}
                     {selectedTours.filter(t => t.type === 'group').length > 0 && (
                       <div className="border rounded-lg overflow-hidden">
-                        <div className="bg-muted/50 px-4 py-2 border-b">
-                          <p className="text-sm font-semibold">Sharing Tours</p>
+                        <div className="bg-muted/50 px-3 py-1.5 border-b">
+                          <p className="text-xs font-semibold">Sharing Tours</p>
                         </div>
                         <div className="divide-y">
                           {selectedTours.filter(t => t.type === 'group').map((tour) => (
-                            <div key={tour.id} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
+                            <div key={tour.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
                               <div className="flex-1">
-                                <p className="font-semibold text-base">{tour.name}</p>
-                                <p className="text-xs text-muted-foreground mt-1">{tour.duration}</p>
+                                <p className="font-semibold text-sm">{tour.name}</p>
+                                <p className="text-[10px] text-muted-foreground mt-0.5">{tour.duration}</p>
                               </div>
-                              <div className="flex items-center gap-3">
-                                <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1">
                                   <Input
                                     type="number"
                                     value={editableRates[`tour_${tour.id}`] ?? tour.costPerPerson}
@@ -1083,12 +1095,12 @@ const QuoteTool = () => {
                                       ...prev,
                                       [`tour_${tour.id}`]: Number(e.target.value)
                                     }))}
-                                    className="w-24 h-9"
+                                    className="w-20 h-8 text-sm"
                                   />
-                                  <span className="text-xs text-muted-foreground whitespace-nowrap">AED/person</span>
+                                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">AED</span>
                                 </div>
-                                <Button variant="ghost" size="sm" onClick={() => removeTour(tour.id)}>
-                                  <X className="h-4 w-4" />
+                                <Button variant="ghost" size="sm" onClick={() => removeTour(tour.id)} className="h-7 w-7 p-0">
+                                  <X className="h-3 w-3" />
                                 </Button>
                               </div>
                             </div>
@@ -1100,8 +1112,8 @@ const QuoteTool = () => {
                     {/* Private Tours */}
                     {selectedTours.filter(t => t.type === 'private').length > 0 && (
                       <div className="border rounded-lg overflow-hidden">
-                        <div className="bg-muted/50 px-4 py-2 border-b">
-                          <p className="text-sm font-semibold">Private Tours</p>
+                        <div className="bg-muted/50 px-3 py-1.5 border-b">
+                          <p className="text-xs font-semibold">Private Tours</p>
                         </div>
                         <div className="divide-y">
                           {selectedTours.filter(t => t.type === 'private').map((tour) => {
@@ -1110,20 +1122,20 @@ const QuoteTool = () => {
                             const perPersonTotal = ticketPrice + (transferCost / totalPax);
                             
                             return (
-                              <div key={tour.id} className="p-4 hover:bg-muted/30 transition-colors">
-                                <div className="flex items-center justify-between mb-3">
+                              <div key={tour.id} className="p-3 hover:bg-muted/30 transition-colors">
+                                <div className="flex items-center justify-between mb-2">
                                   <div className="flex-1">
-                                    <p className="font-semibold text-base">{tour.name}</p>
-                                    <p className="text-xs text-muted-foreground mt-1">{tour.duration}</p>
+                                    <p className="font-semibold text-sm">{tour.name}</p>
+                                    <p className="text-[10px] text-muted-foreground mt-0.5">{tour.duration}</p>
                                   </div>
-                                  <Button variant="ghost" size="sm" onClick={() => removeTour(tour.id)}>
-                                    <X className="h-4 w-4" />
+                                  <Button variant="ghost" size="sm" onClick={() => removeTour(tour.id)} className="h-7 w-7 p-0">
+                                    <X className="h-3 w-3" />
                                   </Button>
                                 </div>
-                                <div className="grid grid-cols-3 gap-4 text-sm">
-                                  <div className="flex flex-col gap-1">
-                                    <Label className="text-xs text-muted-foreground">Ticket Price</Label>
-                                    <div className="flex items-center gap-2">
+                                <div className="grid grid-cols-3 gap-2 text-xs">
+                                  <div className="flex flex-col gap-0.5">
+                                    <Label className="text-[10px] text-muted-foreground">Ticket Price</Label>
+                                    <div className="flex items-center gap-1">
                                       <Input
                                         type="number"
                                         value={ticketPrice}
@@ -1131,21 +1143,21 @@ const QuoteTool = () => {
                                           ...prev,
                                           [`tour_${tour.id}`]: Number(e.target.value)
                                         }))}
-                                        className="w-full h-9"
+                                        className="w-full h-8 text-xs"
                                       />
-                                      <span className="text-xs whitespace-nowrap">AED</span>
+                                      <span className="text-[10px] whitespace-nowrap">AED</span>
                                     </div>
                                   </div>
-                                  <div className="flex flex-col gap-1">
-                                    <Label className="text-xs text-muted-foreground">Transfer ({totalPax} PAX)</Label>
-                                    <div className="h-9 px-3 flex items-center bg-muted rounded-md">
-                                      <span className="font-semibold">AED {transferCost}</span>
+                                  <div className="flex flex-col gap-0.5">
+                                    <Label className="text-[10px] text-muted-foreground">Transfer ({totalPax} PAX)</Label>
+                                    <div className="h-8 px-2 flex items-center bg-muted rounded-md">
+                                      <span className="font-semibold text-xs">AED {transferCost}</span>
                                     </div>
                                   </div>
-                                  <div className="flex flex-col gap-1">
-                                    <Label className="text-xs text-muted-foreground">Per Person Total</Label>
-                                    <div className="h-9 px-3 flex items-center bg-primary/10 rounded-md border border-primary/20">
-                                      <span className="font-bold text-primary">AED {Math.ceil(perPersonTotal)}</span>
+                                  <div className="flex flex-col gap-0.5">
+                                    <Label className="text-[10px] text-muted-foreground">Per Person Total</Label>
+                                    <div className="h-8 px-2 flex items-center bg-primary/10 rounded-md border border-primary/20">
+                                      <span className="font-bold text-primary text-xs">AED {Math.ceil(perPersonTotal)}</span>
                                     </div>
                                   </div>
                                 </div>
@@ -1160,30 +1172,30 @@ const QuoteTool = () => {
                 
                 {/* Available Tours - List Format */}
                 {tourSearch && (
-                  <div className="mt-4 border rounded-lg divide-y max-h-80 overflow-y-auto">
+                  <div className="mt-3 border rounded-lg divide-y max-h-60 overflow-y-auto">
                     {filteredTours.map(tour => (
                       <div 
                         key={tour.id} 
-                        className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                        className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors"
                         onClick={() => addTour(tour)}
                       >
                         <div className="flex-1">
-                          <h4 className="font-semibold text-base">{tour.name}</h4>
-                          <div className="flex items-center gap-3 mt-1">
-                            <Badge variant={tour.type === 'private' ? 'default' : 'secondary'} className="text-xs">
+                          <h4 className="font-semibold text-sm">{tour.name}</h4>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <Badge variant={tour.type === 'private' ? 'default' : 'secondary'} className="text-[10px] h-4 px-1.5">
                               {tour.type === 'private' ? 'Private' : 'Sharing'}
                             </Badge>
-                            <p className="text-sm text-muted-foreground">{tour.duration}</p>
+                            <p className="text-[10px] text-muted-foreground">{tour.duration}</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-base font-bold text-primary">AED {tour.costPerPerson}</p>
-                          <p className="text-xs text-muted-foreground">per person</p>
+                          <p className="text-sm font-bold text-primary">AED {tour.costPerPerson}</p>
+                          <p className="text-[10px] text-muted-foreground">per person</p>
                         </div>
                       </div>
                     ))}
                     {filteredTours.length === 0 && (
-                      <p className="text-sm text-muted-foreground text-center py-8">
+                      <p className="text-xs text-muted-foreground text-center py-6">
                         No results found
                       </p>
                     )}
@@ -1193,34 +1205,33 @@ const QuoteTool = () => {
             </TabsContent>
 
             {/* Tab 4: Additional Services */}
-            <TabsContent value="services" className="space-y-6 mt-6">
-              <div>
-                <Label htmlFor="inclusionSearch">Search Additional Services</Label>
-                <div className="relative mt-2">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <TabsContent value="services" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="inclusionSearch" className="text-xs font-medium">Search Additional Services</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-2.5 h-3 w-3 text-muted-foreground" />
                   <Input
                     id="inclusionSearch"
                     placeholder="Search services..."
                     value={inclusionSearch}
                     onChange={(e) => setInclusionSearch(e.target.value)}
-                    className="pl-10"
+                    className="pl-9 h-9 text-sm"
                   />
                 </div>
                 
                 {/* Selected Services - List Format */}
                 {selectedInclusions.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    <p className="text-sm font-semibold mb-3">Selected Services:</p>
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs font-semibold">Selected Services:</p>
                     <div className="border rounded-lg divide-y">
                       {selectedInclusions.map((inclusion) => (
-                        <div key={inclusion.id} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
+                        <div key={inclusion.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
                           <div className="flex-1">
-                            <p className="font-semibold text-base">{inclusion.name}</p>
-                            <p className="text-sm text-muted-foreground mt-1 capitalize">{inclusion.type}</p>
+                            <p className="font-semibold text-sm">{inclusion.name}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5 capitalize">{inclusion.type}</p>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2">
-                              <Label className="text-xs text-muted-foreground whitespace-nowrap">Rate:</Label>
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1">
                               <Input
                                 type="number"
                                 value={editableRates[`inclusion_${inclusion.id}`] ?? inclusion.cost}
@@ -1228,12 +1239,12 @@ const QuoteTool = () => {
                                   ...prev,
                                   [`inclusion_${inclusion.id}`]: Number(e.target.value)
                                 }))}
-                                className="w-24 h-9"
+                                className="w-20 h-8 text-sm"
                               />
-                              <span className="text-xs text-muted-foreground whitespace-nowrap">AED/person</span>
+                              <span className="text-[10px] text-muted-foreground whitespace-nowrap">AED</span>
                             </div>
-                            <Button variant="ghost" size="sm" onClick={() => toggleInclusion(inclusion)}>
-                              <X className="h-4 w-4" />
+                            <Button variant="ghost" size="sm" onClick={() => toggleInclusion(inclusion)} className="h-7 w-7 p-0">
+                              <X className="h-3 w-3" />
                             </Button>
                           </div>
                         </div>
@@ -1244,25 +1255,25 @@ const QuoteTool = () => {
                 
                 {/* Available Services - List Format */}
                 {inclusionSearch && (
-                  <div className="mt-4 border rounded-lg divide-y max-h-80 overflow-y-auto">
+                  <div className="mt-3 border rounded-lg divide-y max-h-60 overflow-y-auto">
                     {filteredInclusions.map(inclusion => (
                       <div 
                         key={inclusion.id} 
-                        className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                        className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors"
                         onClick={() => toggleInclusion(inclusion)}
                       >
                         <div className="flex-1">
-                          <h4 className="font-semibold text-base">{inclusion.name}</h4>
-                          <p className="text-sm text-muted-foreground mt-1 capitalize">{inclusion.type}</p>
+                          <h4 className="font-semibold text-sm">{inclusion.name}</h4>
+                          <p className="text-[10px] text-muted-foreground mt-0.5 capitalize">{inclusion.type}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-base font-bold text-primary">AED {inclusion.cost}</p>
-                          <p className="text-xs text-muted-foreground">per person</p>
+                          <p className="text-sm font-bold text-primary">AED {inclusion.cost}</p>
+                          <p className="text-[10px] text-muted-foreground">per person</p>
                         </div>
                       </div>
                     ))}
                     {filteredInclusions.length === 0 && (
-                      <p className="text-sm text-muted-foreground text-center py-8">
+                      <p className="text-xs text-muted-foreground text-center py-6">
                         No results found
                       </p>
                     )}
@@ -1272,17 +1283,17 @@ const QuoteTool = () => {
             </TabsContent>
           </Tabs>
 
-          {/* Generate Button */}
-          <div className="flex justify-center mt-8">
-            <Button 
-              onClick={calculateQuote}
-              size="lg"
-              className="shadow-card hover:shadow-hover transition-shadow"
-            >
-              <Calculator className="mr-2 h-5 w-5" />
-              Generate Quote
-            </Button>
-          </div>
+              {/* Generate Button */}
+              <div className="flex justify-center mt-6 pt-4 border-t">
+                <Button 
+                  onClick={calculateQuote}
+                  size="default"
+                  className="shadow-card hover:shadow-hover transition-shadow"
+                >
+                  <Calculator className="mr-2 h-4 w-4" />
+                  Generate Quote
+                </Button>
+              </div>
         </CardContent>
       </Card>
 

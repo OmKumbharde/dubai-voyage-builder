@@ -166,134 +166,121 @@ const HotelsManagement = () => {
       {/* Hotel Form */}
       {(editingId === 'new' || editingId) && (
         <Card className="dubai-card">
-          <CardHeader className="p-6 border-b">
-            <CardTitle className="text-xl">
-              {editingId === 'new' ? 'Add New Hotel' : 'Edit Hotel'}
-            </CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              {editingId === 'new' ? 'Add a new hotel property with rates and details' : 'Update hotel information and pricing'}
-            </p>
+          <CardHeader className="p-4 border-b">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">
+                {editingId === 'new' ? 'Add New Hotel' : 'Edit Hotel'}
+              </CardTitle>
+              <Button variant="ghost" size="sm" onClick={cancelEdit}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent className="p-6 space-y-8">
+          <CardContent className="p-4 space-y-4">
             {/* Basic Information */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b">
-                <div className="h-1 w-1 rounded-full bg-dubai-gold" />
-                <h3 className="text-base font-semibold text-foreground">Basic Information</h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-sm font-semibold">Hotel Name *</Label>
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground border-b pb-1">Basic Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="name" className="text-xs font-medium">Hotel Name *</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                     placeholder="e.g., Burj Al Arab"
-                    className="dubai-input h-11"
+                    className="dubai-input h-9"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location" className="text-sm font-semibold">Location *</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="location" className="text-xs font-medium">Location *</Label>
                   <Input
                     id="location"
                     value={formData.location}
                     onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
                     placeholder="e.g., Jumeirah, Dubai"
-                    className="dubai-input h-11"
+                    className="dubai-input h-9"
                   />
                 </div>
               </div>
             </div>
 
             {/* Rating & Pricing */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b">
-                <div className="h-1 w-1 rounded-full bg-dubai-gold" />
-                <h3 className="text-base font-semibold text-foreground">Category & Pricing</h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="starRating" className="text-sm font-semibold">Star Rating *</Label>
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground border-b pb-1">Category & Pricing</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="starRating" className="text-xs font-medium">Star Rating *</Label>
                   <select
                     id="starRating"
                     value={formData.starRating}
                     onChange={(e) => setFormData(prev => ({ ...prev, starRating: Number(e.target.value) }))}
-                    className="dubai-input h-11"
+                    className="dubai-input h-9"
                   >
                     {[1, 2, 3, 4, 5].map(star => (
                       <option key={star} value={star}>{star} Star</option>
                     ))}
                   </select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="baseRate" className="text-sm font-semibold">Base Rate (AED/night) *</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="baseRate" className="text-xs font-medium">Base Rate (AED/night) *</Label>
                   <Input
                     id="baseRate"
                     type="number"
                     value={formData.baseRate}
                     onChange={(e) => setFormData(prev => ({ ...prev, baseRate: Number(e.target.value) }))}
                     placeholder="0"
-                    className="dubai-input h-11"
+                    className="dubai-input h-9"
                   />
-                  <p className="text-xs text-muted-foreground">Rate per room per night</p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="extraBedRate" className="text-sm font-semibold">Extra Bed (AED/night) *</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="extraBedRate" className="text-xs font-medium">Extra Bed (AED/night) *</Label>
                   <Input
                     id="extraBedRate"
                     type="number"
                     value={formData.extraBedRate}
                     onChange={(e) => setFormData(prev => ({ ...prev, extraBedRate: Number(e.target.value) }))}
                     placeholder="0"
-                    className="dubai-input h-11"
+                    className="dubai-input h-9"
                   />
-                  <p className="text-xs text-muted-foreground">Additional bed charge</p>
                 </div>
               </div>
             </div>
 
             {/* Description */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b">
-                <div className="h-1 w-1 rounded-full bg-dubai-gold" />
-                <h3 className="text-base font-semibold text-foreground">Description</h3>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description" className="text-sm font-semibold">Hotel Description</Label>
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground border-b pb-1">Description</h3>
+              <div className="space-y-1">
+                <Label htmlFor="description" className="text-xs font-medium">Hotel Description</Label>
                 <Textarea
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Describe the hotel's features, location advantages, and what makes it special..."
-                  className="dubai-input min-h-[100px]"
-                  rows={4}
+                  placeholder="Hotel description..."
+                  className="dubai-input min-h-[80px] text-sm"
+                  rows={3}
                 />
-                <p className="text-xs text-muted-foreground">Provide details that will help guests choose this hotel</p>
               </div>
             </div>
 
             {/* Amenities */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b">
-                <div className="h-1 w-1 rounded-full bg-dubai-gold" />
-                <h3 className="text-base font-semibold text-foreground">Amenities</h3>
-              </div>
-              <Label className="text-sm font-semibold">Hotel Amenities</Label>
-              <div className="space-y-3">
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground border-b pb-1">Amenities</h3>
+              <div className="space-y-2">
                 <div className="flex gap-2">
                   <Input
                     value={newAmenity}
                     onChange={(e) => setNewAmenity(e.target.value)}
                     placeholder="Enter amenity"
-                    className="dubai-input flex-1"
+                    className="dubai-input flex-1 h-9 text-sm"
                     onKeyPress={(e) => e.key === 'Enter' && addAmenity()}
                   />
                   <Button 
                     type="button" 
                     onClick={addAmenity}
                     variant="outline"
+                    size="sm"
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-3 w-3" />
                   </Button>
                 </div>
                 
@@ -303,7 +290,7 @@ const HotelsManagement = () => {
                       <Badge 
                         key={index} 
                         variant="secondary" 
-                        className="flex items-center gap-1"
+                        className="flex items-center gap-1 text-xs"
                       >
                         {amenity}
                         <X 
@@ -317,22 +304,22 @@ const HotelsManagement = () => {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end gap-2 pt-3 border-t">
               <Button 
                 variant="outline"
-                size="default"
+                size="sm"
                 onClick={cancelEdit}
               >
                 Cancel
               </Button>
               <Button 
                 onClick={handleSave}
-                size="default"
+                size="sm"
                 className="dubai-button-primary"
                 disabled={!formData.name || !formData.location}
               >
-                <Save className="mr-2 h-4 w-4" />
-                {editingId === 'new' ? 'Add Hotel' : 'Update Hotel'}
+                <Save className="mr-1 h-3 w-3" />
+                {editingId === 'new' ? 'Add' : 'Update'}
               </Button>
             </div>
           </CardContent>

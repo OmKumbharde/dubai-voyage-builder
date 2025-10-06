@@ -155,29 +155,26 @@ const InclusionsManagement = () => {
           </CardHeader>
           <CardContent className="p-6 space-y-8">
             {/* Basic Information */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b">
-                <div className="h-1 w-1 rounded-full bg-dubai-gold" />
-                <h3 className="text-base font-semibold text-foreground">Basic Information</h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-sm font-semibold">Inclusion Name *</Label>
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground border-b pb-1">Basic Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="name" className="text-xs font-medium">Inclusion Name *</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                     placeholder="e.g., Dubai Visa Processing"
-                    className="dubai-input h-11"
+                    className="dubai-input h-9"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="type" className="text-sm font-semibold">Service Type *</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="type" className="text-xs font-medium">Service Type *</Label>
                   <select
                     id="type"
                     value={formData.type}
                     onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as any }))}
-                    className="dubai-input h-11"
+                    className="dubai-input h-9"
                   >
                     <option value="visa">Visa</option>
                     <option value="transfer">Transfer</option>
@@ -189,68 +186,59 @@ const InclusionsManagement = () => {
             </div>
 
             {/* Description */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b">
-                <div className="h-1 w-1 rounded-full bg-dubai-gold" />
-                <h3 className="text-base font-semibold text-foreground">Description</h3>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description" className="text-sm font-semibold">Service Description</Label>
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground border-b pb-1">Description</h3>
+              <div className="space-y-1">
+                <Label htmlFor="description" className="text-xs font-medium">Service Description</Label>
                 <textarea
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Provide detailed information about what this service includes..."
-                  className="dubai-input min-h-[120px] resize-none"
-                  rows={5}
+                  placeholder="Service description..."
+                  className="dubai-input min-h-[80px] resize-none text-sm"
+                  rows={3}
                 />
-                <p className="text-xs text-muted-foreground">Describe the service, processing time, and requirements</p>
               </div>
             </div>
 
             {/* Pricing & Options */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b">
-                <div className="h-1 w-1 rounded-full bg-dubai-gold" />
-                <h3 className="text-base font-semibold text-foreground">Pricing & Options</h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="cost" className="text-sm font-semibold">Cost (AED) *</Label>
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground border-b pb-1">Pricing & Options</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="cost" className="text-xs font-medium">Cost (AED) *</Label>
                   <Input
                     id="cost"
                     type="number"
                     value={formData.cost}
                     onChange={(e) => setFormData(prev => ({ ...prev, cost: Number(e.target.value) }))}
                     placeholder="0"
-                    className="dubai-input h-11"
+                    className="dubai-input h-9"
                   />
-                  <p className="text-xs text-muted-foreground">Cost per person in AED</p>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold">Service Status</Label>
-                  <div className="flex items-center gap-3 p-4 border rounded-lg bg-muted/30 h-11">
+                <div className="space-y-1">
+                  <Label className="text-xs font-medium">Service Status</Label>
+                  <div className="flex items-center gap-3 p-2 border rounded-lg bg-muted/30 h-9">
                     <Checkbox
                       id="isOptional"
                       checked={formData.isOptional}
                       onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isOptional: checked as boolean }))}
                     />
-                    <Label htmlFor="isOptional" className="text-sm font-medium cursor-pointer">
+                    <Label htmlFor="isOptional" className="text-xs font-medium cursor-pointer">
                       Optional Service
                     </Label>
                   </div>
-                  <p className="text-xs text-muted-foreground">Mark if this service is optional for customers</p>
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" size="default" onClick={resetForm}>
+            <div className="flex justify-end gap-2 pt-3 border-t">
+              <Button variant="outline" size="sm" onClick={resetForm}>
                 Cancel
               </Button>
-              <Button onClick={handleSave} size="default" className="dubai-button-primary">
-                <Save className="mr-2 h-4 w-4" />
-                {editingInclusion ? 'Update Inclusion' : 'Create Inclusion'}
+              <Button onClick={handleSave} size="sm" className="dubai-button-primary">
+                <Save className="mr-1 h-3 w-3" />
+                {editingInclusion ? 'Update' : 'Create'}
               </Button>
             </div>
           </CardContent>
