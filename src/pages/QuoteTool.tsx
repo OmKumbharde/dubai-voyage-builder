@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Checkbox } from '../components/ui/checkbox';
+import { Badge } from '../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { toast } from '../hooks/use-toast';
 import { cn } from '../lib/utils';
@@ -20,7 +21,8 @@ import {
   FileText,
   Hotel,
   Building2,
-  Users
+  Users,
+  X
 } from 'lucide-react';
 import { format } from 'date-fns';
 import html2pdf from 'html2pdf.js';
@@ -196,10 +198,17 @@ const QuoteTool = () => {
     }
   };
 
-  // Add/remove hotel functions
+  // Add/remove hotel functions with auto-sort
   const addHotel = (hotel: any) => {
     if (!selectedHotels.find(h => h.id === hotel.id)) {
-      setSelectedHotels([...selectedHotels, hotel]);
+      const newHotels = [...selectedHotels, hotel];
+      // Auto-sort by base rate (lowest to highest)
+      newHotels.sort((a, b) => {
+        const rateA = editableRates[`hotel_${a.id}`] ?? a.baseRate ?? 0;
+        const rateB = editableRates[`hotel_${b.id}`] ?? b.baseRate ?? 0;
+        return rateA - rateB;
+      });
+      setSelectedHotels(newHotels);
       // Set default rate for the hotel
       const rateKey = `hotel_${hotel.id}`;
       setEditableRates(prevRates => ({
@@ -218,6 +227,36 @@ const QuoteTool = () => {
       delete newRates[rateKey];
       return newRates;
     });
+  };
+
+  // Auto-sort hotels whenever rates change
+  useEffect(() => {
+    if (selectedHotels.length > 0) {
+      const sortedHotels = [...selectedHotels].sort((a, b) => {
+        const rateA = editableRates[`hotel_${a.id}`] ?? a.baseRate ?? 0;
+        const rateB = editableRates[`hotel_${b.id}`] ?? b.baseRate ?? 0;
+        return rateA - rateB;
+      });
+      // Only update if order changed
+      const orderChanged = sortedHotels.some((hotel, idx) => hotel.id !== selectedHotels[idx]?.id);
+      if (orderChanged) {
+        setSelectedHotels(sortedHotels);
+      }
+    }
+  }, [editableRates]);
+
+  // Helper function to get private transfer cost based on PAX
+  const getPrivateTransferCost = (tour: any, pax: number): number => {
+    if (tour.type !== 'private') return 0;
+    
+    if (pax <= 5) {
+      return tour.transferPrice1to5Pax || 0;
+    } else if (pax <= 12) {
+      return tour.transferPrice6to12Pax || 0;
+    } else if (pax <= 22) {
+      return tour.transferPrice13to22Pax || 0;
+    }
+    return 0;
   };
 
   // Calculate quote function with multiple occupancy options
@@ -271,8 +310,17 @@ const QuoteTool = () => {
         // Tours and inclusions cost using editable rates
         const toursCost = selectedTours.reduce((total, tour) => {
           const rateKey = `tour_${tour.id}`;
-          const rate = editableRates[rateKey] ?? tour.costPerPerson;
-          return total + (rate * totalPax);
+          const ticketPrice = editableRates[rateKey] ?? tour.costPerPerson;
+          
+          // For private tours, add per-person transfer cost
+          if (tour.type === 'private') {
+            const transferCost = getPrivateTransferCost(tour, totalPax);
+            const perPersonCost = ticketPrice + (transferCost / totalPax);
+            return total + (perPersonCost * totalPax);
+          } else {
+            // For sharing/group tours, just multiply by totalPax
+            return total + (ticketPrice * totalPax);
+          }
         }, 0);
         
         const inclusionsCost = selectedInclusions.reduce((total, inclusion) => {
@@ -915,55 +963,76 @@ const QuoteTool = () => {
                   />
                 </div>
                 
-                {/* Selected */}
+                {/* Selected Hotels - List Format */}
                 {selectedHotels.length > 0 && (
                   <div className="mt-4 space-y-2">
-                    <p className="text-sm font-medium">Selected:</p>
-                    {selectedHotels.map(hotel => (
-                      <div key={hotel.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                        <div className="flex-1">
-                          <p className="font-medium">{hotel.name}</p>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {hotel.location}
-                          </p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <Input
-                              type="number"
-                              value={editableRates[`hotel_${hotel.id}`] ?? hotel.baseRate}
-                              onChange={(e) => setEditableRates(prev => ({
-                                ...prev,
-                                [`hotel_${hotel.id}`]: Number(e.target.value)
-                              }))}
-                              className="w-24 h-8 text-sm"
-                            />
-                            <span className="text-xs text-muted-foreground">AED/night</span>
+                    <p className="text-sm font-semibold mb-3">Selected Hotels (sorted by price):</p>
+                    <div className="border rounded-lg divide-y">
+                      {selectedHotels.map((hotel, index) => (
+                        <div key={hotel.id} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
+                          <div className="flex items-center gap-4 flex-1">
+                            <span className="text-sm font-medium text-muted-foreground w-6">#{index + 1}</span>
+                            <div className="flex-1">
+                              <p className="font-semibold text-base">{hotel.name}</p>
+                              <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                                <MapPin className="h-3 w-3" />
+                                {hotel.location}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-2">
+                                <Label className="text-xs text-muted-foreground whitespace-nowrap">Rate:</Label>
+                                <Input
+                                  type="number"
+                                  value={editableRates[`hotel_${hotel.id}`] ?? hotel.baseRate}
+                                  onChange={(e) => setEditableRates(prev => ({
+                                    ...prev,
+                                    [`hotel_${hotel.id}`]: Number(e.target.value)
+                                  }))}
+                                  className="w-24 h-9"
+                                />
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">AED/night</span>
+                              </div>
+                            </div>
                           </div>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => removeHotel(hotel.id)}
+                            className="ml-3"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => removeHotel(hotel.id)}>
-                          Remove
-                        </Button>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 )}
                 
-                {/* Available */}
+                {/* Available Hotels - List Format */}
                 {hotelSearch && (
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
+                  <div className="mt-4 border rounded-lg divide-y max-h-80 overflow-y-auto">
                     {filteredHotels.map(hotel => (
-                      <Card 
+                      <div 
                         key={hotel.id} 
-                        className="p-3 cursor-pointer hover:border-primary transition-colors"
+                        className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors"
                         onClick={() => addHotel(hotel)}
                       >
-                        <h4 className="font-medium text-sm">{hotel.name}</h4>
-                        <p className="text-xs text-muted-foreground">{hotel.location}</p>
-                        <p className="text-xs mt-1 font-semibold">AED {hotel.baseRate}/night</p>
-                      </Card>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-base">{hotel.name}</h4>
+                          <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                            <MapPin className="h-3 w-3" />
+                            {hotel.location}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-base font-bold text-primary">AED {hotel.baseRate}</p>
+                          <p className="text-xs text-muted-foreground">per night</p>
+                        </div>
+                      </div>
                     ))}
                     {filteredHotels.length === 0 && (
-                      <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
+                      <p className="text-sm text-muted-foreground text-center py-8">
                         No results found
                       </p>
                     )}
@@ -987,52 +1056,134 @@ const QuoteTool = () => {
                   />
                 </div>
                 
-                {/* Selected Tours */}
+                {/* Selected Tours - List Format with Categories */}
                 {selectedTours.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    <p className="text-sm font-medium">Selected Tours:</p>
-                    {selectedTours.map(tour => (
-                      <div key={tour.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                        <div className="flex-1">
-                          <p className="font-medium">{tour.name}</p>
-                          <p className="text-xs text-muted-foreground">{tour.type}</p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <Input
-                              type="number"
-                              value={editableRates[`tour_${tour.id}`] ?? tour.costPerPerson}
-                              onChange={(e) => setEditableRates(prev => ({
-                                ...prev,
-                                [`tour_${tour.id}`]: Number(e.target.value)
-                              }))}
-                              className="w-24 h-8 text-sm"
-                            />
-                            <span className="text-xs text-muted-foreground">AED/person</span>
-                          </div>
+                  <div className="mt-4 space-y-4">
+                    <p className="text-sm font-semibold">Selected Tours:</p>
+                    
+                    {/* Sharing Tours */}
+                    {selectedTours.filter(t => t.type === 'group').length > 0 && (
+                      <div className="border rounded-lg overflow-hidden">
+                        <div className="bg-muted/50 px-4 py-2 border-b">
+                          <p className="text-sm font-semibold">Sharing Tours</p>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => removeTour(tour.id)}>
-                          Remove
-                        </Button>
+                        <div className="divide-y">
+                          {selectedTours.filter(t => t.type === 'group').map((tour) => (
+                            <div key={tour.id} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
+                              <div className="flex-1">
+                                <p className="font-semibold text-base">{tour.name}</p>
+                                <p className="text-xs text-muted-foreground mt-1">{tour.duration}</p>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="number"
+                                    value={editableRates[`tour_${tour.id}`] ?? tour.costPerPerson}
+                                    onChange={(e) => setEditableRates(prev => ({
+                                      ...prev,
+                                      [`tour_${tour.id}`]: Number(e.target.value)
+                                    }))}
+                                    className="w-24 h-9"
+                                  />
+                                  <span className="text-xs text-muted-foreground whitespace-nowrap">AED/person</span>
+                                </div>
+                                <Button variant="ghost" size="sm" onClick={() => removeTour(tour.id)}>
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    ))}
+                    )}
+                    
+                    {/* Private Tours */}
+                    {selectedTours.filter(t => t.type === 'private').length > 0 && (
+                      <div className="border rounded-lg overflow-hidden">
+                        <div className="bg-muted/50 px-4 py-2 border-b">
+                          <p className="text-sm font-semibold">Private Tours</p>
+                        </div>
+                        <div className="divide-y">
+                          {selectedTours.filter(t => t.type === 'private').map((tour) => {
+                            const transferCost = getPrivateTransferCost(tour, totalPax);
+                            const ticketPrice = editableRates[`tour_${tour.id}`] ?? tour.costPerPerson;
+                            const perPersonTotal = ticketPrice + (transferCost / totalPax);
+                            
+                            return (
+                              <div key={tour.id} className="p-4 hover:bg-muted/30 transition-colors">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex-1">
+                                    <p className="font-semibold text-base">{tour.name}</p>
+                                    <p className="text-xs text-muted-foreground mt-1">{tour.duration}</p>
+                                  </div>
+                                  <Button variant="ghost" size="sm" onClick={() => removeTour(tour.id)}>
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                                <div className="grid grid-cols-3 gap-4 text-sm">
+                                  <div className="flex flex-col gap-1">
+                                    <Label className="text-xs text-muted-foreground">Ticket Price</Label>
+                                    <div className="flex items-center gap-2">
+                                      <Input
+                                        type="number"
+                                        value={ticketPrice}
+                                        onChange={(e) => setEditableRates(prev => ({
+                                          ...prev,
+                                          [`tour_${tour.id}`]: Number(e.target.value)
+                                        }))}
+                                        className="w-full h-9"
+                                      />
+                                      <span className="text-xs whitespace-nowrap">AED</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col gap-1">
+                                    <Label className="text-xs text-muted-foreground">Transfer ({totalPax} PAX)</Label>
+                                    <div className="h-9 px-3 flex items-center bg-muted rounded-md">
+                                      <span className="font-semibold">AED {transferCost}</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col gap-1">
+                                    <Label className="text-xs text-muted-foreground">Per Person Total</Label>
+                                    <div className="h-9 px-3 flex items-center bg-primary/10 rounded-md border border-primary/20">
+                                      <span className="font-bold text-primary">AED {Math.ceil(perPersonTotal)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
                 
-                {/* Available Tours */}
+                {/* Available Tours - List Format */}
                 {tourSearch && (
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
+                  <div className="mt-4 border rounded-lg divide-y max-h-80 overflow-y-auto">
                     {filteredTours.map(tour => (
-                      <Card 
+                      <div 
                         key={tour.id} 
-                        className="p-3 cursor-pointer hover:border-primary transition-colors"
+                        className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors"
                         onClick={() => addTour(tour)}
                       >
-                        <h4 className="font-medium text-sm">{tour.name}</h4>
-                        <p className="text-xs text-muted-foreground">{tour.type}</p>
-                        <p className="text-xs mt-1 font-semibold">AED {tour.costPerPerson}/person</p>
-                      </Card>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-base">{tour.name}</h4>
+                          <div className="flex items-center gap-3 mt-1">
+                            <Badge variant={tour.type === 'private' ? 'default' : 'secondary'} className="text-xs">
+                              {tour.type === 'private' ? 'Private' : 'Sharing'}
+                            </Badge>
+                            <p className="text-sm text-muted-foreground">{tour.duration}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-base font-bold text-primary">AED {tour.costPerPerson}</p>
+                          <p className="text-xs text-muted-foreground">per person</p>
+                        </div>
+                      </div>
                     ))}
                     {filteredTours.length === 0 && (
-                      <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
+                      <p className="text-sm text-muted-foreground text-center py-8">
                         No results found
                       </p>
                     )}
@@ -1056,52 +1207,62 @@ const QuoteTool = () => {
                   />
                 </div>
                 
-                {/* Selected Services */}
+                {/* Selected Services - List Format */}
                 {selectedInclusions.length > 0 && (
                   <div className="mt-4 space-y-2">
-                    <p className="text-sm font-medium">Selected Services:</p>
-                    {selectedInclusions.map(inclusion => (
-                      <div key={inclusion.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                        <div className="flex-1">
-                          <p className="font-medium">{inclusion.name}</p>
-                          <p className="text-xs text-muted-foreground">{inclusion.type}</p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <Input
-                              type="number"
-                              value={editableRates[`inclusion_${inclusion.id}`] ?? inclusion.cost}
-                              onChange={(e) => setEditableRates(prev => ({
-                                ...prev,
-                                [`inclusion_${inclusion.id}`]: Number(e.target.value)
-                              }))}
-                              className="w-24 h-8 text-sm"
-                            />
-                            <span className="text-xs text-muted-foreground">AED/person</span>
+                    <p className="text-sm font-semibold mb-3">Selected Services:</p>
+                    <div className="border rounded-lg divide-y">
+                      {selectedInclusions.map((inclusion) => (
+                        <div key={inclusion.id} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
+                          <div className="flex-1">
+                            <p className="font-semibold text-base">{inclusion.name}</p>
+                            <p className="text-sm text-muted-foreground mt-1 capitalize">{inclusion.type}</p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
+                              <Label className="text-xs text-muted-foreground whitespace-nowrap">Rate:</Label>
+                              <Input
+                                type="number"
+                                value={editableRates[`inclusion_${inclusion.id}`] ?? inclusion.cost}
+                                onChange={(e) => setEditableRates(prev => ({
+                                  ...prev,
+                                  [`inclusion_${inclusion.id}`]: Number(e.target.value)
+                                }))}
+                                className="w-24 h-9"
+                              />
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">AED/person</span>
+                            </div>
+                            <Button variant="ghost" size="sm" onClick={() => toggleInclusion(inclusion)}>
+                              <X className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => toggleInclusion(inclusion)}>
-                          Remove
-                        </Button>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 )}
                 
-                {/* Available Services */}
+                {/* Available Services - List Format */}
                 {inclusionSearch && (
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
+                  <div className="mt-4 border rounded-lg divide-y max-h-80 overflow-y-auto">
                     {filteredInclusions.map(inclusion => (
-                      <Card 
+                      <div 
                         key={inclusion.id} 
-                        className="p-3 cursor-pointer hover:border-primary transition-colors"
+                        className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors"
                         onClick={() => toggleInclusion(inclusion)}
                       >
-                        <h4 className="font-medium text-sm">{inclusion.name}</h4>
-                        <p className="text-xs text-muted-foreground">{inclusion.type}</p>
-                        <p className="text-xs mt-1 font-semibold">AED {inclusion.cost}/person</p>
-                      </Card>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-base">{inclusion.name}</h4>
+                          <p className="text-sm text-muted-foreground mt-1 capitalize">{inclusion.type}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-base font-bold text-primary">AED {inclusion.cost}</p>
+                          <p className="text-xs text-muted-foreground">per person</p>
+                        </div>
+                      </div>
                     ))}
                     {filteredInclusions.length === 0 && (
-                      <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
+                      <p className="text-sm text-muted-foreground text-center py-8">
                         No results found
                       </p>
                     )}

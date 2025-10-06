@@ -47,6 +47,9 @@ export interface Tour {
   duration: string;
   costPerPerson: number;
   transferIncluded: boolean;
+  transferPrice1to5Pax?: number;
+  transferPrice6to12Pax?: number;
+  transferPrice13to22Pax?: number;
   images: string[];
   highlights: string[];
   createdAt: string;

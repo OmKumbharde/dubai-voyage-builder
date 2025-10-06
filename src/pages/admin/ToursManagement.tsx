@@ -34,7 +34,9 @@ const ToursManagement = () => {
     dropTime: '05:00 PM',
     costPerPerson: 0,
     transferIncluded: true,
-    privateTransferCost: 0,
+    transferPrice1to5Pax: 0,
+    transferPrice6to12Pax: 0,
+    transferPrice13to22Pax: 0,
     highlights: [] as string[]
   });
 
@@ -48,7 +50,9 @@ const ToursManagement = () => {
       dropTime: '05:00 PM',
       costPerPerson: 0,
       transferIncluded: true,
-      privateTransferCost: 0,
+      transferPrice1to5Pax: 0,
+      transferPrice6to12Pax: 0,
+      transferPrice13to22Pax: 0,
       highlights: []
     });
     setIsCreating(false);
@@ -75,7 +79,9 @@ const ToursManagement = () => {
         dropTime: formData.dropTime,
         costPerPerson: formData.costPerPerson,
         transferIncluded: formData.transferIncluded,
-        privateTransferCost: formData.privateTransferCost,
+        transferPrice1to5Pax: formData.transferPrice1to5Pax,
+        transferPrice6to12Pax: formData.transferPrice6to12Pax,
+        transferPrice13to22Pax: formData.transferPrice13to22Pax,
         highlights: formData.highlights.filter(h => h.trim() !== ''),
         images: ['/api/placeholder/400/300'] // Default placeholder
       };
@@ -102,7 +108,9 @@ const ToursManagement = () => {
       dropTime: (tour as any).dropTime || '05:00 PM',
       costPerPerson: tour.costPerPerson,
       transferIncluded: tour.transferIncluded,
-      privateTransferCost: tour.privateTransferCost || 0,
+      transferPrice1to5Pax: tour.transferPrice1to5Pax || 0,
+      transferPrice6to12Pax: tour.transferPrice6to12Pax || 0,
+      transferPrice13to22Pax: tour.transferPrice13to22Pax || 0,
       highlights: tour.highlights
     });
     setIsCreating(true);  
@@ -276,7 +284,9 @@ const ToursManagement = () => {
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="costPerPerson" className="text-sm font-semibold">Cost Per Person (AED) *</Label>
+                  <Label htmlFor="costPerPerson" className="text-sm font-semibold">
+                    {formData.type === 'private' ? 'Ticket Price Per Person (AED) *' : 'Cost Per Person (AED) *'}
+                  </Label>
                   <Input
                     id="costPerPerson"
                     type="number"
@@ -285,24 +295,53 @@ const ToursManagement = () => {
                     placeholder="0"
                     className="dubai-input h-11"
                   />
+                  {formData.type === 'private' && (
+                    <p className="text-xs text-muted-foreground">
+                      Ticket/entrance price per person
+                    </p>
+                  )}
                 </div>
-                {formData.type === 'private' && (
+              </div>
+              
+              {/* Private Tour Transfer Pricing */}
+              {formData.type === 'private' && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 border rounded-lg bg-muted/30">
                   <div className="space-y-2">
-                    <Label htmlFor="privateTransferCost" className="text-sm font-semibold">Private Transfer Cost (AED)</Label>
+                    <Label htmlFor="transferPrice1to5" className="text-sm font-semibold">Transfer (1-5 PAX) AED</Label>
                     <Input
-                      id="privateTransferCost"
+                      id="transferPrice1to5"
                       type="number"
-                      value={formData.privateTransferCost}
-                      onChange={(e) => setFormData(prev => ({ ...prev, privateTransferCost: Number(e.target.value) }))}
-                      placeholder="0"
+                      value={formData.transferPrice1to5Pax}
+                      onChange={(e) => setFormData(prev => ({ ...prev, transferPrice1to5Pax: Number(e.target.value) }))}
+                      placeholder="300"
                       className="dubai-input h-11"
                     />
-                    <p className="text-xs text-muted-foreground">
-                      This cost will be divided among all passengers
-                    </p>
                   </div>
-                )}
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="transferPrice6to12" className="text-sm font-semibold">Transfer (6-12 PAX) AED</Label>
+                    <Input
+                      id="transferPrice6to12"
+                      type="number"
+                      value={formData.transferPrice6to12Pax}
+                      onChange={(e) => setFormData(prev => ({ ...prev, transferPrice6to12Pax: Number(e.target.value) }))}
+                      placeholder="600"
+                      className="dubai-input h-11"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="transferPrice13to22" className="text-sm font-semibold">Transfer (13-22 PAX) AED</Label>
+                    <Input
+                      id="transferPrice13to22"
+                      type="number"
+                      value={formData.transferPrice13to22Pax}
+                      onChange={(e) => setFormData(prev => ({ ...prev, transferPrice13to22Pax: Number(e.target.value) }))}
+                      placeholder="1200"
+                      className="dubai-input h-11"
+                    />
+                  </div>
+                </div>
+              )}
+              
               <div className="flex items-center gap-3 p-4 border rounded-lg bg-muted/30">
                 <Checkbox
                   id="transferIncluded"

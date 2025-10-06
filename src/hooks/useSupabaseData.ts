@@ -37,11 +37,15 @@ export interface DbTour {
   duration: string | null;
   cost_per_person: number;
   transfer_included: boolean;
-  private_transfer_cost: number | null;
+  transfer_price_1_5_pax: number | null;
+  transfer_price_6_12_pax: number | null;
+  transfer_price_13_22_pax: number | null;
   highlights: string[] | null;
   images: string[] | null;
   created_at: string;
   updated_at: string;
+  pickup_time: string | null;
+  drop_time: string | null;
 }
 
 export interface DbInclusion {
@@ -109,7 +113,9 @@ export interface Tour {
   dropTime?: string;
   costPerPerson: number;
   transferIncluded: boolean;
-  privateTransferCost?: number;
+  transferPrice1to5Pax?: number;
+  transferPrice6to12Pax?: number;
+  transferPrice13to22Pax?: number;
   images: string[];
   highlights: string[];
   createdAt: string;
@@ -190,7 +196,9 @@ const adaptDbTourToTour = (dbTour: any): Tour => ({
   dropTime: dbTour.drop_time || '05:00 PM',
   costPerPerson: Number(dbTour.cost_per_person),
   transferIncluded: Boolean(dbTour.transfer_included),
-  privateTransferCost: dbTour.private_transfer_cost ? Number(dbTour.private_transfer_cost) : undefined,
+  transferPrice1to5Pax: dbTour.transfer_price_1_5_pax ? Number(dbTour.transfer_price_1_5_pax) : 0,
+  transferPrice6to12Pax: dbTour.transfer_price_6_12_pax ? Number(dbTour.transfer_price_6_12_pax) : 0,
+  transferPrice13to22Pax: dbTour.transfer_price_13_22_pax ? Number(dbTour.transfer_price_13_22_pax) : 0,
   images: dbTour.images || ['/api/placeholder/400/300'],
   highlights: dbTour.highlights || [],
   createdAt: dbTour.created_at,
@@ -411,7 +419,9 @@ export const useSupabaseData = () => {
         drop_time: tour.dropTime || '05:00 PM',
         cost_per_person: tour.costPerPerson,
         transfer_included: tour.transferIncluded,
-        private_transfer_cost: tour.privateTransferCost || 0,
+        transfer_price_1_5_pax: tour.transferPrice1to5Pax || 0,
+        transfer_price_6_12_pax: tour.transferPrice6to12Pax || 0,
+        transfer_price_13_22_pax: tour.transferPrice13to22Pax || 0,
         highlights: tour.highlights,
         images: tour.images
       };
@@ -456,7 +466,9 @@ export const useSupabaseData = () => {
       if (updates.dropTime) updateData.drop_time = updates.dropTime;
       if (updates.costPerPerson !== undefined) updateData.cost_per_person = updates.costPerPerson;
       if (updates.transferIncluded !== undefined) updateData.transfer_included = updates.transferIncluded;
-      if (updates.privateTransferCost !== undefined) updateData.private_transfer_cost = updates.privateTransferCost;
+      if (updates.transferPrice1to5Pax !== undefined) updateData.transfer_price_1_5_pax = updates.transferPrice1to5Pax;
+      if (updates.transferPrice6to12Pax !== undefined) updateData.transfer_price_6_12_pax = updates.transferPrice6to12Pax;
+      if (updates.transferPrice13to22Pax !== undefined) updateData.transfer_price_13_22_pax = updates.transferPrice13to22Pax;
       if (updates.highlights) updateData.highlights = updates.highlights;
       if (updates.images) updateData.images = updates.images;
 

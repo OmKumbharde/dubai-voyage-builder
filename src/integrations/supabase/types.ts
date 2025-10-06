@@ -369,8 +369,10 @@ export type Database = {
           images: string[] | null
           name: string
           pickup_time: string | null
-          private_transfer_cost: number | null
           transfer_included: boolean | null
+          transfer_price_1_5_pax: number | null
+          transfer_price_13_22_pax: number | null
+          transfer_price_6_12_pax: number | null
           type: string
           updated_at: string
         }
@@ -385,8 +387,10 @@ export type Database = {
           images?: string[] | null
           name: string
           pickup_time?: string | null
-          private_transfer_cost?: number | null
           transfer_included?: boolean | null
+          transfer_price_1_5_pax?: number | null
+          transfer_price_13_22_pax?: number | null
+          transfer_price_6_12_pax?: number | null
           type?: string
           updated_at?: string
         }
@@ -401,8 +405,10 @@ export type Database = {
           images?: string[] | null
           name?: string
           pickup_time?: string | null
-          private_transfer_cost?: number | null
           transfer_included?: boolean | null
+          transfer_price_1_5_pax?: number | null
+          transfer_price_13_22_pax?: number | null
+          transfer_price_6_12_pax?: number | null
           type?: string
           updated_at?: string
         }
