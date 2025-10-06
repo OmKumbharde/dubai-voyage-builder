@@ -209,15 +209,35 @@ const QuoteManagement = () => {
   };
 
   const editQuote = (quote: Quote) => {
+    // Parse structured data from notes if available
+    let structuredData: any = {};
+    const dbQuote = quote as any;
+    if (dbQuote.notes && dbQuote.notes.includes('---QUOTE_DATA---')) {
+      try {
+        const jsonPart = dbQuote.notes.split('---QUOTE_DATA---')[1];
+        structuredData = JSON.parse(jsonPart);
+      } catch (e) {
+        console.error('Failed to parse quote data:', e);
+      }
+    }
+    
     // Navigate to quote tool with the quote data, converting to expected format
     const editData = {
       ...quote,
+      id: dbQuote.id,
       client_name: quote.customerName,
       client_email: quote.customerEmail,
       reference_number: quote.ticketReference,
       travel_dates_from: quote.travelDates.startDate,
       travel_dates_to: quote.travelDates.endDate,
-      selectedOccupancies: ['DBL'] // Default occupancy selection
+      selectedOccupancies: structuredData.occupancies || ['DBL'],
+      selectedHotels: structuredData.selectedHotels || (quote.selectedHotel ? [quote.selectedHotel] : []),
+      selectedTours: structuredData.selectedTours || quote.selectedTours || [],
+      selectedInclusions: structuredData.selectedInclusions || [],
+      editableRates: structuredData.editableRates || {},
+      hotelOptions: structuredData.hotelOptions,
+      formattedText: dbQuote.formatted_quote,
+      calculations: quote.calculations
     };
     navigate('/quote', { state: { editQuote: editData } });
   };

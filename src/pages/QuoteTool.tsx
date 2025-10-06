@@ -111,6 +111,16 @@ const QuoteTool = () => {
         setSelectedOccupancies(quote.selectedOccupancies);
       }
       
+      // Load editable rates if they exist
+      if (quote.editableRates) {
+        setEditableRates(quote.editableRates);
+      }
+      
+      // Restore the generated quote preview if it exists
+      if (quote.formattedText || quote.calculations) {
+        setGeneratedQuote(quote);
+      }
+      
       // Clear the location state to prevent re-loading on refresh
       window.history.replaceState({}, document.title);
     }
@@ -599,7 +609,8 @@ const QuoteTool = () => {
           selectedHotels,
           selectedTours,
           selectedInclusions,
-          occupancies: selectedOccupancies
+          occupancies: selectedOccupancies,
+          editableRates
         });
         
         // Use database field names directly
@@ -637,7 +648,8 @@ const QuoteTool = () => {
           selectedHotels,
           selectedTours,
           selectedInclusions,
-          occupancies: selectedOccupancies
+          occupancies: selectedOccupancies,
+          editableRates
         });
         
         // Use database field names directly  
