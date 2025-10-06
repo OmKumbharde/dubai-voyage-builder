@@ -209,35 +209,15 @@ const QuoteManagement = () => {
   };
 
   const editQuote = (quote: Quote) => {
-    // Parse structured data from notes if available
-    let structuredData: any = {};
-    const dbQuote = quote as any;
-    if (dbQuote.notes && dbQuote.notes.includes('---QUOTE_DATA---')) {
-      try {
-        const jsonPart = dbQuote.notes.split('---QUOTE_DATA---')[1];
-        structuredData = JSON.parse(jsonPart);
-      } catch (e) {
-        console.error('Failed to parse quote data:', e);
-      }
-    }
-    
     // Navigate to quote tool with the quote data, converting to expected format
     const editData = {
       ...quote,
-      id: dbQuote.id,
       client_name: quote.customerName,
       client_email: quote.customerEmail,
       reference_number: quote.ticketReference,
       travel_dates_from: quote.travelDates.startDate,
       travel_dates_to: quote.travelDates.endDate,
-      selectedOccupancies: structuredData.occupancies || ['DBL'],
-      selectedHotels: structuredData.selectedHotels || (quote.selectedHotel ? [quote.selectedHotel] : []),
-      selectedTours: structuredData.selectedTours || quote.selectedTours || [],
-      selectedInclusions: structuredData.selectedInclusions || [],
-      editableRates: structuredData.editableRates || {},
-      hotelOptions: structuredData.hotelOptions,
-      formattedText: dbQuote.formatted_quote,
-      calculations: quote.calculations
+      selectedOccupancies: ['DBL'] // Default occupancy selection
     };
     navigate('/quote', { state: { editQuote: editData } });
   };
@@ -294,7 +274,7 @@ const QuoteManagement = () => {
 
       {/* Filters */}
       <Card className="dubai-card">
-        <CardContent className="p-6">
+        <CardContent className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <Label htmlFor="search">Search Quotes</Label>
@@ -328,9 +308,9 @@ const QuoteManagement = () => {
       </Card>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="dubai-card">
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Quotes</p>
@@ -342,7 +322,7 @@ const QuoteManagement = () => {
         </Card>
         
         <Card className="dubai-card">
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Confirmed</p>
@@ -356,7 +336,7 @@ const QuoteManagement = () => {
         </Card>
         
         <Card className="dubai-card">
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Pending</p>
@@ -370,7 +350,7 @@ const QuoteManagement = () => {
         </Card>
         
         <Card className="dubai-card">
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Value</p>
@@ -389,10 +369,10 @@ const QuoteManagement = () => {
 
       {/* Quotes List */}
       <Card className="dubai-card">
-        <CardHeader className="p-6">
+        <CardHeader>
           <CardTitle>All Quotes</CardTitle>
         </CardHeader>
-        <CardContent className="p-6">
+        <CardContent>
           {isLoading ? (
             <div className="text-center py-8">Loading quotes...</div>
           ) : (

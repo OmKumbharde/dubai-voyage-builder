@@ -4,9 +4,8 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
-import { Checkbox } from '../../components/ui/checkbox';
 import { 
-  Plus,
+  Plus, 
   Edit3, 
   Trash2,
   Save,
@@ -118,7 +117,7 @@ const InclusionsManagement = () => {
   });
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-8 space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
@@ -140,115 +139,83 @@ const InclusionsManagement = () => {
 
       {isCreating && (
         <Card className="dubai-card">
-          <CardHeader className="p-6 border-b">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-xl">{editingInclusion ? 'Edit Inclusion' : 'Add New Inclusion'}</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {editingInclusion ? 'Update inclusion details and pricing' : 'Add a new service inclusion'}
-                </p>
-              </div>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>{editingInclusion ? 'Edit Inclusion' : 'Add New Inclusion'}</span>
               <Button variant="ghost" size="sm" onClick={resetForm}>
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </Button>
-            </div>
+            </CardTitle>
           </CardHeader>
-          <CardContent className="p-6 space-y-8">
-            {/* Basic Information */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b">
-                <div className="h-1 w-1 rounded-full bg-dubai-gold" />
-                <h3 className="text-base font-semibold text-foreground">Basic Information</h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-sm font-semibold">Inclusion Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="e.g., Dubai Visa Processing"
-                    className="dubai-input h-11"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="type" className="text-sm font-semibold">Service Type *</Label>
-                  <select
-                    id="type"
-                    value={formData.type}
-                    onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as any }))}
-                    className="dubai-input h-11"
-                  >
-                    <option value="visa">Visa</option>
-                    <option value="transfer">Transfer</option>
-                    <option value="insurance">Insurance</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Description */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b">
-                <div className="h-1 w-1 rounded-full bg-dubai-gold" />
-                <h3 className="text-base font-semibold text-foreground">Description</h3>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description" className="text-sm font-semibold">Service Description</Label>
-                <textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Provide detailed information about what this service includes..."
-                  className="dubai-input min-h-[120px] resize-none"
-                  rows={5}
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Label htmlFor="name">Inclusion Name *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="e.g., Dubai Visa Processing"
+                  className="dubai-input"
                 />
-                <p className="text-xs text-muted-foreground">Describe the service, processing time, and requirements</p>
+              </div>
+              <div>
+                <Label htmlFor="type">Type</Label>
+                <select
+                  id="type"
+                  value={formData.type}
+                  onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as any }))}
+                  className="dubai-input"
+                >
+                  <option value="visa">Visa</option>
+                  <option value="transfer">Transfer</option>
+                  <option value="insurance">Insurance</option>
+                  <option value="other">Other</option>
+                </select>
               </div>
             </div>
 
-            {/* Pricing & Options */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b">
-                <div className="h-1 w-1 rounded-full bg-dubai-gold" />
-                <h3 className="text-base font-semibold text-foreground">Pricing & Options</h3>
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Enter detailed description of the inclusion"
+                className="dubai-input min-h-[100px] resize-none"
+                rows={4}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Label htmlFor="cost">Cost (AED) *</Label>
+                <Input
+                  id="cost"
+                  type="number"
+                  value={formData.cost}
+                  onChange={(e) => setFormData(prev => ({ ...prev, cost: Number(e.target.value) }))}
+                  placeholder="0"
+                  className="dubai-input"
+                />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="cost" className="text-sm font-semibold">Cost (AED) *</Label>
-                  <Input
-                    id="cost"
-                    type="number"
-                    value={formData.cost}
-                    onChange={(e) => setFormData(prev => ({ ...prev, cost: Number(e.target.value) }))}
-                    placeholder="0"
-                    className="dubai-input h-11"
-                  />
-                  <p className="text-xs text-muted-foreground">Cost per person in AED</p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold">Service Status</Label>
-                  <div className="flex items-center gap-3 p-4 border rounded-lg bg-muted/30 h-11">
-                    <Checkbox
-                      id="isOptional"
-                      checked={formData.isOptional}
-                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isOptional: checked as boolean }))}
-                    />
-                    <Label htmlFor="isOptional" className="text-sm font-medium cursor-pointer">
-                      Optional Service
-                    </Label>
-                  </div>
-                  <p className="text-xs text-muted-foreground">Mark if this service is optional for customers</p>
-                </div>
+              <div className="flex items-center space-x-2 pt-6">
+                <input
+                  type="checkbox"
+                  id="isOptional"
+                  checked={formData.isOptional}
+                  onChange={(e) => setFormData(prev => ({ ...prev, isOptional: e.target.checked }))}
+                  className="rounded"
+                />
+                <Label htmlFor="isOptional">Optional Service</Label>
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" size="default" onClick={resetForm}>
+            <div className="flex justify-end space-x-3 pt-4">
+              <Button variant="outline" onClick={resetForm}>
                 Cancel
               </Button>
-              <Button onClick={handleSave} size="default" className="dubai-button-primary">
+              <Button onClick={handleSave} className="dubai-button-primary">
                 <Save className="mr-2 h-4 w-4" />
                 {editingInclusion ? 'Update Inclusion' : 'Create Inclusion'}
               </Button>
@@ -259,7 +226,7 @@ const InclusionsManagement = () => {
 
       {/* Search and Filter */}
       <Card className="dubai-card">
-        <CardContent className="p-6">
+        <CardContent className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
             <Input
               placeholder="Search inclusions..."
@@ -284,20 +251,20 @@ const InclusionsManagement = () => {
 
       {/* Inclusions List - Table View */}
       <Card className="dubai-card">
-        <CardHeader className="p-6">
+        <CardHeader>
           <CardTitle>Inclusions List</CardTitle>
         </CardHeader>
-        <CardContent className="p-6">
+        <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-4">Sr. No</th>
-                  <th className="text-left p-4">Name</th>
-                  <th className="text-left p-4">Type</th>
-                  <th className="text-left p-4">Cost (AED)</th>
-                  <th className="text-left p-4">Optional</th>
-                  <th className="text-left p-4">Actions</th>
+                  <th className="text-left p-3">Sr. No</th>
+                  <th className="text-left p-3">Name</th>
+                  <th className="text-left p-3">Type</th>
+                  <th className="text-left p-3">Cost (AED)</th>
+                  <th className="text-left p-3">Optional</th>
+                  <th className="text-left p-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -306,9 +273,9 @@ const InclusionsManagement = () => {
                     <td colSpan={6} className="text-center py-8">Loading inclusions...</td>
                   </tr>
                 ) : filteredInclusions.map((inclusion, index) => (
-                  <tr key={inclusion.id} className="border-b hover:bg-muted/50 transition-colors">
-                    <td className="p-4">{index + 1}</td>
-                    <td className="p-4">
+                  <tr key={inclusion.id} className="border-b hover:bg-gray-50">
+                    <td className="p-3">{index + 1}</td>
+                    <td className="p-3">
                       <div className="flex items-center gap-2">
                         {getTypeIcon(inclusion.type)}
                         <div>
@@ -317,28 +284,28 @@ const InclusionsManagement = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="p-4">
+                    <td className="p-3">
                       <Badge className={getTypeColor(inclusion.type)}>
                         {inclusion.type}
                       </Badge>
                     </td>
-                    <td className="p-4">AED {inclusion.cost.toFixed(2)}</td>
-                    <td className="p-4">
+                    <td className="p-3">AED {inclusion.cost.toFixed(2)}</td>
+                    <td className="p-3">
                       <Badge variant={inclusion.isOptional ? "secondary" : "destructive"}>
                         {inclusion.isOptional ? 'Yes' : 'No'}
                       </Badge>
                     </td>
-                    <td className="p-4">
-                      <div className="flex gap-2">
+                    <td className="p-3">
+                      <div className="flex space-x-2">
                         <Button variant="ghost" size="sm" onClick={() => startEdit(inclusion)}>
-                          <Edit3 className="h-4 w-4" />
+                          <Edit3 className="h-3 w-3" />
                         </Button>
                         <Button 
                           variant="ghost" 
                           size="sm"
                           onClick={() => handleDelete(inclusion.id)}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
                     </td>

@@ -109,7 +109,6 @@ const Sidebar = () => {
             <NavLink
               key={item.name}
               to={item.href}
-              end
               className={({ isActive }) =>
                 `dubai-sidebar-item ${isActive ? 'active' : ''} text-white/90 hover:text-white hover:bg-white/10`
               }
@@ -129,7 +128,6 @@ const Sidebar = () => {
             <NavLink
               key={item.name}
               to={item.href}
-              end
               className={({ isActive }) =>
                 `dubai-sidebar-item ${isActive ? 'active' : ''} text-white/90 hover:text-white hover:bg-white/10`
               }

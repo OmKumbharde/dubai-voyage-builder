@@ -201,7 +201,7 @@ const Analytics = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {kpiCards.map((kpi, index) => (
           <Card key={index} className="dubai-card">
-            <CardContent className="p-6 pt-6">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">{kpi.title}</p>
@@ -221,7 +221,7 @@ const Analytics = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue Trend */}
         <Card className="dubai-card">
-          <CardHeader className="p-6">
+          <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>Revenue Trend</span>
               <Select value={selectedMetric} onValueChange={setSelectedMetric}>
@@ -236,7 +236,7 @@ const Analytics = () => {
               </Select>
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-6">
+          <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={analyticsData.monthlyData}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -262,10 +262,10 @@ const Analytics = () => {
 
         {/* Tour Performance Pie Chart */}
         <Card className="dubai-card">
-          <CardHeader className="p-6">
+          <CardHeader>
             <CardTitle>Popular Tours Distribution</CardTitle>
           </CardHeader>
-          <CardContent className="p-6">
+          <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -293,10 +293,10 @@ const Analytics = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Hotel Performance */}
         <Card className="dubai-card">
-          <CardHeader className="p-6">
+          <CardHeader>
             <CardTitle>Top Performing Hotels</CardTitle>
           </CardHeader>
-          <CardContent className="p-6">
+          <CardContent>
             <div className="space-y-4">
               {analyticsData.hotelPerformance.map((hotel, index) => (
                 <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
@@ -321,10 +321,10 @@ const Analytics = () => {
 
         {/* Sales Team Performance */}
         <Card className="dubai-card">
-          <CardHeader className="p-6">
+          <CardHeader>
             <CardTitle>Sales Team Performance</CardTitle>
           </CardHeader>
-          <CardContent className="p-6">
+          <CardContent>
             <div className="space-y-4">
               {analyticsData.salesTeamData.map((member, index) => (
                 <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
@@ -352,10 +352,10 @@ const Analytics = () => {
 
       {/* Monthly Performance Chart */}
       <Card className="dubai-card">
-        <CardHeader className="p-6">
+        <CardHeader>
           <CardTitle>Monthly Performance Overview</CardTitle>
         </CardHeader>
-        <CardContent className="p-6">
+        <CardContent>
           <ResponsiveContainer width="100%" height={400}>
             <BarChart data={analyticsData.monthlyData}>
               <CartesianGrid strokeDasharray="3 3" />
