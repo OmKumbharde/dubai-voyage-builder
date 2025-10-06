@@ -134,71 +134,6 @@ const QuoteTool = () => {
   ) : [];
 
   const totalPax = adults + cnb + cwb;
-  
-  // Constants from specifications
-  const AED_TO_USD = 3.65;
-  const VISA_ADULT_AED = 310;
-  const VISA_CHILD_AED = 73;
-  const INFANT_VISA_USD = 20;
-  
-  // Helper function to get visa cost from inclusions or use default
-  const getVisaCost = (type: 'adult' | 'child') => {
-    const visaInclusion = selectedInclusions.find(inc => inc.type === 'visa');
-    if (visaInclusion && type === 'adult') {
-      const rateKey = `inclusion_${visaInclusion.id}`;
-      return editableRates[rateKey] ?? visaInclusion.cost;
-    }
-    return type === 'adult' ? VISA_ADULT_AED : VISA_CHILD_AED;
-  };
-  
-  // Helper function to get airport transfer cost
-  const getAirportTransferCost = () => {
-    const transferInclusion = selectedInclusions.find(inc => inc.type === 'transfer' && inc.name.toLowerCase().includes('airport'));
-    if (transferInclusion) {
-      const rateKey = `inclusion_${transferInclusion.id}`;
-      return editableRates[rateKey] ?? transferInclusion.cost;
-    }
-    // Default pricing based on pax count
-    if (totalPax >= 1 && totalPax <= 5) return 250;
-    if (totalPax >= 6 && totalPax <= 10) return 500;
-    if (totalPax >= 11 && totalPax <= 17) return 1000;
-    return 0;
-  };
-  
-  // Calculate visa cost for the entire group
-  const calcVisaCostAED = () => {
-    const hasVisa = selectedInclusions.some(inc => inc.type === 'visa');
-    if (!hasVisa) return 0;
-    
-    const adultVisaCost = getVisaCost('adult');
-    const childVisaCost = getVisaCost('child');
-    const totalChildren = cwb + cnb;
-    
-    return (adults * adultVisaCost) + (totalChildren * childVisaCost);
-  };
-  
-  // Calculate airport transfer cost
-  const calcAirportTransferCostAED = () => {
-    const hasTransfer = selectedInclusions.some(inc => inc.type === 'transfer' && inc.name.toLowerCase().includes('airport'));
-    if (!hasTransfer) return 0;
-    return getAirportTransferCost();
-  };
-  
-  // Calculate tours cost per person in AED
-  const calcToursTotalPerPersonAED = () => {
-    return selectedTours.reduce((total, tour) => {
-      const rateKey = `tour_${tour.id}`;
-      const baseRate = editableRates[rateKey] ?? tour.costPerPerson;
-      
-      // Add private transfer cost if applicable
-      let transferCost = 0;
-      if (tour.type === 'private' && tour.privateTransferCost) {
-        transferCost = tour.privateTransferCost / totalPax;
-      }
-      
-      return total + baseRate + transferCost;
-    }, 0);
-  };
 
   // Tour management functions
   const addTour = (tour: any) => {
@@ -270,7 +205,7 @@ const QuoteTool = () => {
     });
   };
 
-  // Calculate quote function with new calculation logic
+  // Calculate quote function with multiple occupancy options
   const calculateQuote = () => {
     if (selectedHotels.length === 0 || !checkInDate || !checkOutDate) {
       toast({
@@ -290,73 +225,63 @@ const QuoteTool = () => {
       });
       return;
     }
-    
-    // Get costs for visa and airport transfer
-    const visaCostAED = calcVisaCostAED();
-    const airportTransferCostAED = calcAirportTransferCostAED();
-    const perPersonAirportTransferAED = adults > 0 ? airportTransferCostAED / adults : 0;
-    const toursCostPerPersonAED = calcToursTotalPerPersonAED();
+
+    const exchangeRate = 3.67;
     
     // Calculate for each hotel and occupancy type combination
     const hotelOptions = selectedHotels.map(hotel => {
-      const hotelRateKey = `hotel_${hotel.id}`;
-      const hotelRatePerNight = editableRates[hotelRateKey] ?? hotel.baseRate ?? 0;
-      const extraBedRate = hotel.extraBedRate || 100;
-      
       const occupancyOptions = selectedOccupancies.map(occupancyType => {
-        // Calculate hotel cost per person based on occupancy
-        const totalHotelRate = hotelRatePerNight * nights;
-        let divisor = 1;
-        
-        if (occupancyType === 'SGL') divisor = 1;
-        else if (occupancyType === 'DBL') divisor = 2;
-        else if (occupancyType === 'TPL') divisor = 3;
-        
-        const hotelCostPerPersonAED = Math.ceil(totalHotelRate / divisor);
-        
-        // Calculate total per person in AED
-        let totalPerPersonAED = hotelCostPerPersonAED + toursCostPerPersonAED;
-        
-        // Add visa and airport transfer per adult
-        const hasVisa = selectedInclusions.some(inc => inc.type === 'visa');
-        const hasAirportTransfer = selectedInclusions.some(inc => inc.type === 'transfer' && inc.name.toLowerCase().includes('airport'));
-        
-        if (hasVisa) totalPerPersonAED += getVisaCost('adult');
-        if (hasAirportTransfer) totalPerPersonAED += perPersonAirportTransferAED;
-        
-        totalPerPersonAED = Math.ceil(totalPerPersonAED);
-        const totalPerPersonUSD = Math.ceil(totalPerPersonAED / AED_TO_USD);
-        
-        // Calculate costs for children with bed (CWB)
-        let cwbCostAED = 0;
-        let cwbCostUSD = 0;
-        if (cwb > 0) {
-          cwbCostAED = (extraBedRate * nights) + toursCostPerPersonAED;
-          if (hasVisa) cwbCostAED += VISA_CHILD_AED;
-          cwbCostAED = Math.ceil(cwbCostAED);
-          cwbCostUSD = Math.ceil(cwbCostAED / AED_TO_USD);
+        let roomsNeeded = 1;
+        let extraBeds = 0;
+        let hotelRate = hotel.baseRate || 0;
+        let extraBedRate = hotel.extraBedRate || 0;
+
+        // Calculate rooms and extra beds based on occupancy type
+        // Use editable rate for hotel if available
+        const hotelRateKey = `hotel_${hotel.id}`;
+        hotelRate = editableRates[hotelRateKey] ?? hotel.baseRate ?? 0;
+        if (occupancyType === 'SGL') {
+          roomsNeeded = adults;
+          extraBeds = cwb > 0 ? cwb : 0; // Extra bed only for CWB
+        } else if (occupancyType === 'DBL') {
+          roomsNeeded = Math.ceil(adults / 2);
+          extraBeds = cwb > 0 ? cwb : 0; // Extra bed only for CWB
+        } else if (occupancyType === 'TPL') {
+          roomsNeeded = Math.ceil(adults / 3);
+          extraBeds = cwb > 0 ? cwb : 0; // Extra bed only for CWB
         }
+
+        const hotelCost = (roomsNeeded * hotelRate + extraBeds * extraBedRate) * nights;
         
-        // Calculate costs for children without bed (CNB)
-        let cnbCostAED = 0;
-        let cnbCostUSD = 0;
-        if (cnb > 0) {
-          cnbCostAED = toursCostPerPersonAED;
-          if (hasVisa) cnbCostAED += VISA_CHILD_AED;
-          cnbCostAED = Math.ceil(cnbCostAED);
-          cnbCostUSD = Math.ceil(cnbCostAED / AED_TO_USD);
-        }
+        // Tours and inclusions cost using editable rates
+        const toursCost = selectedTours.reduce((total, tour) => {
+          const rateKey = `tour_${tour.id}`;
+          const rate = editableRates[rateKey] ?? tour.costPerPerson;
+          return total + (rate * totalPax);
+        }, 0);
+        
+        const inclusionsCost = selectedInclusions.reduce((total, inclusion) => {
+          const rateKey = `inclusion_${inclusion.id}`;
+          const rate = editableRates[rateKey] ?? inclusion.cost;
+          return total + (rate * totalPax);
+        }, 0);
+        
+        const totalCostAED = hotelCost + toursCost + inclusionsCost;
+        const totalCostUSD = totalCostAED / exchangeRate;
+        const perPersonAED = totalCostAED / totalPax;
+        const perPersonUSD = totalCostUSD / totalPax;
 
         return {
           occupancyType,
-          hotelCostPerPersonAED,
-          totalPerPersonAED,
-          totalPerPersonUSD,
-          cwbCostAED,
-          cwbCostUSD,
-          cnbCostAED,
-          cnbCostUSD,
-          nights
+          roomsNeeded,
+          extraBeds,
+          hotelCost,
+          toursCost,
+          inclusionsCost,
+          totalCostAED,
+          totalCostUSD,
+          perPersonAED,
+          perPersonUSD
         };
       });
       
@@ -377,11 +302,8 @@ const QuoteTool = () => {
       selectedTours,
       selectedInclusions,
       hotelOptions,
-      exchangeRate: AED_TO_USD,
-      totalPax,
-      visaCostAED,
-      airportTransferCostAED,
-      toursCostPerPersonAED
+      exchangeRate,
+      totalPax
     };
 
     setGeneratedQuote(quote);
@@ -446,26 +368,30 @@ const QuoteTool = () => {
     quoteHTML += `</tr>`;
     quoteHTML += `<tbody>`;
     
-    // Add row for each hotel with new calculation
+    // Add row for each hotel
     hotelOptions.forEach((hotelOption: any) => {
       quoteHTML += `<tr><td style="padding: 4px;">${hotelOption.hotel.name}</td>`;
       
       // Add pricing for each occupancy type for this hotel
       hotelOption.occupancyOptions.forEach((option: any) => {
-        quoteHTML += `<td style="padding: 4px;">USD ${option.totalPerPersonUSD} per person with BB</td>`;
+        const perPersonUSD = Math.round(option.perPersonUSD);
+        quoteHTML += `<td style="padding: 4px;">USD ${perPersonUSD} per person with BB</td>`;
       });
       
       // Add child prices if applicable for this hotel
       if (paxDetails.cwb > 0) {
-        // Use the first occupancy option's CWB cost (same across all occupancies)
-        const cwbCostUSD = hotelOption.occupancyOptions[0].cwbCostUSD;
-        quoteHTML += `<td style="padding: 4px;">USD ${cwbCostUSD} per person with BB</td>`;
+        const extraBedUSD = Math.round((hotelOption.hotel.extraBedRate * nights) / quote.exchangeRate);
+        const toursCost = selectedTours.reduce((total, tour) => total + tour.costPerPerson, 0) / quote.exchangeRate;
+        const inclusionsCost = selectedInclusions.reduce((total, inclusion) => total + inclusion.cost, 0) / quote.exchangeRate;
+        const totalCwbUSD = Math.round(extraBedUSD + toursCost + inclusionsCost);
+        quoteHTML += `<td style="padding: 4px;">USD ${totalCwbUSD} per person with BB</td>`;
       }
       
       if (paxDetails.cnb > 0) {
-        // Use the first occupancy option's CNB cost (same across all occupancies)
-        const cnbCostUSD = hotelOption.occupancyOptions[0].cnbCostUSD;
-        quoteHTML += `<td style="padding: 4px;">USD ${cnbCostUSD} per person</td>`;
+        const toursCost = selectedTours.reduce((total, tour) => total + tour.costPerPerson, 0) / quote.exchangeRate;
+        const inclusionsCost = selectedInclusions.reduce((total, inclusion) => total + inclusion.cost, 0) / quote.exchangeRate;
+        const totalCnbUSD = Math.round(toursCost + inclusionsCost);
+        quoteHTML += `<td style="padding: 4px;">USD ${totalCnbUSD} per person</td>`;
       }
       
       quoteHTML += `</tr>`;
@@ -489,27 +415,9 @@ const QuoteTool = () => {
       quoteHTML += `<li>${inclusion.name}</li>`;
     });
     
-    // Standard inclusions with dynamic transfer text
-    const hasPrivateTour = selectedTours.some((tour: any) => tour.type === 'private');
-    const transferText = hasPrivateTour 
-      ? "All transfers SIC except where private specified"
-      : "All transfers SIC basis";
-    quoteHTML += `<li>${transferText}</li>`;
-    
-    // Tax information based on Tourism Dirham inclusion
-    const hasTourismDirham = selectedInclusions.some((inc: any) => 
-      inc.name.toLowerCase().includes('tourism dirham') || inc.name.toLowerCase().includes('td')
-    );
-    const taxText = hasTourismDirham 
-      ? "Including Tourism Dirham"
-      : "All taxes except Tourism Dirham";
-    quoteHTML += `<li>${taxText}</li>`;
-    
-    // Add infant pricing note if infants present
-    if (paxDetails.infants > 0) {
-      quoteHTML += `<li>Infant(s): USD ${INFANT_VISA_USD} per infant (visa only)</li>`;
-    }
-    
+    // Standard inclusions
+    quoteHTML += `<li>All transfers on a SIC basis</li>`;
+    quoteHTML += `<li>All taxes except Tourism Dirham</li>`;
     quoteHTML += `</ul><br /><br />`;
     
     // Note: Removed the "Optional Cost" section as requested - all services are now part of inclusions
@@ -530,111 +438,67 @@ const QuoteTool = () => {
     setGeneratedQuote(quote);
   };
 
-  // Generate breakdown following the new calculation format
+  // Generate breakdown following the exact format from the old quote tool
   const generateBreakdown = (quote: any) => {
-    const { hotelOptions, selectedTours, selectedInclusions, totalPax, nights, paxDetails } = quote;
+    const { hotelOptions, selectedTours, selectedInclusions, totalPax, nights } = quote;
     
     const checkInFormatted = new Date(checkInDate).toLocaleDateString("en-GB", {
       day: "2-digit",
       month: "short",
-      year: "numeric",
     });
     const checkOutFormatted = new Date(checkOutDate).toLocaleDateString("en-GB", {
-      day: "2-digit",
+      day: "2-digit",  
       month: "short",
-      year: "numeric",
     });
+
+    let breakdownText = `${checkInFormatted} - ${checkOutFormatted}\n`;
+    breakdownText += `${String(nights).padStart(2, '0')} Nights\n`;
     
-    let breakdown = `Quote Breakdown\n\n`;
-    breakdown += `Customer: ${customerName}\n`;
-    breakdown += `Reference: ${referenceNumber}\n`;
-    breakdown += `Travel Dates: ${checkInFormatted} to ${checkOutFormatted} (${nights} night${nights > 1 ? 's' : ''})\n`;
-    breakdown += `Pax: ${adults} Adult${adults > 1 ? 's' : ''}`;
-    if (cwb > 0) breakdown += `, ${cwb} CWB`;
-    if (cnb > 0) breakdown += `, ${cnb} CNB`;
-    if (infants > 0) breakdown += `, ${infants} Infant${infants > 1 ? 's' : ''}`;
-    breakdown += `\n\n`;
+    // Pax text - show all possible cases
+    let paxText = `${adults} Adults`;
+    if (cwb > 0) paxText += ` + ${cwb} Child with Bed`;
+    if (cnb > 0) paxText += ` + ${cnb} Child without Bed`;
+    if (infants > 0) paxText += ` + ${infants} Infant`;
+    breakdownText += `${paxText}\n\n`;
     
-    breakdown += `Exchange Rate: 1 USD = ${AED_TO_USD} AED\n\n`;
-    
-    breakdown += `=== COST BREAKDOWN ===\n\n`;
-    
-    // Hotel costs by occupancy type
-    hotelOptions.forEach((hotelOption: any, index: number) => {
-      breakdown += `Hotel ${index + 1}: ${hotelOption.hotel.name}\n`;
-      hotelOption.occupancyOptions.forEach((option: any) => {
-        const occType = option.occupancyType === 'SGL' ? 'Single' : 
-                       option.occupancyType === 'DBL' ? 'Double' : 'Triple';
-        breakdown += `  ${occType} Occupancy: USD ${option.totalPerPersonUSD} per adult\n`;
-      });
+    // Hotels - showing rate per room per night
+    hotelOptions.forEach((hotelOption: any) => {
+      const hotelRateKey = `hotel_${hotelOption.hotel.id}`;
+      const rate = editableRates[hotelRateKey] ?? hotelOption.hotel.baseRate;
       
-      if (paxDetails.cwb > 0) {
-        breakdown += `  Child with Bed: USD ${hotelOption.occupancyOptions[0].cwbCostUSD} per child\n`;
+      const hasExtraBed = cwb > 0;
+      if (hasExtraBed && hotelOption.hotel.extraBedRate) {
+        const extraBedRateKey = `hotel_${hotelOption.hotel.id}_extrabed`;
+        const extraBedRate = editableRates[extraBedRateKey] ?? hotelOption.hotel.extraBedRate;
+        breakdownText += `${hotelOption.hotel.name} - ${rate}/night | ${extraBedRate} EB/night\n`;
+      } else {
+        breakdownText += `${hotelOption.hotel.name} - ${rate}/night\n`;
       }
-      if (paxDetails.cnb > 0) {
-        breakdown += `  Child without Bed: USD ${hotelOption.occupancyOptions[0].cnbCostUSD} per child\n`;
-      }
-      breakdown += `\n`;
     });
     
-    // Tours breakdown
-    if (selectedTours.length > 0) {
-      breakdown += `Tours & Activities:\n`;
-      selectedTours.forEach((tour: any) => {
-        const rateKey = `tour_${tour.id}`;
-        const rateAED = editableRates[rateKey] ?? tour.costPerPerson;
-        const rateUSD = Math.ceil(rateAED / AED_TO_USD);
-        
-        breakdown += `  - ${tour.name}: AED ${rateAED} (USD ${rateUSD}) per person\n`;
-        
-        if (tour.type === 'private' && tour.privateTransferCost) {
-          const transferPerPax = Math.ceil(tour.privateTransferCost / totalPax);
-          const transferUSD = Math.ceil(transferPerPax / AED_TO_USD);
-          breakdown += `    + Private transfer: AED ${transferPerPax} (USD ${transferUSD}) per person\n`;
-        }
-      });
-      breakdown += `\n`;
-    }
+    breakdownText += `\n`;
     
-    // Visa costs
-    const hasVisa = selectedInclusions.some(inc => inc.type === 'visa');
-    if (hasVisa) {
-      breakdown += `Visa Costs:\n`;
-      breakdown += `  - Adults (${adults}): AED ${getVisaCost('adult')} × ${adults} = AED ${adults * getVisaCost('adult')}\n`;
-      const totalChildren = cwb + cnb;
-      if (totalChildren > 0) {
-        breakdown += `  - Children (${totalChildren}): AED ${VISA_CHILD_AED} × ${totalChildren} = AED ${totalChildren * VISA_CHILD_AED}\n`;
-      }
-      if (infants > 0) {
-        breakdown += `  - Infants (${infants}): USD ${INFANT_VISA_USD} × ${infants} = USD ${infants * INFANT_VISA_USD}\n`;
-      }
-      breakdown += `  Total Visa Cost: AED ${calcVisaCostAED()} (USD ${Math.ceil(calcVisaCostAED() / AED_TO_USD)})\n\n`;
-    }
+    // Tours - showing per person price from actual selected rates
+    let toursAndInclusionsTotal = 0;
+    selectedTours.forEach((tour: any) => {
+      const rateKey = `tour_${tour.id}`;
+      const perPersonRate = editableRates[rateKey] ?? tour.costPerPerson;
+      breakdownText += `${tour.name} - ${perPersonRate}\n`;
+      toursAndInclusionsTotal += perPersonRate;
+    });
     
-    // Airport transfer
-    const hasTransfer = selectedInclusions.some(inc => inc.type === 'transfer' && inc.name.toLowerCase().includes('airport'));
-    if (hasTransfer) {
-      const transferCost = calcAirportTransferCostAED();
-      breakdown += `Airport Transfer:\n`;
-      breakdown += `  Total: AED ${transferCost} (USD ${Math.ceil(transferCost / AED_TO_USD)})\n`;
-      breakdown += `  Per Adult: AED ${Math.ceil(transferCost / adults)} (USD ${Math.ceil(transferCost / adults / AED_TO_USD)})\n\n`;
-    }
+    // Inclusions - showing per person price from actual selected rates
+    selectedInclusions.forEach((inclusion: any) => {
+      const rateKey = `inclusion_${inclusion.id}`;
+      const perPersonRate = editableRates[rateKey] ?? inclusion.cost;
+      breakdownText += `${inclusion.name} - ${perPersonRate}\n`;
+      toursAndInclusionsTotal += perPersonRate;
+    });
     
-    // Other inclusions
-    const otherInclusions = selectedInclusions.filter(inc => 
-      inc.type !== 'visa' && !(inc.type === 'transfer' && inc.name.toLowerCase().includes('airport'))
-    );
-    if (otherInclusions.length > 0) {
-      breakdown += `Additional Services:\n`;
-      otherInclusions.forEach((inclusion: any) => {
-        const rateKey = `inclusion_${inclusion.id}`;
-        const rate = editableRates[rateKey] ?? inclusion.cost;
-        const rateUSD = Math.ceil(rate / AED_TO_USD);
-        breakdown += `  - ${inclusion.name}: AED ${rate} (USD ${rateUSD}) per person\n`;
-      });
-      breakdown += `\n`;
-    }
+    // Total per person for tours and inclusions
+    breakdownText += `Total - ${toursAndInclusionsTotal} | per person\n`;
     
+    return breakdownText;
   };
 
   // Copy formatted text with proper table formatting - copies exactly as visible
