@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Checkbox } from '../components/ui/checkbox';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { toast } from '../hooks/use-toast';
 import { cn } from '../lib/utils';
 import { 
@@ -16,7 +17,10 @@ import {
   Minus, 
   Search, 
   MapPin,
-  FileText
+  FileText,
+  Hotel,
+  Building2,
+  Users
 } from 'lucide-react';
 import { format } from 'date-fns';
 import html2pdf from 'html2pdf.js';
@@ -705,481 +709,416 @@ const QuoteTool = () => {
       </div>
 
       {/* Input Form */}
-      <Card className="dubai-card">
-        <CardHeader className="p-6 border-b">
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <Calculator className="h-6 w-6 text-dubai-gold" />
-            Package Details
+      <Card className="shadow-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calculator className="h-5 w-5 text-primary" />
+            Package Configuration
           </CardTitle>
-          <p className="text-sm text-muted-foreground mt-2">Enter all required information to generate a professional quote</p>
         </CardHeader>
-        <CardContent className="p-6 space-y-8">
-          {/* Customer Information Section */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b">
-              <div className="h-1 w-1 rounded-full bg-dubai-gold" />
-              <h3 className="text-base font-semibold text-foreground">Customer Information</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="customerName" className="text-sm font-semibold">Customer Name *</Label>
-                <Input
-                  id="customerName"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="Enter full name"
-                  className="dubai-input h-11"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="referenceNumber" className="text-sm font-semibold">TKT Reference Number</Label>
-                <Input
-                  id="referenceNumber"
-                  value={referenceNumber}
-                  onChange={(e) => setReferenceNumber(e.target.value)}
-                  placeholder="Enter reference number"
-                  className="dubai-input h-11"
-                />
-              </div>
-            </div>
-          </div>
+        <CardContent>
+          <Tabs defaultValue="details" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="accommodation">Accommodation</TabsTrigger>
+              <TabsTrigger value="tours">Tours</TabsTrigger>
+              <TabsTrigger value="services">Services</TabsTrigger>
+            </TabsList>
 
-          {/* Travel Dates Section */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b">
-              <div className="h-1 w-1 rounded-full bg-dubai-gold" />
-              <h3 className="text-base font-semibold text-foreground">Travel Dates</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="checkin" className="text-sm font-semibold">Check-in Date *</Label>
-                <Input
-                  id="checkin"
-                  type="date"
-                  value={checkInDate}
-                  onChange={(e) => setCheckInDate(e.target.value)}
-                  className="dubai-input h-11"
-                />
-                <p className="text-xs text-muted-foreground">Start date of the trip</p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="checkout" className="text-sm font-semibold">Check-out Date *</Label>
-                <Input
-                  id="checkout"
-                  type="date"
-                  value={checkOutDate}
-                  onChange={(e) => setCheckOutDate(e.target.value)}
-                  className="dubai-input h-11"
-                />
-                <p className="text-xs text-muted-foreground">End date of the trip</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Passenger Details Section */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b">
-              <div className="h-1 w-1 rounded-full bg-dubai-gold" />
-              <h3 className="text-base font-semibold text-foreground">Passenger Details</h3>
-            </div>
-            <p className="text-sm text-muted-foreground">Specify the number of passengers for each category</p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="adults" className="text-sm font-semibold">Adults *</Label>
-                <div className="flex items-center justify-center gap-2 p-2 border rounded-lg bg-background h-11">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setAdults(Math.max(1, adults - 1))}
-                    className="h-7 w-7 p-0"
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <span className="min-w-[50px] text-center font-semibold text-lg">{adults}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setAdults(adults + 1)}
-                    className="h-7 w-7 p-0"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="infants" className="text-sm font-semibold">Infants</Label>
-                <div className="flex items-center justify-center gap-2 p-2 border rounded-lg bg-background h-11">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setInfants(Math.max(0, infants - 1))}
-                    className="h-7 w-7 p-0"
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <span className="min-w-[50px] text-center font-semibold text-lg">{infants}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setInfants(infants + 1)}
-                    className="h-7 w-7 p-0"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cnb" className="text-sm font-semibold">Child (No Bed)</Label>
-                <div className="flex items-center justify-center gap-2 p-2 border rounded-lg bg-background h-11">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setCnb(Math.max(0, cnb - 1))}
-                    className="h-7 w-7 p-0"
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <span className="min-w-[50px] text-center font-semibold text-lg">{cnb}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setCnb(cnb + 1)}
-                    className="h-7 w-7 p-0"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cwb" className="text-sm font-semibold">Child (With Bed)</Label>
-                <div className="flex items-center justify-center gap-2 p-2 border rounded-lg bg-background h-11">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setCwb(Math.max(0, cwb - 1))}
-                    className="h-7 w-7 p-0"
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <span className="min-w-[50px] text-center font-semibold text-lg">{cwb}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setCwb(cwb + 1)}
-                    className="h-7 w-7 p-0"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Occupancy Selection Section */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b">
-              <div className="h-1 w-1 rounded-full bg-dubai-gold" />
-              <h3 className="text-base font-semibold text-foreground">Occupancy Types</h3>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Select which occupancy types to display in the quote
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {occupancyTypes.map(occupancy => (
-                <div 
-                  key={occupancy.id}
-                  className={cn(
-                    "flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all",
-                    selectedOccupancies.includes(occupancy.id) 
-                      ? "border-dubai-gold bg-dubai-gold/5 shadow-sm" 
-                      : "border-border hover:border-dubai-gold/50 hover:bg-muted/30"
-                  )}
-                  onClick={() => {
-                    if (selectedOccupancies.includes(occupancy.id)) {
-                      setSelectedOccupancies(selectedOccupancies.filter(o => o !== occupancy.id));
-                    } else {
-                      setSelectedOccupancies([...selectedOccupancies, occupancy.id]);
-                    }
-                  }}
-                >
-                  <Checkbox 
-                    checked={selectedOccupancies.includes(occupancy.id)}
-                    onChange={() => {}}
+            {/* Tab 1: Basic Details */}
+            <TabsContent value="details" className="space-y-6 mt-6">
+              {/* Customer Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="customerName">Customer Name *</Label>
+                  <Input
+                    id="customerName"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="Enter customer name"
                   />
-                  <div className="flex-1">
-                    <p className="font-semibold text-sm text-foreground">{occupancy.label}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{occupancy.description}</p>
+                </div>
+                <div>
+                  <Label htmlFor="referenceNumber">TKT Reference</Label>
+                  <Input
+                    id="referenceNumber"
+                    value={referenceNumber}
+                    onChange={(e) => setReferenceNumber(e.target.value)}
+                    placeholder="Enter ticket reference"
+                  />
+                </div>
+              </div>
+
+              {/* Dates */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="checkin">Check-in Date *</Label>
+                  <Input
+                    id="checkin"
+                    type="date"
+                    value={checkInDate}
+                    onChange={(e) => setCheckInDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="checkout">Check-out Date *</Label>
+                  <Input
+                    id="checkout"
+                    type="date"
+                    value={checkOutDate}
+                    onChange={(e) => setCheckOutDate(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Pax Details */}
+              <div>
+                <Label className="flex items-center gap-2 mb-3">
+                  <Users className="h-4 w-4" />
+                  Passenger Details
+                </Label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs">Adults</Label>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAdults(Math.max(1, adults - 1))}
+                      >
+                        <Minus className="h-3 w-3" />
+                      </Button>
+                      <span className="w-12 text-center font-semibold">{adults}</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAdults(adults + 1)}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">CWB</Label>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCwb(Math.max(0, cwb - 1))}
+                      >
+                        <Minus className="h-3 w-3" />
+                      </Button>
+                      <span className="w-12 text-center font-semibold">{cwb}</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCwb(cwb + 1)}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">CNB</Label>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCnb(Math.max(0, cnb - 1))}
+                      >
+                        <Minus className="h-3 w-3" />
+                      </Button>
+                      <span className="w-12 text-center font-semibold">{cnb}</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCnb(cnb + 1)}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Infants</Label>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setInfants(Math.max(0, infants - 1))}
+                      >
+                        <Minus className="h-3 w-3" />
+                      </Button>
+                      <span className="w-12 text-center font-semibold">{infants}</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setInfants(infants + 1)}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Hotel Selection Section */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b">
-              <div className="h-1 w-1 rounded-full bg-dubai-gold" />
-              <h3 className="text-base font-semibold text-foreground">Hotel Selection</h3>
-            </div>
-            <Label htmlFor="hotelSearch" className="text-sm font-semibold">Select Hotels *</Label>
-            <div className="space-y-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="hotelSearch"
-                  placeholder="Search hotels..."
-                  value={hotelSearch}
-                  onChange={(e) => setHotelSearch(e.target.value)}
-                  className="dubai-input pl-10"
-                />
               </div>
-              
-              {/* Selected Hotels */}
-              {selectedHotels.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Selected Hotels:</p>
-                  {selectedHotels.map(hotel => (
-                    <Card key={hotel.id} className="p-4 border-dubai-gold">
-                      <div className="flex justify-between items-start">
-                         <div>
-                           <h3 className="font-medium">{hotel.name}</h3>
-                           <p className="text-sm text-muted-foreground flex items-center gap-1">
-                             <MapPin className="h-3 w-3" />
-                             {hotel.location}
-                           </p>
-                           <div className="flex items-center gap-2 mt-2">
-                             <Label className="text-xs">Rate/night:</Label>
-                             <Input
-                               type="number"
-                               value={editableRates[`hotel_${hotel.id}`] ?? hotel.baseRate}
-                               onChange={(e) => setEditableRates(prev => ({
-                                 ...prev,
-                                 [`hotel_${hotel.id}`]: Number(e.target.value)
-                               }))}
-                               className="w-20 h-7 text-xs"
-                             />
-                             <span className="text-xs text-muted-foreground">AED</span>
-                           </div>
-                           <p className="text-xs text-muted-foreground">
-                             Extra Bed: AED {hotel.extraBedRate}/night
-                           </p>
-                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => removeHotel(hotel.id)}
-                        >
+            </TabsContent>
+
+            {/* Tab 2: Accommodation */}
+            <TabsContent value="accommodation" className="space-y-6 mt-6">
+              {/* Occupancy Selection */}
+              <div>
+                <Label className="mb-3 block">Select Occupancy Types *</Label>
+                <div className="grid grid-cols-3 gap-3">
+                  {occupancyTypes.map(occupancy => (
+                    <div 
+                      key={occupancy.id}
+                      className="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => {
+                        if (selectedOccupancies.includes(occupancy.id)) {
+                          setSelectedOccupancies(selectedOccupancies.filter(o => o !== occupancy.id));
+                        } else {
+                          setSelectedOccupancies([...selectedOccupancies, occupancy.id]);
+                        }
+                      }}
+                    >
+                      <Checkbox 
+                        checked={selectedOccupancies.includes(occupancy.id)}
+                        onCheckedChange={() => {}}
+                      />
+                      <div>
+                        <p className="font-medium text-sm">{occupancy.label}</p>
+                        <p className="text-xs text-muted-foreground">{occupancy.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Hotel Search */}
+              <div>
+                <Label htmlFor="hotelSearch">Search Hotels *</Label>
+                <div className="relative mt-2">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="hotelSearch"
+                    placeholder="Search hotels..."
+                    value={hotelSearch}
+                    onChange={(e) => setHotelSearch(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                
+                {/* Selected */}
+                {selectedHotels.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <p className="text-sm font-medium">Selected:</p>
+                    {selectedHotels.map(hotel => (
+                      <div key={hotel.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                        <div className="flex-1">
+                          <p className="font-medium">{hotel.name}</p>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {hotel.location}
+                          </p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Input
+                              type="number"
+                              value={editableRates[`hotel_${hotel.id}`] ?? hotel.baseRate}
+                              onChange={(e) => setEditableRates(prev => ({
+                                ...prev,
+                                [`hotel_${hotel.id}`]: Number(e.target.value)
+                              }))}
+                              className="w-24 h-8 text-sm"
+                            />
+                            <span className="text-xs text-muted-foreground">AED/night</span>
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={() => removeHotel(hotel.id)}>
                           Remove
                         </Button>
                       </div>
-                    </Card>
-                  ))}
-                </div>
-              )}
-              
-              {/* Available Hotels */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
-                {filteredHotels.map(hotel => (
-                  <Card 
-                    key={hotel.id} 
-                    className="p-3 cursor-pointer hover:border-dubai-gold transition-colors"
-                    onClick={() => {
-                      addHotel(hotel);
-                      setHotelSearch('');
-                    }}
-                  >
-                    <h4 className="font-medium text-sm">{hotel.name}</h4>
-                    <p className="text-xs text-muted-foreground">{hotel.location}</p>
-                    <p className="text-xs mt-1">AED {hotel.baseRate}/night</p>
-                  </Card>
-                ))}
-                {hotelSearch.length > 0 && filteredHotels.length === 0 && (
-                  <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
-                    No hotels found matching your search.
-                  </p>
+                    ))}
+                  </div>
                 )}
-                {hotelSearch.length === 0 && (
-                  <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
-                    Start typing to search for hotels...
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Tours Selection */}
-          <div>
-            <Label>Select Tours & Activities</Label>
-            <div className="space-y-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search tours..."
-                  value={tourSearch}
-                  onChange={(e) => setTourSearch(e.target.value)}
-                  className="dubai-input pl-10"
-                />
-              </div>
-              
-              {/* Selected Tours */}
-              {selectedTours.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Selected Tours:</p>
-                  {selectedTours.map(tour => (
-                    <div key={tour.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                       <div className="flex-1">
-                         <span className="font-medium">{tour.name}</span>
-                         <div className="flex items-center gap-2 mt-1">
-                           <Label className="text-xs">Rate/person:</Label>
-                           <Input
-                             type="number"
-                             value={editableRates[`tour_${tour.id}`] ?? tour.costPerPerson}
-                             onChange={(e) => setEditableRates(prev => ({
-                               ...prev,
-                               [`tour_${tour.id}`]: Number(e.target.value)
-                             }))}
-                             className="w-20 h-7 text-xs"
-                           />
-                           <span className="text-xs text-muted-foreground">
-                             AED × {totalPax} pax = AED {((editableRates[`tour_${tour.id}`] ?? tour.costPerPerson) * totalPax).toLocaleString()}
-                           </span>
-                         </div>
-                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeTour(tour.id)}
+                
+                {/* Available */}
+                {hotelSearch && (
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
+                    {filteredHotels.map(hotel => (
+                      <Card 
+                        key={hotel.id} 
+                        className="p-3 cursor-pointer hover:border-primary transition-colors"
+                        onClick={() => addHotel(hotel)}
                       >
-                        Remove
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              {/* Available Tours */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
-                {filteredTours.map(tour => (
-                  <Card 
-                    key={tour.id} 
-                    className="p-3 cursor-pointer hover:border-dubai-gold transition-colors"
-                    onClick={() => addTour(tour)}
-                  >
-                    <h4 className="font-medium text-sm">{tour.name}</h4>
-                    <p className="text-xs text-muted-foreground">{tour.type}</p>
-                    <p className="text-xs mt-1">AED {tour.costPerPerson}/person</p>
-                  </Card>
-                ))}
-                {tourSearch.length > 0 && filteredTours.length === 0 && (
-                  <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
-                    No tours found matching your search.
-                  </p>
-                )}
-                {tourSearch.length === 0 && (
-                  <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
-                    Start typing to search for tours...
-                  </p>
+                        <h4 className="font-medium text-sm">{hotel.name}</h4>
+                        <p className="text-xs text-muted-foreground">{hotel.location}</p>
+                        <p className="text-xs mt-1 font-semibold">AED {hotel.baseRate}/night</p>
+                      </Card>
+                    ))}
+                    {filteredHotels.length === 0 && (
+                      <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
+                        No results found
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
-            </div>
-          </div>
+            </TabsContent>
 
-          {/* Inclusions Selection */}
-          <div>
-            <Label>Additional Services</Label>
-            <div className="space-y-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search additional services..."
-                  value={inclusionSearch}
-                  onChange={(e) => setInclusionSearch(e.target.value)}
-                  className="dubai-input pl-10"
-                />
+            {/* Tab 3: Tours */}
+            <TabsContent value="tours" className="space-y-6 mt-6">
+              <div>
+                <Label htmlFor="tourSearch">Search Tours & Activities</Label>
+                <div className="relative mt-2">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="tourSearch"
+                    placeholder="Search tours..."
+                    value={tourSearch}
+                    onChange={(e) => setTourSearch(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                
+                {/* Selected Tours */}
+                {selectedTours.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <p className="text-sm font-medium">Selected Tours:</p>
+                    {selectedTours.map(tour => (
+                      <div key={tour.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                        <div className="flex-1">
+                          <p className="font-medium">{tour.name}</p>
+                          <p className="text-xs text-muted-foreground">{tour.type}</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Input
+                              type="number"
+                              value={editableRates[`tour_${tour.id}`] ?? tour.costPerPerson}
+                              onChange={(e) => setEditableRates(prev => ({
+                                ...prev,
+                                [`tour_${tour.id}`]: Number(e.target.value)
+                              }))}
+                              className="w-24 h-8 text-sm"
+                            />
+                            <span className="text-xs text-muted-foreground">AED/person</span>
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={() => removeTour(tour.id)}>
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Available Tours */}
+                {tourSearch && (
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
+                    {filteredTours.map(tour => (
+                      <Card 
+                        key={tour.id} 
+                        className="p-3 cursor-pointer hover:border-primary transition-colors"
+                        onClick={() => addTour(tour)}
+                      >
+                        <h4 className="font-medium text-sm">{tour.name}</h4>
+                        <p className="text-xs text-muted-foreground">{tour.type}</p>
+                        <p className="text-xs mt-1 font-semibold">AED {tour.costPerPerson}/person</p>
+                      </Card>
+                    ))}
+                    {filteredTours.length === 0 && (
+                      <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
+                        No results found
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
-              
-              {/* Selected Inclusions */}
-              {selectedInclusions.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Selected Services:</p>
-                  {selectedInclusions.map(inclusion => (
-                    <div key={inclusion.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                       <div className="flex-1">
-                         <span className="font-medium">{inclusion.name}</span>
-                         <div className="flex items-center gap-2 mt-1">
-                           <Label className="text-xs">Rate/person:</Label>
-                           <Input
-                             type="number"
-                             value={editableRates[`inclusion_${inclusion.id}`] ?? inclusion.cost}
-                             onChange={(e) => setEditableRates(prev => ({
-                               ...prev,
-                               [`inclusion_${inclusion.id}`]: Number(e.target.value)
-                             }))}
-                             className="w-20 h-7 text-xs"
-                           />
-                           <span className="text-xs text-muted-foreground">
-                             AED × {totalPax} pax = AED {((editableRates[`inclusion_${inclusion.id}`] ?? inclusion.cost) * totalPax).toLocaleString()}
-                           </span>
-                         </div>
-                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
+            </TabsContent>
+
+            {/* Tab 4: Additional Services */}
+            <TabsContent value="services" className="space-y-6 mt-6">
+              <div>
+                <Label htmlFor="inclusionSearch">Search Additional Services</Label>
+                <div className="relative mt-2">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="inclusionSearch"
+                    placeholder="Search services..."
+                    value={inclusionSearch}
+                    onChange={(e) => setInclusionSearch(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                
+                {/* Selected Services */}
+                {selectedInclusions.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <p className="text-sm font-medium">Selected Services:</p>
+                    {selectedInclusions.map(inclusion => (
+                      <div key={inclusion.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                        <div className="flex-1">
+                          <p className="font-medium">{inclusion.name}</p>
+                          <p className="text-xs text-muted-foreground">{inclusion.type}</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Input
+                              type="number"
+                              value={editableRates[`inclusion_${inclusion.id}`] ?? inclusion.cost}
+                              onChange={(e) => setEditableRates(prev => ({
+                                ...prev,
+                                [`inclusion_${inclusion.id}`]: Number(e.target.value)
+                              }))}
+                              className="w-24 h-8 text-sm"
+                            />
+                            <span className="text-xs text-muted-foreground">AED/person</span>
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={() => toggleInclusion(inclusion)}>
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Available Services */}
+                {inclusionSearch && (
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
+                    {filteredInclusions.map(inclusion => (
+                      <Card 
+                        key={inclusion.id} 
+                        className="p-3 cursor-pointer hover:border-primary transition-colors"
                         onClick={() => toggleInclusion(inclusion)}
                       >
-                        Remove
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              {/* Available Inclusions */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
-                {filteredInclusions.map(inclusion => (
-                  <div 
-                    key={inclusion.id}
-                    className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
-                    onClick={() => toggleInclusion(inclusion)}
-                  >
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">{inclusion.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        AED {inclusion.cost}/person × {totalPax} pax = AED {(inclusion.cost * totalPax).toLocaleString()}
+                        <h4 className="font-medium text-sm">{inclusion.name}</h4>
+                        <p className="text-xs text-muted-foreground">{inclusion.type}</p>
+                        <p className="text-xs mt-1 font-semibold">AED {inclusion.cost}/person</p>
+                      </Card>
+                    ))}
+                    {filteredInclusions.length === 0 && (
+                      <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
+                        No results found
                       </p>
-                    </div>
+                    )}
                   </div>
-                ))}
-                {inclusionSearch.length > 0 && filteredInclusions.length === 0 && (
-                  <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
-                    No services found matching your search.
-                  </p>
-                )}
-                {inclusionSearch.length === 0 && (
-                  <p className="text-sm text-muted-foreground col-span-2 text-center py-4">
-                    Start typing to search for additional services...
-                  </p>
                 )}
               </div>
-            </div>
-          </div>
+            </TabsContent>
+          </Tabs>
 
-          {/* Generate Quote Button */}
-          <div className="flex justify-center">
+          {/* Generate Button */}
+          <div className="flex justify-center mt-8">
             <Button 
               onClick={calculateQuote}
-              className="dubai-button-primary"
-              disabled={selectedHotels.length === 0 || !customerName || !checkInDate || !checkOutDate || selectedOccupancies.length === 0}
+              size="lg"
+              className="shadow-card hover:shadow-hover transition-shadow"
             >
-              <Calculator className="mr-2 h-4 w-4" />
+              <Calculator className="mr-2 h-5 w-5" />
               Generate Quote
             </Button>
           </div>
