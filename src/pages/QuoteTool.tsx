@@ -6,8 +6,9 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Checkbox } from '../components/ui/checkbox';
 import { toast } from '../hooks/use-toast';
+import { cn } from '../lib/utils';
 import { 
-  Calculator, 
+  Calculator,
   Copy, 
   Download, 
   Save, 
@@ -705,164 +706,202 @@ const QuoteTool = () => {
 
       {/* Input Form */}
       <Card className="dubai-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calculator className="h-5 w-5" />
+        <CardHeader className="p-6 border-b">
+          <CardTitle className="flex items-center gap-2 text-xl">
+            <Calculator className="h-6 w-6 text-dubai-gold" />
             Package Details
           </CardTitle>
+          <p className="text-sm text-muted-foreground mt-2">Enter all required information to generate a professional quote</p>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Customer Details */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="customerName">Customer Name *</Label>
-              <Input
-                id="customerName"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Enter customer name"
-                className="dubai-input"
-              />
+        <CardContent className="p-6 space-y-8">
+          {/* Customer Information Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b">
+              <div className="h-1 w-1 rounded-full bg-dubai-gold" />
+              <h3 className="text-base font-semibold text-foreground">Customer Information</h3>
             </div>
-            <div>
-            <Label htmlFor="referenceNumber">TKT Reference Number</Label>
-            <Input
-              id="referenceNumber"
-              value={referenceNumber}
-              onChange={(e) => setReferenceNumber(e.target.value)}
-              placeholder="Enter TKT reference number"
-              className="dubai-input"
-            />
-            </div>
-          </div>
-
-          {/* Travel Dates */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="checkin">Check-in Date *</Label>
-              <Input
-                id="checkin"
-                type="date"
-                value={checkInDate}
-                onChange={(e) => setCheckInDate(e.target.value)}
-                className="dubai-input"
-              />
-            </div>
-            <div>
-              <Label htmlFor="checkout">Check-out Date *</Label>
-              <Input
-                id="checkout"
-                type="date"
-                value={checkOutDate}
-                onChange={(e) => setCheckOutDate(e.target.value)}
-                className="dubai-input"
-              />
-            </div>
-          </div>
-
-          {/* Pax Details */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <Label htmlFor="adults">Adults *</Label>
-              <div className="flex items-center space-x-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setAdults(Math.max(1, adults - 1))}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-                <span className="min-w-[40px] text-center font-medium">{adults}</span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setAdults(adults + 1)}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="customerName" className="text-sm font-semibold">Customer Name *</Label>
+                <Input
+                  id="customerName"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="Enter full name"
+                  className="dubai-input h-11"
+                />
               </div>
-            </div>
-            <div>
-              <Label htmlFor="infants">Infants</Label>
-              <div className="flex items-center space-x-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setInfants(Math.max(0, infants - 1))}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-                <span className="min-w-[40px] text-center font-medium">{infants}</span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setInfants(infants + 1)}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="cnb">CNB</Label>
-              <div className="flex items-center space-x-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCnb(Math.max(0, cnb - 1))}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-                <span className="min-w-[40px] text-center font-medium">{cnb}</span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCnb(cnb + 1)}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="cwb">CWB</Label>
-              <div className="flex items-center space-x-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCwb(Math.max(0, cwb - 1))}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-                <span className="min-w-[40px] text-center font-medium">{cwb}</span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCwb(cwb + 1)}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
+              <div className="space-y-2">
+                <Label htmlFor="referenceNumber" className="text-sm font-semibold">TKT Reference Number</Label>
+                <Input
+                  id="referenceNumber"
+                  value={referenceNumber}
+                  onChange={(e) => setReferenceNumber(e.target.value)}
+                  placeholder="Enter reference number"
+                  className="dubai-input h-11"
+                />
               </div>
             </div>
           </div>
 
-          {/* Occupancy Selection */}
-          <div>
-            <Label>Select Occupancy Types to Display *</Label>
-            <p className="text-sm text-muted-foreground mb-3">
-              Choose which occupancy types to show in the quote table
+          {/* Travel Dates Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b">
+              <div className="h-1 w-1 rounded-full bg-dubai-gold" />
+              <h3 className="text-base font-semibold text-foreground">Travel Dates</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="checkin" className="text-sm font-semibold">Check-in Date *</Label>
+                <Input
+                  id="checkin"
+                  type="date"
+                  value={checkInDate}
+                  onChange={(e) => setCheckInDate(e.target.value)}
+                  className="dubai-input h-11"
+                />
+                <p className="text-xs text-muted-foreground">Start date of the trip</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="checkout" className="text-sm font-semibold">Check-out Date *</Label>
+                <Input
+                  id="checkout"
+                  type="date"
+                  value={checkOutDate}
+                  onChange={(e) => setCheckOutDate(e.target.value)}
+                  className="dubai-input h-11"
+                />
+                <p className="text-xs text-muted-foreground">End date of the trip</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Passenger Details Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b">
+              <div className="h-1 w-1 rounded-full bg-dubai-gold" />
+              <h3 className="text-base font-semibold text-foreground">Passenger Details</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">Specify the number of passengers for each category</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="adults" className="text-sm font-semibold">Adults *</Label>
+                <div className="flex items-center justify-center gap-2 p-2 border rounded-lg bg-background h-11">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setAdults(Math.max(1, adults - 1))}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="min-w-[50px] text-center font-semibold text-lg">{adults}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setAdults(adults + 1)}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="infants" className="text-sm font-semibold">Infants</Label>
+                <div className="flex items-center justify-center gap-2 p-2 border rounded-lg bg-background h-11">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setInfants(Math.max(0, infants - 1))}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="min-w-[50px] text-center font-semibold text-lg">{infants}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setInfants(infants + 1)}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cnb" className="text-sm font-semibold">Child (No Bed)</Label>
+                <div className="flex items-center justify-center gap-2 p-2 border rounded-lg bg-background h-11">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCnb(Math.max(0, cnb - 1))}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="min-w-[50px] text-center font-semibold text-lg">{cnb}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCnb(cnb + 1)}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cwb" className="text-sm font-semibold">Child (With Bed)</Label>
+                <div className="flex items-center justify-center gap-2 p-2 border rounded-lg bg-background h-11">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCwb(Math.max(0, cwb - 1))}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="min-w-[50px] text-center font-semibold text-lg">{cwb}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCwb(cwb + 1)}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Occupancy Selection Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b">
+              <div className="h-1 w-1 rounded-full bg-dubai-gold" />
+              <h3 className="text-base font-semibold text-foreground">Occupancy Types</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Select which occupancy types to display in the quote
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {occupancyTypes.map(occupancy => (
                 <div 
                   key={occupancy.id}
-                  className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
+                  className={cn(
+                    "flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all",
+                    selectedOccupancies.includes(occupancy.id) 
+                      ? "border-dubai-gold bg-dubai-gold/5 shadow-sm" 
+                      : "border-border hover:border-dubai-gold/50 hover:bg-muted/30"
+                  )}
                   onClick={() => {
                     if (selectedOccupancies.includes(occupancy.id)) {
                       setSelectedOccupancies(selectedOccupancies.filter(o => o !== occupancy.id));
@@ -876,27 +915,21 @@ const QuoteTool = () => {
                     onChange={() => {}}
                   />
                   <div className="flex-1">
-                    <p className="font-medium text-sm">{occupancy.label}</p>
-                    <p className="text-xs text-muted-foreground">{occupancy.description}</p>
+                    <p className="font-semibold text-sm text-foreground">{occupancy.label}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{occupancy.description}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Note about multiple occupancy */}
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <p className="text-sm text-blue-800 font-medium">
-              📋 Quote Format
-            </p>
-            <p className="text-xs text-blue-600 mt-1">
-              The quote will show pricing for selected occupancy types with USD per person rates in a professional format.
-            </p>
-          </div>
-
-          {/* Hotel Selection */}
-          <div>
-            <Label htmlFor="hotelSearch">Select Hotels *</Label>
+          {/* Hotel Selection Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b">
+              <div className="h-1 w-1 rounded-full bg-dubai-gold" />
+              <h3 className="text-base font-semibold text-foreground">Hotel Selection</h3>
+            </div>
+            <Label htmlFor="hotelSearch" className="text-sm font-semibold">Select Hotels *</Label>
             <div className="space-y-3">
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
