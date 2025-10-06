@@ -94,13 +94,13 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => (
           <Card key={index} className="dubai-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 p-6">
               <CardTitle className="text-sm font-medium">
                 {stat.title}
               </CardTitle>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
+              <stat.icon className={`h-5 w-5 ${stat.color}`} />
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-6 pt-0">
               <div className="text-2xl font-bold">{stat.value}</div>
               <p className="text-xs text-muted-foreground">
                 <span className="text-green-500">{stat.change}</span> from last month
@@ -114,13 +114,13 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Quick Actions */}
         <Card className="dubai-card">
-          <CardHeader>
+          <CardHeader className="p-6">
             <CardTitle className="flex items-center">
               <Star className="h-5 w-5 mr-2 text-dubai-gold" />
               Quick Actions
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="p-6 space-y-3">
             <button 
               onClick={() => navigate('/quote')}
               className="w-full text-left p-4 rounded-lg border hover:bg-gray-50 transition-smooth"
@@ -162,10 +162,10 @@ const Dashboard = () => {
 
         {/* Recent Quotes */}
         <Card className="dubai-card">
-          <CardHeader>
+          <CardHeader className="p-6">
             <CardTitle>Recent Quotes</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             <div className="space-y-4">
               {isLoading ? (
                 <div className="text-center py-4">Loading quotes...</div>
@@ -203,10 +203,10 @@ const Dashboard = () => {
       {/* Popular Hotels and Tours */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="dubai-card">
-          <CardHeader>
+          <CardHeader className="p-6">
             <CardTitle>Popular Hotels</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             <div className="space-y-4">
               {hotels.slice(0, 3).map((hotel) => (
                 <div key={hotel.id} className="flex items-center space-x-4 p-3 rounded-lg bg-gray-50">
@@ -232,10 +232,10 @@ const Dashboard = () => {
         </Card>
 
         <Card className="dubai-card">
-          <CardHeader>
+          <CardHeader className="p-6">
             <CardTitle>Top Tours</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             <div className="space-y-4">
               {tours.map((tour) => (
                 <div key={tour.id} className="flex items-center space-x-4 p-3 rounded-lg bg-gray-50">

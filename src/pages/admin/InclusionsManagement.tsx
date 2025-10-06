@@ -117,7 +117,7 @@ const InclusionsManagement = () => {
   });
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
@@ -147,7 +147,7 @@ const InclusionsManagement = () => {
               </Button>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="p-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <Label htmlFor="name">Inclusion Name *</Label>
@@ -211,11 +211,11 @@ const InclusionsManagement = () => {
               </div>
             </div>
 
-            <div className="flex justify-end space-x-3 pt-4">
-              <Button variant="outline" onClick={resetForm}>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button variant="outline" size="default" onClick={resetForm}>
                 Cancel
               </Button>
-              <Button onClick={handleSave} className="dubai-button-primary">
+              <Button onClick={handleSave} size="default" className="dubai-button-primary">
                 <Save className="mr-2 h-4 w-4" />
                 {editingInclusion ? 'Update Inclusion' : 'Create Inclusion'}
               </Button>
@@ -226,7 +226,7 @@ const InclusionsManagement = () => {
 
       {/* Search and Filter */}
       <Card className="dubai-card">
-        <CardContent className="p-4">
+        <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-4">
             <Input
               placeholder="Search inclusions..."
@@ -251,20 +251,20 @@ const InclusionsManagement = () => {
 
       {/* Inclusions List - Table View */}
       <Card className="dubai-card">
-        <CardHeader>
+        <CardHeader className="p-6">
           <CardTitle>Inclusions List</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-3">Sr. No</th>
-                  <th className="text-left p-3">Name</th>
-                  <th className="text-left p-3">Type</th>
-                  <th className="text-left p-3">Cost (AED)</th>
-                  <th className="text-left p-3">Optional</th>
-                  <th className="text-left p-3">Actions</th>
+                  <th className="text-left p-4">Sr. No</th>
+                  <th className="text-left p-4">Name</th>
+                  <th className="text-left p-4">Type</th>
+                  <th className="text-left p-4">Cost (AED)</th>
+                  <th className="text-left p-4">Optional</th>
+                  <th className="text-left p-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -273,9 +273,9 @@ const InclusionsManagement = () => {
                     <td colSpan={6} className="text-center py-8">Loading inclusions...</td>
                   </tr>
                 ) : filteredInclusions.map((inclusion, index) => (
-                  <tr key={inclusion.id} className="border-b hover:bg-gray-50">
-                    <td className="p-3">{index + 1}</td>
-                    <td className="p-3">
+                  <tr key={inclusion.id} className="border-b hover:bg-muted/50 transition-colors">
+                    <td className="p-4">{index + 1}</td>
+                    <td className="p-4">
                       <div className="flex items-center gap-2">
                         {getTypeIcon(inclusion.type)}
                         <div>
@@ -284,28 +284,28 @@ const InclusionsManagement = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="p-3">
+                    <td className="p-4">
                       <Badge className={getTypeColor(inclusion.type)}>
                         {inclusion.type}
                       </Badge>
                     </td>
-                    <td className="p-3">AED {inclusion.cost.toFixed(2)}</td>
-                    <td className="p-3">
+                    <td className="p-4">AED {inclusion.cost.toFixed(2)}</td>
+                    <td className="p-4">
                       <Badge variant={inclusion.isOptional ? "secondary" : "destructive"}>
                         {inclusion.isOptional ? 'Yes' : 'No'}
                       </Badge>
                     </td>
-                    <td className="p-3">
-                      <div className="flex space-x-2">
+                    <td className="p-4">
+                      <div className="flex gap-2">
                         <Button variant="ghost" size="sm" onClick={() => startEdit(inclusion)}>
-                          <Edit3 className="h-3 w-3" />
+                          <Edit3 className="h-4 w-4" />
                         </Button>
                         <Button 
                           variant="ghost" 
                           size="sm"
                           onClick={() => handleDelete(inclusion.id)}
                         >
-                          <Trash2 className="h-3 w-3" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </td>

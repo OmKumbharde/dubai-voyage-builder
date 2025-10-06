@@ -471,11 +471,11 @@ const BookingCenter = () => {
             Manage confirmed bookings and generate itineraries
           </p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-3">
           <div className="flex rounded-lg border">
             <Button
               variant={selectedView === 'list' ? 'default' : 'ghost'}
-              size="sm"
+              size="default"
               onClick={() => setSelectedView('list')}
             >
               List View

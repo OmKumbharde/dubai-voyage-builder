@@ -143,7 +143,7 @@ const HotelsManagement = () => {
   }
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
@@ -166,12 +166,12 @@ const HotelsManagement = () => {
       {/* Hotel Form */}
       {(editingId === 'new' || editingId) && (
         <Card className="dubai-card">
-          <CardHeader>
+          <CardHeader className="p-6">
             <CardTitle>
               {editingId === 'new' ? 'Add New Hotel' : 'Edit Hotel'}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="p-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <Label htmlFor="name">Hotel Name</Label>
@@ -286,15 +286,17 @@ const HotelsManagement = () => {
               </div>
             </div>
 
-            <div className="flex justify-end space-x-4">
+            <div className="flex justify-end gap-3">
               <Button 
-                variant="outline" 
+                variant="outline"
+                size="default"
                 onClick={cancelEdit}
               >
                 Cancel
               </Button>
               <Button 
-                onClick={handleSave} 
+                onClick={handleSave}
+                size="default"
                 className="dubai-button-primary"
                 disabled={!formData.name || !formData.location}
               >
@@ -308,7 +310,7 @@ const HotelsManagement = () => {
 
       {/* Search and Filter */}
       <Card className="dubai-card">
-        <CardContent className="p-4">
+        <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-4">
             <Input
               placeholder="Search hotels..."
@@ -342,28 +344,28 @@ const HotelsManagement = () => {
 
       {/* Hotels List - Table View */}
       <Card className="dubai-card">
-        <CardHeader>
+        <CardHeader className="p-6">
           <CardTitle>Hotels List</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-3">Sr. No</th>
-                  <th className="text-left p-3">Hotel Name</th>
-                  <th className="text-left p-3">Category</th>
-                  <th className="text-left p-3">Location</th>
-                  <th className="text-left p-3">Base Rate</th>
-                  <th className="text-left p-3">Extra Bed Rate</th>
-                  <th className="text-left p-3">Actions</th>
+                  <th className="text-left p-4">Sr. No</th>
+                  <th className="text-left p-4">Hotel Name</th>
+                  <th className="text-left p-4">Category</th>
+                  <th className="text-left p-4">Location</th>
+                  <th className="text-left p-4">Base Rate</th>
+                  <th className="text-left p-4">Extra Bed Rate</th>
+                  <th className="text-left p-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredHotels.map((hotel, index) => (
-                  <tr key={hotel.id} className="border-b hover:bg-gray-50">
-                    <td className="p-3">{index + 1}</td>
-                    <td className="p-3">
+                  <tr key={hotel.id} className="border-b hover:bg-muted/50 transition-colors">
+                    <td className="p-4">{index + 1}</td>
+                    <td className="p-4">
                       <div>
                         <p className="font-semibold">{hotel.name}</p>
                         <div className="flex items-center mt-1">
@@ -373,12 +375,12 @@ const HotelsManagement = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="p-3">{hotel.starRating} Star</td>
-                    <td className="p-3">{hotel.location}</td>
-                    <td className="p-3">AED {hotel.baseRate}</td>
-                    <td className="p-3">AED {hotel.extraBedRate}</td>
-                    <td className="p-3">
-                      <div className="flex space-x-2">
+                    <td className="p-4">{hotel.starRating} Star</td>
+                    <td className="p-4">{hotel.location}</td>
+                    <td className="p-4">AED {hotel.baseRate}</td>
+                    <td className="p-4">AED {hotel.extraBedRate}</td>
+                    <td className="p-4">
+                      <div className="flex gap-2">
                         <Button
                           variant="outline"
                           size="sm"

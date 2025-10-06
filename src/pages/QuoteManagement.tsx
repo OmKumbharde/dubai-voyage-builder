@@ -294,7 +294,7 @@ const QuoteManagement = () => {
 
       {/* Filters */}
       <Card className="dubai-card">
-        <CardContent className="p-4">
+        <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <Label htmlFor="search">Search Quotes</Label>
@@ -328,9 +328,9 @@ const QuoteManagement = () => {
       </Card>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="dubai-card">
-          <CardContent className="p-4">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Quotes</p>
@@ -342,7 +342,7 @@ const QuoteManagement = () => {
         </Card>
         
         <Card className="dubai-card">
-          <CardContent className="p-4">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Confirmed</p>
@@ -356,7 +356,7 @@ const QuoteManagement = () => {
         </Card>
         
         <Card className="dubai-card">
-          <CardContent className="p-4">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Pending</p>
@@ -370,7 +370,7 @@ const QuoteManagement = () => {
         </Card>
         
         <Card className="dubai-card">
-          <CardContent className="p-4">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Value</p>
@@ -389,10 +389,10 @@ const QuoteManagement = () => {
 
       {/* Quotes List */}
       <Card className="dubai-card">
-        <CardHeader>
+        <CardHeader className="p-6">
           <CardTitle>All Quotes</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           {isLoading ? (
             <div className="text-center py-8">Loading quotes...</div>
           ) : (

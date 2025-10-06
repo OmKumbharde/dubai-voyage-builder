@@ -167,8 +167,8 @@ const ToursManagement = () => {
               </Button>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent className="p-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <Label htmlFor="name">Tour Name *</Label>
                 <Input
@@ -191,7 +191,7 @@ const ToursManagement = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <Label htmlFor="pickupTime">Approx. Pickup Time *</Label>
                 <Input
@@ -226,7 +226,7 @@ const ToursManagement = () => {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <Label htmlFor="type">Tour Type</Label>
                 <select
@@ -311,11 +311,11 @@ const ToursManagement = () => {
               </div>
             </div>
 
-            <div className="flex justify-end space-x-3">
-              <Button variant="outline" onClick={resetForm}>
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" size="default" onClick={resetForm}>
                 Cancel
               </Button>
-              <Button onClick={handleSave} className="dubai-button-primary">
+              <Button onClick={handleSave} size="default" className="dubai-button-primary">
                 <Save className="mr-2 h-4 w-4" />
                 {editingTour ? 'Update Tour' : 'Create Tour'}
               </Button>
@@ -326,7 +326,7 @@ const ToursManagement = () => {
 
       {/* Search and Filter */}
       <Card className="dubai-card">
-        <CardContent className="p-4">
+        <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-4">
             <Input
               placeholder="Search tours..."
@@ -349,21 +349,21 @@ const ToursManagement = () => {
 
       {/* Tours List - Table View */}
       <Card className="dubai-card">
-        <CardHeader>
+        <CardHeader className="p-6">
           <CardTitle>Tours List</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-3">Sr. No</th>
-                  <th className="text-left p-3">Tour Name</th>
-                  <th className="text-left p-3">Pickup Time</th>
-                  <th className="text-left p-3">Drop Time</th>
-                  <th className="text-left p-3">Type</th>
-                  <th className="text-left p-3">Cost Per Person</th>
-                  <th className="text-left p-3">Actions</th>
+                  <th className="text-left p-4">Sr. No</th>
+                  <th className="text-left p-4">Tour Name</th>
+                  <th className="text-left p-4">Pickup Time</th>
+                  <th className="text-left p-4">Drop Time</th>
+                  <th className="text-left p-4">Type</th>
+                  <th className="text-left p-4">Cost Per Person</th>
+                  <th className="text-left p-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -372,33 +372,33 @@ const ToursManagement = () => {
                     <td colSpan={7} className="text-center py-8">Loading tours...</td>
                   </tr>
                 ) : filteredTours.map((tour, index) => (
-                  <tr key={tour.id} className="border-b hover:bg-gray-50">
-                    <td className="p-3">{index + 1}</td>
-                    <td className="p-3">
+                  <tr key={tour.id} className="border-b hover:bg-muted/50 transition-colors">
+                    <td className="p-4">{index + 1}</td>
+                    <td className="p-4">
                       <div>
                         <p className="font-semibold">{tour.name}</p>
                         <p className="text-sm text-muted-foreground truncate">{tour.description}</p>
                       </div>
                     </td>
-                    <td className="p-3">{tour.pickupTime || '09:00 AM'}</td>
-                    <td className="p-3">{tour.dropTime || '05:00 PM'}</td>
-                    <td className="p-3">
+                    <td className="p-4">{tour.pickupTime || '09:00 AM'}</td>
+                    <td className="p-4">{tour.dropTime || '05:00 PM'}</td>
+                    <td className="p-4">
                       <Badge variant={tour.type === 'private' ? 'default' : 'secondary'}>
                         {tour.type === 'private' ? 'Private' : 'Sharing'}
                       </Badge>
                     </td>
-                    <td className="p-3">AED {tour.costPerPerson}</td>
-                    <td className="p-3">
-                      <div className="flex space-x-2">
+                    <td className="p-4">AED {tour.costPerPerson}</td>
+                    <td className="p-4">
+                      <div className="flex gap-2">
                         <Button variant="ghost" size="sm" onClick={() => startEdit(tour)}>
-                          <Edit3 className="h-3 w-3" />
+                          <Edit3 className="h-4 w-4" />
                         </Button>
                         <Button 
                           variant="ghost" 
                           size="sm"
                           onClick={() => deleteTour(tour.id)}
                         >
-                          <Trash2 className="h-3 w-3" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </td>
