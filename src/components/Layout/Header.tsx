@@ -54,28 +54,18 @@ const Header = () => {
       </div>
 
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-        </Button>
-
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-3 px-3">
+            <Button variant="ghost" className="flex items-center gap-3 px-3 hover:bg-transparent">
               <Avatar className="h-8 w-8">
                 <AvatarImage src="" alt="User" />
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                   {user?.email ? getUserInitials(user.email) : 'U'}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex flex-col items-start">
-                <span className="text-sm font-medium">
-                  {user?.user_metadata?.name || user?.email?.split('@')[0] || 'User'}
-                </span>
-                <Badge variant={getRoleBadgeVariant(user?.email || '') as any} className="text-xs h-4">
-                  {getUserRole(user?.email || '')}
-                </Badge>
-              </div>
+              <span className="text-sm font-medium">
+                {user?.user_metadata?.name || user?.email?.split('@')[0] || 'User'}
+              </span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">

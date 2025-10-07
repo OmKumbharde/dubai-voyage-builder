@@ -297,25 +297,25 @@ const QuoteManagement = () => {
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
-              <Label htmlFor="search">Search Quotes</Label>
+              <Label htmlFor="search" className="text-xs font-medium mb-1.5 block">Search Quotes</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="search"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search by customer name or ticket reference..."
-                  className="pl-10 dubai-input"
+                  placeholder="Search by customer name or TKT reference..."
+                  className="pl-10 h-9 dubai-input"
                 />
               </div>
             </div>
             <div>
-              <Label htmlFor="status">Filter by Status</Label>
+              <Label htmlFor="status" className="text-xs font-medium mb-1.5 block">Filter by Status</Label>
               <select
                 id="status"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="dubai-input"
+                className="h-9 dubai-input"
               >
                 <option value="all">All Status</option>
                 {statusOptions.map(option => (

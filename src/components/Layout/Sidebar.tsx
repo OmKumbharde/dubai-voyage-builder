@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   Home, 
@@ -14,9 +14,27 @@ import {
   Navigation
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../integrations/supabase/client';
 
 const Sidebar = () => {
   const { user, signOut } = useAuth();
+  const [userName, setUserName] = useState('');
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (user?.id) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', user.id)
+          .single();
+        
+        setUserName(data?.name || user.email?.split('@')[0] || 'User');
+      }
+    };
+
+    fetchUserProfile();
+  }, [user]);
 
   const navigationItems = [
     { 
@@ -89,11 +107,11 @@ const Sidebar = () => {
           <div className="flex items-center space-x-3">
             <div className="h-10 w-10 rounded-full bg-dubai-gold flex items-center justify-center">
               <span className="text-sm font-semibold text-dubai-navy">
-                {user?.email?.charAt(0).toUpperCase() || 'U'}
+                {userName?.charAt(0).toUpperCase() || 'U'}
               </span>
             </div>
             <div>
-              <p className="text-sm font-medium text-white">{user?.email?.split('@')[0]}</p>
+              <p className="text-sm font-medium text-white">{userName}</p>
               <p className="text-xs text-white/70">Team Member</p>
             </div>
           </div>

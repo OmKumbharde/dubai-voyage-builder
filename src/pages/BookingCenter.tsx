@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { 
   Calendar, 
   MapPin, 
@@ -10,7 +13,8 @@ import {
   Clock,
   Download,
   Eye,
-  CheckCircle
+  CheckCircle,
+  Search
 } from 'lucide-react';
 import { useSupabaseData } from '../hooks/useSupabaseData';
 import { useAuth } from '../context/AuthContext';
@@ -22,12 +26,13 @@ import { supabase } from '../integrations/supabase/client';
 const BookingCenter = () => {
   const { quotes, tours, isLoading } = useSupabaseData();
   const { user } = useAuth();
-  const [selectedView, setSelectedView] = useState<'calendar' | 'list'>('list');
   const [voucherDialogOpen, setVoucherDialogOpen] = useState(false);
   const [selectedBookingForVoucher, setSelectedBookingForVoucher] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
-  // Transform quotes into bookings for display using real database structure
-  const bookings = quotes.filter(quote => 
+  // Transform quotes into bookings and apply filters
+  const allBookings = quotes.filter(quote => 
     ['confirmed', 'sent'].includes(quote.status)
   ).map(quote => {
     const checkInDate = (quote as any).travel_dates_from || quote.travelDates?.startDate;
@@ -55,6 +60,17 @@ const BookingCenter = () => {
     };
   });
 
+  // Apply filters
+  const bookings = allBookings.filter(booking => {
+    const matchesSearch = searchTerm === '' || 
+      booking.ticketReference.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      booking.customerName.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || booking.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'confirmed': return 'bg-green-100 text-green-800';
@@ -65,7 +81,7 @@ const BookingCenter = () => {
   };
 
   const sendItineraryLink = (bookingId: string) => {
-    const booking = bookings.find(b => b.id === bookingId);
+    const booking = allBookings.find(b => b.id === bookingId);
     if (!booking) return;
     
     // Generate shareable link
@@ -472,28 +488,50 @@ const BookingCenter = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex rounded-lg border">
-            <Button
-              variant={selectedView === 'list' ? 'default' : 'ghost'}
-              size="default"
-              onClick={() => setSelectedView('list')}
-            >
-              List View
-            </Button>
-            <Button
-              variant={selectedView === 'calendar' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setSelectedView('calendar')}
-            >
-              Calendar View
-            </Button>
-          </div>
           <Button onClick={exportBookingReport} className="dubai-button-gold flex items-center">
             <Download className="mr-2 h-4 w-4" />
             Export Report
           </Button>
         </div>
       </div>
+
+      {/* Search and Filter Section */}
+      <Card className="dubai-card">
+        <CardContent className="p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="relative">
+              <Label htmlFor="search" className="text-xs font-medium mb-1.5 block">
+                Search by TKT Reference or Customer Name
+              </Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="search"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search bookings..."
+                  className="pl-10 h-9 dubai-input"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="statusFilter" className="text-xs font-medium mb-1.5 block">
+                Filter by Status
+              </Label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="h-9 dubai-input">
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="confirmed">Confirmed</SelectItem>
+                  <SelectItem value="sent">Sent</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -663,7 +701,9 @@ const BookingCenter = () => {
               ))}
               {!isLoading && bookings.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
-                  No confirmed bookings yet. Change quote status to "confirmed" or "sent" to see them here.
+                  {searchTerm || statusFilter !== 'all' 
+                    ? 'No bookings match your search criteria.'
+                    : 'No confirmed bookings yet. Change quote status to "confirmed" or "sent" to see them here.'}
                 </div>
               )}
             </div>

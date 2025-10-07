@@ -332,12 +332,12 @@ const HotelsManagement = () => {
           <div className="flex flex-col md:flex-row gap-4">
             <Input
               placeholder="Search hotels..."
-              className="dubai-input flex-1"
+              className="h-9 dubai-input flex-1"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             <select 
-              className="dubai-input md:w-48" 
+              className="h-9 dubai-input md:w-48"
               value={filterRating}
               onChange={(e) => setFilterRating(e.target.value)}
             >
