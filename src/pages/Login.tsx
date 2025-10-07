@@ -89,39 +89,6 @@ const Login = () => {
     setIsLoading(false);
   };
 
-  const handleDemoLogin = async (role: 'admin' | 'sales' | 'booking') => {
-    setIsLoading(true);
-    setError('');
-
-    const demoAccounts = {
-      admin: { email: 'admin@dubaitravel.com', password: 'admin123' },
-      sales: { email: 'sales@dubaitravel.com', password: 'sales123' },
-      booking: { email: 'booking@dubaitravel.com', password: 'booking123' }
-    };
-
-    const account = demoAccounts[role];
-    
-    const { error } = await supabase.auth.signInWithPassword({
-      email: account.email,
-      password: account.password,
-    });
-
-    if (error) {
-      setError(error.message);
-      toast({
-        title: "Demo Login Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: `Welcome ${role}!`,
-        description: `You are now logged in as ${role}.`,
-      });
-      navigate('/');
-    }
-    setIsLoading(false);
-  };
 
   return (
     <div className="min-h-screen bg-gradient-hero flex items-center justify-center p-4">
@@ -311,49 +278,6 @@ const Login = () => {
                   </form>
                 </TabsContent>
               </Tabs>
-              
-              <div className="mt-6">
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">
-                      Or try demo accounts
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 gap-3 mt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleDemoLogin('admin')}
-                    disabled={isLoading}
-                    className="w-full"
-                  >
-                    <Building2 className="mr-2 h-4 w-4" />
-                    Admin Demo
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleDemoLogin('sales')}
-                    disabled={isLoading}
-                    className="w-full"
-                  >
-                    <Users className="mr-2 h-4 w-4" />
-                    Sales Demo
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleDemoLogin('booking')}
-                    disabled={isLoading}
-                    className="w-full"
-                  >
-                    <Calendar className="mr-2 h-4 w-4" />
-                    Booking Demo
-                  </Button>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </div>
