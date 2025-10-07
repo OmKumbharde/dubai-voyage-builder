@@ -780,12 +780,25 @@ export const VoucherGenerationDialog: React.FC<VoucherGenerationDialogProps> = (
                 Next Step
               </Button>
             </>
-          ) : (
+          ) : step === 2 ? (
             <>
               <Button variant="outline" onClick={() => setStep(1)}>
                 Back
               </Button>
-              <Button onClick={generateVoucherPDF} className="dubai-button-primary">
+              <Button onClick={handleStepTwoNext} className="dubai-button-primary">
+                Next Step
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => setStep(2)}>
+                Back
+              </Button>
+              <Button 
+                onClick={generateVoucherPDF} 
+                className="dubai-button-primary"
+                disabled={!servicesBooked || !confirmationsReceived}
+              >
                 Generate Voucher
               </Button>
             </>

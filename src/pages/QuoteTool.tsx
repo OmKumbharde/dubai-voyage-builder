@@ -141,6 +141,11 @@ const QuoteTool = () => {
         setEditableRates(quote.editableRates);
       }
       
+      // Load Tourism Dirham setting if it exists
+      if (quote.includeTourismDirham !== undefined) {
+        setIncludeTourismDirham(quote.includeTourismDirham);
+      }
+      
       // Restore the generated quote preview if it exists
       if (quote.formattedText || quote.calculations) {
         setGeneratedQuote(quote);
