@@ -40,9 +40,8 @@ const quoteFormSchema = z.object({
     .max(100, { message: "Customer name must be less than 100 characters" }),
   referenceNumber: z.string()
     .trim()
-    .max(50, { message: "Reference number must be less than 50 characters" })
-    .optional()
-    .or(z.literal('')),
+    .min(1, { message: "TKT Reference Number is required" })
+    .max(50, { message: "TKT Reference Number must be less than 50 characters" }),
   checkInDate: z.string().min(1, { message: "Check-in date is required" }),
   checkOutDate: z.string().min(1, { message: "Check-out date is required" }),
 });
@@ -715,7 +714,7 @@ const QuoteTool = () => {
         const updateData = {
           reference_number: editingQuote.reference_number,
           client_name: customerName,
-          ticket_reference: referenceNumber || null,
+          ticket_reference: referenceNumber,
           travel_dates_from: checkInDate,
           travel_dates_to: checkOutDate,
           adults,
@@ -754,7 +753,7 @@ const QuoteTool = () => {
         const insertData = {
           reference_number: `QT-${Date.now()}`,
           client_name: customerName,
-          ticket_reference: referenceNumber || null,
+          ticket_reference: referenceNumber,
           travel_dates_from: checkInDate,
           travel_dates_to: checkOutDate,
           adults,
@@ -833,16 +832,17 @@ const QuoteTool = () => {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="referenceNumber" className="text-xs font-medium">TKT Reference (Optional)</Label>
+                  <Label htmlFor="referenceNumber" className="text-xs font-medium">TKT Reference Number *</Label>
                   <Input
                     id="referenceNumber"
                     value={referenceNumber}
                     onChange={(e) => setReferenceNumber(e.target.value)}
-                    placeholder="Enter TKT reference if available"
+                    placeholder="Enter TKT reference number"
                     className="h-9"
                     maxLength={50}
+                    required
                   />
-                  <p className="text-[10px] text-muted-foreground">User-provided ticket reference for tracking</p>
+                  <p className="text-[10px] text-muted-foreground">Mandatory ticket reference for tracking and searching</p>
                 </div>
               </div>
 
