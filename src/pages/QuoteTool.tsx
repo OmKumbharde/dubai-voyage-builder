@@ -268,6 +268,33 @@ const QuoteTool = () => {
     }
   }, [editableRates]);
 
+  // Update hotel rates when Tourism Dirham is toggled
+  const prevTDRef = React.useRef(includeTourismDirham);
+  
+  useEffect(() => {
+    // Only update if TD checkbox state actually changed
+    if (prevTDRef.current !== includeTourismDirham && selectedHotels.length > 0) {
+      setEditableRates(prevRates => {
+        const newRates = { ...prevRates };
+        selectedHotels.forEach(hotel => {
+          const rateKey = `hotel_${hotel.id}`;
+          const currentRate = newRates[rateKey] ?? hotel.baseRate ?? 0;
+          const tdCost = getTourismDirhamCost(hotel.starRating || 5);
+          
+          if (includeTourismDirham) {
+            // TD was just enabled, add TD cost
+            newRates[rateKey] = currentRate + tdCost;
+          } else {
+            // TD was just disabled, subtract TD cost
+            newRates[rateKey] = Math.max(0, currentRate - tdCost);
+          }
+        });
+        return newRates;
+      });
+      prevTDRef.current = includeTourismDirham;
+    }
+  }, [includeTourismDirham, selectedHotels]);
+
   // Helper function to get private transfer cost based on PAX
   const getPrivateTransferCost = (tour: any, pax: number): number => {
     if (tour.type !== 'private') return 0;
@@ -356,9 +383,8 @@ const QuoteTool = () => {
         const hotelRateKey = `hotel_${hotel.id}`;
         hotelRate = editableRates[hotelRateKey] ?? hotel.baseRate ?? 0;
         
-        // Add Tourism Dirham to hotel rate per night if included
-        const tdCostPerNight = getTourismDirhamCost(hotel.starRating || 5);
-        const hotelRateWithTD = hotelRate + tdCostPerNight;
+        // Note: TD cost is already included in the editable rate if TD is enabled
+        const hotelRateWithTD = hotelRate;
         
         if (occupancyType === 'SGL') {
           roomsNeeded = adults;
