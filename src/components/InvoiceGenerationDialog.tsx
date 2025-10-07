@@ -114,7 +114,8 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
     
     const today = new Date();
     const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
-    const invoiceNo = `INV-${dateStr}-${quote.ticketReference}`;
+    const tktRef = (quote as any).ticket_reference || (quote as any).reference_number || quote.ticketReference;
+    const invoiceNo = `INV-${dateStr}-${tktRef}`;
 
     // Calculate services
     const occupancies = [
@@ -418,7 +419,7 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
                     <div class="info-label">Invoice Details</div>
                     <div class="info-value">
                       <strong>Date:</strong> ${format(today, 'dd MMM yyyy')}<br>
-                      <strong>Reference:</strong> TKT ${quote.ticketReference}
+                      <strong>Reference:</strong> ${tktRef ? `TKT ${tktRef}` : `Ref ${(quote as any).reference_number}`}
                     </div>
                   </div>
                 </div>
@@ -536,12 +537,13 @@ export const InvoiceGenerationDialog: React.FC<InvoiceGenerationDialogProps> = (
   const totalAdults = quote.paxDetails.adults;
   const totalCwb = quote.paxDetails.cwb;
   const totalCnb = quote.paxDetails.cnb;
+  const tktRef = (quote as any).ticket_reference || (quote as any).reference_number || quote.ticketReference;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Generate Invoice - Quote #{quote.ticketReference}</DialogTitle>
+          <DialogTitle>Generate Invoice - {tktRef ? `TKT ${tktRef}` : `Ref ${(quote as any).reference_number}`}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">

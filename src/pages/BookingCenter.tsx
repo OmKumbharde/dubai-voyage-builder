@@ -42,7 +42,7 @@ const BookingCenter = () => {
     
     return {
       id: quote.id,
-      ticketReference: (quote as any).reference_number || `TKT-${quote.id.substring(0, 8)}`,
+      ticketReference: (quote as any).ticket_reference || (quote as any).reference_number || `QT-${quote.id.substring(0, 8)}`,
       customerName: (quote as any).client_name || quote.customerName || 'N/A',
       customerEmail: (quote as any).client_email || quote.customerEmail,
       checkIn: checkInDate,
@@ -63,7 +63,7 @@ const BookingCenter = () => {
   // Apply filters
   const bookings = allBookings.filter(booking => {
     const matchesSearch = searchTerm === '' || 
-      booking.ticketReference.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (booking.ticketReference && booking.ticketReference.toLowerCase().includes(searchTerm.toLowerCase())) ||
       booking.customerName.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || booking.status === statusFilter;
@@ -610,7 +610,7 @@ const BookingCenter = () => {
                             {booking.customerName}
                           </h3>
                           <p className="text-sm text-muted-foreground">
-                            TKT {booking.ticketReference}
+                            {booking.ticketReference ? `TKT ${booking.ticketReference}` : `Ref ${booking.id.substring(0, 8)}`}
                           </p>
                         </div>
                         <Badge className={getStatusColor(booking.status)}>

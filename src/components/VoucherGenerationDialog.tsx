@@ -81,13 +81,14 @@ export const VoucherGenerationDialog: React.FC<VoucherGenerationDialogProps> = (
     const totalPax = quoteAny.adults + (quoteAny.cwb || 0) + (quoteAny.cnb || 0) + (quoteAny.infants || 0);
     const checkIn = new Date(quoteAny.travel_dates_from);
     const checkOut = new Date(quoteAny.travel_dates_to);
+    const tktRef = quoteAny.ticket_reference || quoteAny.reference_number || (quote as any).ticketReference;
 
     const newWindow = window.open('', '_blank');
     if (newWindow) {
       newWindow.document.write(`
         <html>
           <head>
-            <title>Hotel Tour Voucher - TKT ${quote.ticketReference}</title>
+            <title>Hotel Tour Voucher - ${tktRef ? `TKT ${tktRef}` : 'Voucher'}</title>
             <style>
               * { margin: 0; padding: 0; box-sizing: border-box; }
               body { 
@@ -273,7 +274,7 @@ export const VoucherGenerationDialog: React.FC<VoucherGenerationDialogProps> = (
             <div class="container">
               <div class="header">
                 <h1>HOTEL / TOUR VOUCHER</h1>
-                <h2>TKT ${quote.ticketReference}</h2>
+                <h2>${tktRef ? `TKT ${tktRef}` : 'Voucher'}</h2>
               </div>
 
               <div class="section">
@@ -452,7 +453,7 @@ export const VoucherGenerationDialog: React.FC<VoucherGenerationDialogProps> = (
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            Generate Voucher - TKT {quote.ticketReference} 
+            Generate Voucher - {((quote as any).ticket_reference) ? `TKT ${(quote as any).ticket_reference}` : `Ref ${(quote as any).reference_number}`}
             <span className="text-sm font-normal text-muted-foreground ml-2">(Step {step} of 2)</span>
           </DialogTitle>
         </DialogHeader>

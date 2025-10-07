@@ -52,8 +52,10 @@ const QuoteManagement = () => {
   }, [searchParams, quotes]);
 
   const filteredQuotes = quotes.filter(quote => {
+    const dbQuote = quote as any;
+    const ticketRef = dbQuote.ticket_reference || dbQuote.reference_number || quote.ticketReference || '';
     const matchesSearch = quote.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         quote.ticketReference.toLowerCase().includes(searchTerm.toLowerCase());
+                         ticketRef.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || quote.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -410,7 +412,7 @@ const QuoteManagement = () => {
                               {quote.customerName}
                             </h3>
                             <p className="text-sm text-muted-foreground">
-                              TKT {quote.ticketReference}
+                              {((quote as any).ticket_reference) ? `TKT ${(quote as any).ticket_reference}` : `Ref ${(quote as any).reference_number || quote.ticketReference}`}
                             </p>
                           </div>
                           <Badge className={getStatusColor(quote.status)}>

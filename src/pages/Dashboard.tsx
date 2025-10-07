@@ -176,7 +176,9 @@ const Dashboard = () => {
                   onClick={() => navigate(`/quotes?selected=${quote.id}`)}
                 >
                   <div>
-                    <h4 className="font-semibold">TKT {quote.ticketReference}</h4>
+                    <h4 className="font-semibold">
+                      {((quote as any).ticket_reference) ? `TKT ${(quote as any).ticket_reference}` : `Ref ${(quote as any).reference_number || quote.ticketReference}`}
+                    </h4>
                     <p className="text-sm text-muted-foreground">
                       {quote.customerName} • {quote.paxDetails?.adults || quote.adults} adults
                     </p>

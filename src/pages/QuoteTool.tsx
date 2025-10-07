@@ -91,7 +91,7 @@ const QuoteTool = () => {
       const quote = location.state.editQuote;
       setEditingQuote(quote);
       setCustomerName(quote.client_name || '');
-      setReferenceNumber(quote.reference_number || '');
+      setReferenceNumber(quote.ticket_reference || '');
       setCheckInDate(quote.travel_dates_from || '');
       setCheckOutDate(quote.travel_dates_to || '');
       setAdults(quote.adults || 2);
@@ -713,9 +713,9 @@ const QuoteTool = () => {
         
         // Use database field names directly
         const updateData = {
-          reference_number: referenceNumber || editingQuote.reference_number,
+          reference_number: editingQuote.reference_number,
           client_name: customerName,
-          ticket_reference: referenceNumber || editingQuote.reference_number,
+          ticket_reference: referenceNumber || null,
           travel_dates_from: checkInDate,
           travel_dates_to: checkOutDate,
           adults,
@@ -752,9 +752,9 @@ const QuoteTool = () => {
         
         // Use database field names directly  
         const insertData = {
-          reference_number: referenceNumber || `TKT-${Date.now()}`,
+          reference_number: `QT-${Date.now()}`,
           client_name: customerName,
-          ticket_reference: referenceNumber || `TKT-${Date.now()}`,
+          ticket_reference: referenceNumber || null,
           travel_dates_from: checkInDate,
           travel_dates_to: checkOutDate,
           adults,
@@ -833,14 +833,16 @@ const QuoteTool = () => {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="referenceNumber" className="text-xs font-medium">TKT Reference</Label>
+                  <Label htmlFor="referenceNumber" className="text-xs font-medium">TKT Reference (Optional)</Label>
                   <Input
                     id="referenceNumber"
                     value={referenceNumber}
                     onChange={(e) => setReferenceNumber(e.target.value)}
-                    placeholder="Enter ticket reference"
+                    placeholder="Enter TKT reference if available"
                     className="h-9"
+                    maxLength={50}
                   />
+                  <p className="text-[10px] text-muted-foreground">User-provided ticket reference for tracking</p>
                 </div>
               </div>
 
