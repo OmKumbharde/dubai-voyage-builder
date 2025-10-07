@@ -32,8 +32,7 @@ const HotelsManagement = () => {
     starRating: 5,
     baseRate: 0,
     extraBedRate: 100,
-    amenities: [] as string[],
-    category: 'hotel' as 'hotel' | 'apartment'
+    amenities: [] as string[]
   });
   const [newAmenity, setNewAmenity] = useState('');
   
@@ -65,8 +64,7 @@ const HotelsManagement = () => {
         starRating: 5,
         baseRate: 0,
         extraBedRate: 100,
-        amenities: [],
-        category: 'hotel'
+        amenities: []
       });
       
       toast({
@@ -92,8 +90,7 @@ const HotelsManagement = () => {
       starRating: hotel.starRating,
       baseRate: hotel.baseRate,
       extraBedRate: hotel.extraBedRate,
-      amenities: hotel.amenities || [],
-      category: hotel.category || 'hotel'
+      amenities: hotel.amenities || []
     });
   };
 
@@ -106,8 +103,7 @@ const HotelsManagement = () => {
       starRating: 5,
       baseRate: 0,
       extraBedRate: 100,
-      amenities: [],
-      category: 'hotel'
+      amenities: []
     });
   };
 
@@ -211,19 +207,7 @@ const HotelsManagement = () => {
             {/* Rating & Pricing */}
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-foreground border-b pb-1">Category & Pricing</h3>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <div className="space-y-1">
-                  <Label htmlFor="category" className="text-xs font-medium">Type *</Label>
-                  <select
-                    id="category"
-                    value={formData.category}
-                    onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value as 'hotel' | 'apartment' }))}
-                    className="dubai-input h-9"
-                  >
-                    <option value="hotel">Hotel</option>
-                    <option value="apartment">Apartment</option>
-                  </select>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="space-y-1">
                   <Label htmlFor="starRating" className="text-xs font-medium">Star Rating *</Label>
                   <select

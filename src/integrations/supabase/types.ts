@@ -104,7 +104,6 @@ export type Database = {
         Row: {
           amenities: string[] | null
           base_rate: number | null
-          category: string | null
           created_at: string
           description: string | null
           extra_bed_rate: number | null
@@ -118,7 +117,6 @@ export type Database = {
         Insert: {
           amenities?: string[] | null
           base_rate?: number | null
-          category?: string | null
           created_at?: string
           description?: string | null
           extra_bed_rate?: number | null
@@ -132,7 +130,6 @@ export type Database = {
         Update: {
           amenities?: string[] | null
           base_rate?: number | null
-          category?: string | null
           created_at?: string
           description?: string | null
           extra_bed_rate?: number | null

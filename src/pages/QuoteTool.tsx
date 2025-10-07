@@ -59,16 +59,17 @@ const QuoteTool = () => {
   const [selectedTours, setSelectedTours] = useState<any[]>([]);
   const [selectedInclusions, setSelectedInclusions] = useState<any[]>([]);
   const [editableRates, setEditableRates] = useState<{[key: string]: number}>({});
-
+  
   // Search states
   const [hotelSearch, setHotelSearch] = useState('');
   const [tourSearch, setTourSearch] = useState('');
   const [inclusionSearch, setInclusionSearch] = useState('');
-
+  
   // Generated quote and editing
   const [generatedQuote, setGeneratedQuote] = useState<any>(null);
   const [editingQuote, setEditingQuote] = useState<any>(null);
 
+  // Effects for editing
   useEffect(() => {
     if (location.state?.editQuote) {
       const quote = location.state.editQuote;
@@ -89,6 +90,7 @@ const QuoteTool = () => {
         ).filter(Boolean);
         setSelectedHotels(existingHotels);
       } else if (quote.selectedHotel) {
+        // Backward compatibility for old quotes with single hotel
         const existingHotel = hotels.find(h => h.id === quote.selectedHotel.id) || quote.selectedHotel;
         if (existingHotel) {
           setSelectedHotels([existingHotel]);
@@ -154,6 +156,7 @@ const QuoteTool = () => {
   const addTour = (tour: any) => {
     if (!selectedTours.find(t => t.id === tour.id)) {
       setSelectedTours([...selectedTours, tour]);
+      // Set default rate for the tour
       const rateKey = `tour_${tour.id}`;
       setEditableRates(prevRates => ({
         ...prevRates,
@@ -164,6 +167,7 @@ const QuoteTool = () => {
 
   const removeTour = (tourId: string) => {
     setSelectedTours(selectedTours.filter(tour => tour.id !== tourId));
+    // Remove rate from editable rates
     const rateKey = `tour_${tourId}`;
     setEditableRates(prevRates => {
       const newRates = { ...prevRates };
@@ -176,6 +180,7 @@ const QuoteTool = () => {
   const toggleInclusion = (inclusion: any) => {
     if (selectedInclusions.find(i => i.id === inclusion.id)) {
       setSelectedInclusions(selectedInclusions.filter(i => i.id !== inclusion.id));
+      // Remove rate from editable rates
       const rateKey = `inclusion_${inclusion.id}`;
       setEditableRates(prevRates => {
         const newRates = { ...prevRates };
@@ -184,6 +189,7 @@ const QuoteTool = () => {
       });
     } else {
       setSelectedInclusions([...selectedInclusions, inclusion]);
+      // Set default rate for the inclusion
       const rateKey = `inclusion_${inclusion.id}`;
       setEditableRates(prevRates => ({
         ...prevRates,
@@ -196,30 +202,29 @@ const QuoteTool = () => {
   const addHotel = (hotel: any) => {
     if (!selectedHotels.find(h => h.id === hotel.id)) {
       const newHotels = [...selectedHotels, hotel];
+      // Auto-sort by base rate (lowest to highest)
       newHotels.sort((a, b) => {
         const rateA = editableRates[`hotel_${a.id}`] ?? a.baseRate ?? 0;
         const rateB = editableRates[`hotel_${b.id}`] ?? b.baseRate ?? 0;
         return rateA - rateB;
       });
       setSelectedHotels(newHotels);
+      // Set default rate for the hotel
       const rateKey = `hotel_${hotel.id}`;
-      const extraBedKey = `hotel_${hotel.id}_extrabed`;
       setEditableRates(prevRates => ({
         ...prevRates,
-        [rateKey]: hotel.baseRate,
-        [extraBedKey]: hotel.extraBedRate
+        [rateKey]: hotel.baseRate
       }));
     }
   };
 
   const removeHotel = (hotelId: string) => {
     setSelectedHotels(selectedHotels.filter(hotel => hotel.id !== hotelId));
+    // Remove rate from editable rates
     const rateKey = `hotel_${hotelId}`;
-    const extraBedKey = `hotel_${hotelId}_extrabed`;
     setEditableRates(prevRates => {
       const newRates = { ...prevRates };
       delete newRates[rateKey];
-      delete newRates[extraBedKey];
       return newRates;
     });
   };
@@ -232,6 +237,7 @@ const QuoteTool = () => {
         const rateB = editableRates[`hotel_${b.id}`] ?? b.baseRate ?? 0;
         return rateA - rateB;
       });
+      // Only update if order changed
       const orderChanged = sortedHotels.some((hotel, idx) => hotel.id !== selectedHotels[idx]?.id);
       if (orderChanged) {
         setSelectedHotels(sortedHotels);
@@ -253,7 +259,7 @@ const QuoteTool = () => {
     return 0;
   };
 
-  // NEW PRICING LOGIC - Complete rewrite according to user specs
+  // Calculate quote function with multiple occupancy options
   const calculateQuote = () => {
     if (selectedHotels.length === 0 || !checkInDate || !checkOutDate) {
       toast({
@@ -274,150 +280,71 @@ const QuoteTool = () => {
       return;
     }
 
-    const exchangeRate = 3.65; // User specified USD conversion rate
+    const exchangeRate = 3.67;
     
     // Calculate for each hotel and occupancy type combination
     const hotelOptions = selectedHotels.map(hotel => {
       const occupancyOptions = selectedOccupancies.map(occupancyType => {
-        const hotelRateKey = `hotel_${hotel.id}`;
-        const extraBedKey = `hotel_${hotel.id}_extrabed`;
-        const hotelRate = editableRates[hotelRateKey] ?? hotel.baseRate ?? 0;
-        const extraBedRate = editableRates[extraBedKey] ?? hotel.extraBedRate ?? 0;
+        let roomsNeeded = 1;
+        let extraBeds = 0;
+        let hotelRate = hotel.baseRate || 0;
+        let extraBedRate = hotel.extraBedRate || 0;
 
-        // CORRECT PRICING LOGIC PER USER SPECIFICATION
-        // Hotel: (Per night price * No of nights) / Selected Occupancy
-        let adultPerPersonHotelCostAED = 0;
-        
+        // Calculate rooms and extra beds based on occupancy type
+        // Use editable rate for hotel if available
+        const hotelRateKey = `hotel_${hotel.id}`;
+        hotelRate = editableRates[hotelRateKey] ?? hotel.baseRate ?? 0;
         if (occupancyType === 'SGL') {
-          // Single occupancy: full room price per adult
-          adultPerPersonHotelCostAED = (hotelRate * nights) / 1;
+          roomsNeeded = adults;
+          extraBeds = cwb > 0 ? cwb : 0; // Extra bed only for CWB
         } else if (occupancyType === 'DBL') {
-          // Double occupancy: room price divided by 2 adults
-          adultPerPersonHotelCostAED = (hotelRate * nights) / 2;
+          roomsNeeded = Math.ceil(adults / 2);
+          extraBeds = cwb > 0 ? cwb : 0; // Extra bed only for CWB
         } else if (occupancyType === 'TPL') {
-          // Triple occupancy: (per night rate + extra bed rate) * no of nights / 03 PAX
-          adultPerPersonHotelCostAED = ((hotelRate + extraBedRate) * nights) / 3;
+          roomsNeeded = Math.ceil(adults / 3);
+          extraBeds = cwb > 0 ? cwb : 0; // Extra bed only for CWB
         }
 
-        // Tours cost per adult
-        const toursPerAdultAED = selectedTours.reduce((total, tour) => {
+        const hotelCost = (roomsNeeded * hotelRate + extraBeds * extraBedRate) * nights;
+        
+        // Tours and inclusions cost using editable rates
+        const toursCost = selectedTours.reduce((total, tour) => {
           const rateKey = `tour_${tour.id}`;
           const ticketPrice = editableRates[rateKey] ?? tour.costPerPerson;
           
+          // For private tours, add per-person transfer cost
           if (tour.type === 'private') {
             const transferCost = getPrivateTransferCost(tour, totalPax);
             const perPersonCost = ticketPrice + (transferCost / totalPax);
-            return total + perPersonCost;
+            return total + (perPersonCost * totalPax);
           } else {
-            // Sharing tour: just ticket price per person
-            return total + ticketPrice;
+            // For sharing/group tours, just multiply by totalPax
+            return total + (ticketPrice * totalPax);
           }
         }, 0);
         
-        // Inclusions cost per adult (check for adult-specific cost)
-        const inclusionsPerAdultAED = selectedInclusions.reduce((total, inclusion) => {
+        const inclusionsCost = selectedInclusions.reduce((total, inclusion) => {
           const rateKey = `inclusion_${inclusion.id}`;
-          // Use adultCost if available, otherwise use cost
-          const rate = inclusion.adultCost || (editableRates[rateKey] ?? inclusion.cost);
-          return total + rate;
+          const rate = editableRates[rateKey] ?? inclusion.cost;
+          return total + (rate * totalPax);
         }, 0);
         
-        // Per person ADULT total in AED
-        const perPersonAdultAED = adultPerPersonHotelCostAED + toursPerAdultAED + inclusionsPerAdultAED;
-        const perPersonAdultUSD = perPersonAdultAED / exchangeRate;
-
-        // Total for all adults
-        const totalAdultsAED = perPersonAdultAED * adults;
-        const totalAdultsUSD = totalAdultsAED / exchangeRate;
-
-        // CHILD WITH BED (CWB): (extra bed rate per night * no of nights) + tours + inclusions
-        let perPersonCwbAED = 0;
-        let totalCwbAED = 0;
-        let perPersonCwbUSD = 0;
-        let totalCwbUSD = 0;
-        if (cwb > 0) {
-          const cwbHotelCostAED = extraBedRate * nights;
-          const cwbToursAED = selectedTours.reduce((total, tour) => {
-            const rateKey = `tour_${tour.id}`;
-            const ticketPrice = editableRates[rateKey] ?? tour.costPerPerson;
-            
-            if (tour.type === 'private') {
-              const transferCost = getPrivateTransferCost(tour, totalPax);
-              const perPersonCost = ticketPrice + (transferCost / totalPax);
-              return total + perPersonCost;
-            } else {
-              return total + ticketPrice;
-            }
-          }, 0);
-          
-          const cwbInclusionsAED = selectedInclusions.reduce((total, inclusion) => {
-            const rateKey = `inclusion_${inclusion.id}`;
-            // Use childCost if available, otherwise use cost
-            const rate = inclusion.childCost || (editableRates[rateKey] ?? inclusion.cost);
-            return total + rate;
-          }, 0);
-          
-          perPersonCwbAED = cwbHotelCostAED + cwbToursAED + cwbInclusionsAED;
-          perPersonCwbUSD = perPersonCwbAED / exchangeRate;
-          totalCwbAED = perPersonCwbAED * cwb;
-          totalCwbUSD = totalCwbAED / exchangeRate;
-        }
-
-        // CHILD WITHOUT BED (CNB): only tours + inclusions
-        let perPersonCnbAED = 0;
-        let totalCnbAED = 0;
-        let perPersonCnbUSD = 0;
-        let totalCnbUSD = 0;
-        if (cnb > 0) {
-          const cnbToursAED = selectedTours.reduce((total, tour) => {
-            const rateKey = `tour_${tour.id}`;
-            const ticketPrice = editableRates[rateKey] ?? tour.costPerPerson;
-            
-            if (tour.type === 'private') {
-              const transferCost = getPrivateTransferCost(tour, totalPax);
-              const perPersonCost = ticketPrice + (transferCost / totalPax);
-              return total + perPersonCost;
-            } else {
-              return total + ticketPrice;
-            }
-          }, 0);
-          
-          const cnbInclusionsAED = selectedInclusions.reduce((total, inclusion) => {
-            const rateKey = `inclusion_${inclusion.id}`;
-            // Use childCost if available, otherwise use cost
-            const rate = inclusion.childCost || (editableRates[rateKey] ?? inclusion.cost);
-            return total + rate;
-          }, 0);
-          
-          perPersonCnbAED = cnbToursAED + cnbInclusionsAED;
-          perPersonCnbUSD = perPersonCnbAED / exchangeRate;
-          totalCnbAED = perPersonCnbAED * cnb;
-          totalCnbUSD = totalCnbAED / exchangeRate;
-        }
-
-        // Grand totals
-        const totalCostAED = totalAdultsAED + totalCwbAED + totalCnbAED;
+        const totalCostAED = hotelCost + toursCost + inclusionsCost;
         const totalCostUSD = totalCostAED / exchangeRate;
+        const perPersonAED = totalCostAED / totalPax;
+        const perPersonUSD = totalCostUSD / totalPax;
 
         return {
           occupancyType,
-          adultPerPersonHotelCostAED,
-          toursPerAdultAED,
-          inclusionsPerAdultAED,
-          perPersonAdultAED,
-          perPersonAdultUSD,
-          totalAdultsAED,
-          totalAdultsUSD,
-          perPersonCwbAED,
-          perPersonCwbUSD,
-          totalCwbAED,
-          totalCwbUSD,
-          perPersonCnbAED,
-          perPersonCnbUSD,
-          totalCnbAED,
-          totalCnbUSD,
+          roomsNeeded,
+          extraBeds,
+          hotelCost,
+          toursCost,
+          inclusionsCost,
           totalCostAED,
-          totalCostUSD
+          totalCostUSD,
+          perPersonAED,
+          perPersonUSD
         };
       });
       
@@ -446,10 +373,11 @@ const QuoteTool = () => {
     generateQuoteText(quote);
   };
 
-  // Generate quote text function with star ratings and correct format
+  // Generate quote text function matching user's exact format with multiple hotels
   const generateQuoteText = (quote: any) => {
     const { hotelOptions, paxDetails, nights, totalPax } = quote;
     
+    // Format exactly like the user's example
     let quoteHTML = `<div style="font-family: Arial, sans-serif; line-height: 1.3; font-size: 13px;">`;
     quoteHTML += `Dear Partner,<br /><br />`;
     quoteHTML += `Greetings for the day…!!!<br /><br />`;
@@ -478,7 +406,7 @@ const QuoteTool = () => {
     quoteHTML += `<strong>Check-in:</strong> ${format(new Date(checkInDate), 'do MMMM yyyy')}<br />`;
     quoteHTML += `<strong>Check-out:</strong> ${format(new Date(checkOutDate), 'do MMMM yyyy')}<br /><br />`;
 
-    // Hotel pricing table with STAR RATINGS
+    // Hotel pricing table exactly like user's format with multiple hotels
     quoteHTML += `<table border="1" cellpadding="4" cellspacing="0" style="border-collapse: collapse; width: 100%; max-width: 800px; font-size: 11px;">`;
     quoteHTML += `<tr>`;
     quoteHTML += `<td><strong>Hotel Name</strong></td>`;
@@ -503,33 +431,30 @@ const QuoteTool = () => {
     quoteHTML += `</tr>`;
     quoteHTML += `<tbody>`;
     
-    // Add row for each hotel with STAR RATING
+    // Add row for each hotel
     hotelOptions.forEach((hotelOption: any) => {
-      const hotel = hotelOption.hotel;
-      // Show star rating if hotel, show "Apartment" if apartment
-      const hotelName = hotel.category === 'apartment' 
-        ? `${hotel.name} (Apartment)` 
-        : `${hotel.name} ${hotel.starRating}*`;
-      
-      quoteHTML += `<tr><td style="padding: 4px;">${hotelName}</td>`;
+      quoteHTML += `<tr><td style="padding: 4px;">${hotelOption.hotel.name}</td>`;
       
       // Add pricing for each occupancy type for this hotel
       hotelOption.occupancyOptions.forEach((option: any) => {
-        const perPersonUSD = Math.round(option.perPersonAdultUSD);
-        const bbText = hotel.category === 'apartment' ? '' : ' with BB';
-        quoteHTML += `<td style="padding: 4px;">USD ${perPersonUSD} per person${bbText}</td>`;
+        const perPersonUSD = Math.round(option.perPersonUSD);
+        quoteHTML += `<td style="padding: 4px;">USD ${perPersonUSD} per person with BB</td>`;
       });
       
-      // Add child prices if applicable
+      // Add child prices if applicable for this hotel
       if (paxDetails.cwb > 0) {
-        const cwbUSD = Math.round(hotelOption.occupancyOptions[0].perPersonCwbUSD);
-        const bbText = hotel.category === 'apartment' ? '' : ' with BB';
-        quoteHTML += `<td style="padding: 4px;">USD ${cwbUSD} per person${bbText}</td>`;
+        const extraBedUSD = Math.round((hotelOption.hotel.extraBedRate * nights) / quote.exchangeRate);
+        const toursCost = selectedTours.reduce((total, tour) => total + tour.costPerPerson, 0) / quote.exchangeRate;
+        const inclusionsCost = selectedInclusions.reduce((total, inclusion) => total + inclusion.cost, 0) / quote.exchangeRate;
+        const totalCwbUSD = Math.round(extraBedUSD + toursCost + inclusionsCost);
+        quoteHTML += `<td style="padding: 4px;">USD ${totalCwbUSD} per person with BB</td>`;
       }
       
       if (paxDetails.cnb > 0) {
-        const cnbUSD = Math.round(hotelOption.occupancyOptions[0].perPersonCnbUSD);
-        quoteHTML += `<td style="padding: 4px;">USD ${cnbUSD} per person</td>`;
+        const toursCost = selectedTours.reduce((total, tour) => total + tour.costPerPerson, 0) / quote.exchangeRate;
+        const inclusionsCost = selectedInclusions.reduce((total, inclusion) => total + inclusion.cost, 0) / quote.exchangeRate;
+        const totalCnbUSD = Math.round(toursCost + inclusionsCost);
+        quoteHTML += `<td style="padding: 4px;">USD ${totalCnbUSD} per person</td>`;
       }
       
       quoteHTML += `</tr>`;
@@ -537,36 +462,18 @@ const QuoteTool = () => {
     
     quoteHTML += `</tbody></table><br /><br />`;
 
-    // Inclusions section
+    // Inclusions section exactly like user's format - include all services here
     quoteHTML += `<strong><u>Inclusions:</u></strong><br /><br />`;
     quoteHTML += `<ul class="list-disc list-inside space-y-1">`;
     quoteHTML += `<li><strong>${String(nights).padStart(2, '0')}</strong> Night${nights > 1 ? "'s" : ""} accommodation in above specified hotel(s)</li>`;
+    quoteHTML += `<li>Daily Breakfast</li>`;
     
-    // Only show "Daily Breakfast" for hotels, not apartments
-    const hasHotels = selectedHotels.some(h => h.category === 'hotel');
-    if (hasHotels) {
-      quoteHTML += `<li>Daily Breakfast</li>`;
-    }
+    // Add selected tours
+    selectedTours.forEach((tour: any) => {
+      quoteHTML += `<li>${tour.name}</li>`;
+    });
     
-    // Add selected tours - group by type
-    const sharingTours = selectedTours.filter(t => t.type === 'group');
-    const privateTours = selectedTours.filter(t => t.type === 'private');
-    
-    if (sharingTours.length > 0) {
-      quoteHTML += `<li><strong>Sharing Tours:</strong></li>`;
-      sharingTours.forEach((tour: any) => {
-        quoteHTML += `<li>&nbsp;&nbsp;• ${tour.name}</li>`;
-      });
-    }
-    
-    if (privateTours.length > 0) {
-      quoteHTML += `<li><strong>Private Tours:</strong></li>`;
-      privateTours.forEach((tour: any) => {
-        quoteHTML += `<li>&nbsp;&nbsp;• ${tour.name}</li>`;
-      });
-    }
-    
-    // Add ALL selected inclusions
+    // Add ALL selected inclusions (not just visa/transfer)
     selectedInclusions.forEach((inclusion: any) => {
       quoteHTML += `<li>${inclusion.name}</li>`;
     });
@@ -575,6 +482,8 @@ const QuoteTool = () => {
     quoteHTML += `<li>All transfers on a SIC basis</li>`;
     quoteHTML += `<li>All taxes except Tourism Dirham</li>`;
     quoteHTML += `</ul><br /><br />`;
+    
+    // Note: Removed the "Optional Cost" section as requested - all services are now part of inclusions
 
     quoteHTML += `<strong>Note: Rates and rooms are subject to change at the time of confirmation. / Rates quoted are fully nonrefundable</strong><br /><br />`;
     quoteHTML += `Should you need any clarifications on the above or require further assistance, please feel free to contact me at any time.<br />`;
@@ -585,11 +494,14 @@ const QuoteTool = () => {
     quoteHTML += `</div>`;
 
     quote.formattedText = quoteHTML;
+    
+    // Generate breakdown
     quote.breakdown = generateBreakdown(quote);
+    
     setGeneratedQuote(quote);
   };
 
-  // Generate breakdown with star ratings
+  // Generate breakdown following the exact format from the old quote tool
   const generateBreakdown = (quote: any) => {
     const { hotelOptions, selectedTours, selectedInclusions, totalPax, nights } = quote;
     
@@ -605,84 +517,58 @@ const QuoteTool = () => {
     let breakdownText = `${checkInFormatted} - ${checkOutFormatted}\n`;
     breakdownText += `${String(nights).padStart(2, '0')} Nights\n`;
     
-    // Pax text
+    // Pax text - show all possible cases
     let paxText = `${adults} Adults`;
     if (cwb > 0) paxText += ` + ${cwb} Child with Bed`;
     if (cnb > 0) paxText += ` + ${cnb} Child without Bed`;
     if (infants > 0) paxText += ` + ${infants} Infant`;
     breakdownText += `${paxText}\n\n`;
     
-    // Hotels with star ratings and extra bed if needed
+    // Hotels - showing rate per room per night
     hotelOptions.forEach((hotelOption: any) => {
-      const hotel = hotelOption.hotel;
-      const hotelRateKey = `hotel_${hotel.id}`;
-      const extraBedKey = `hotel_${hotel.id}_extrabed`;
-      const rate = editableRates[hotelRateKey] ?? hotel.baseRate;
-      const extraBedRate = editableRates[extraBedKey] ?? hotel.extraBedRate;
+      const hotelRateKey = `hotel_${hotelOption.hotel.id}`;
+      const rate = editableRates[hotelRateKey] ?? hotelOption.hotel.baseRate;
       
-      // Show star rating in breakdown too
-      const hotelName = hotel.category === 'apartment' 
-        ? `${hotel.name} (Apartment)` 
-        : `${hotel.name} ${hotel.starRating}*`;
-      
-      // Show extra bed rate if CWB or triple occupancy selected
-      const showExtraBed = cwb > 0 || selectedOccupancies.includes('TPL');
-      if (showExtraBed) {
-        breakdownText += `${hotelName} - ${rate}/night | ${extraBedRate} EB/night\n`;
+      const hasExtraBed = cwb > 0;
+      if (hasExtraBed && hotelOption.hotel.extraBedRate) {
+        const extraBedRateKey = `hotel_${hotelOption.hotel.id}_extrabed`;
+        const extraBedRate = editableRates[extraBedRateKey] ?? hotelOption.hotel.extraBedRate;
+        breakdownText += `${hotelOption.hotel.name} - ${rate}/night | ${extraBedRate} EB/night\n`;
       } else {
-        breakdownText += `${hotelName} - ${rate}/night\n`;
+        breakdownText += `${hotelOption.hotel.name} - ${rate}/night\n`;
       }
     });
     
     breakdownText += `\n`;
     
-    // Tours - showing per person price with distinction
+    // Tours - showing per person price from actual selected rates
     let toursAndInclusionsTotal = 0;
+    selectedTours.forEach((tour: any) => {
+      const rateKey = `tour_${tour.id}`;
+      const perPersonRate = editableRates[rateKey] ?? tour.costPerPerson;
+      breakdownText += `${tour.name} - ${perPersonRate}\n`;
+      toursAndInclusionsTotal += perPersonRate;
+    });
     
-    const sharingTours = selectedTours.filter(t => t.type === 'group');
-    const privateTours = selectedTours.filter(t => t.type === 'private');
-    
-    if (sharingTours.length > 0) {
-      breakdownText += `Sharing Tours:\n`;
-      sharingTours.forEach((tour: any) => {
-        const rateKey = `tour_${tour.id}`;
-        const perPersonRate = editableRates[rateKey] ?? tour.costPerPerson;
-        breakdownText += `  ${tour.name} - ${perPersonRate}/person\n`;
-        toursAndInclusionsTotal += perPersonRate;
-      });
-    }
-    
-    if (privateTours.length > 0) {
-      breakdownText += `Private Tours:\n`;
-      privateTours.forEach((tour: any) => {
-        const rateKey = `tour_${tour.id}`;
-        const ticketPrice = editableRates[rateKey] ?? tour.costPerPerson;
-        const transferCost = getPrivateTransferCost(tour, totalPax);
-        const perPersonTransfer = transferCost / totalPax;
-        const totalPerPerson = ticketPrice + perPersonTransfer;
-        breakdownText += `  ${tour.name} - Ticket: ${ticketPrice} + Transfer: ${perPersonTransfer.toFixed(2)} = ${totalPerPerson.toFixed(2)}/person\n`;
-        toursAndInclusionsTotal += totalPerPerson;
-      });
-    }
-    
-    // Inclusions
+    // Inclusions - showing per person price from actual selected rates
     selectedInclusions.forEach((inclusion: any) => {
       const rateKey = `inclusion_${inclusion.id}`;
       const perPersonRate = editableRates[rateKey] ?? inclusion.cost;
-      breakdownText += `${inclusion.name} - ${perPersonRate}/person\n`;
+      breakdownText += `${inclusion.name} - ${perPersonRate}\n`;
       toursAndInclusionsTotal += perPersonRate;
     });
     
     // Total per person for tours and inclusions
-    breakdownText += `Total - ${toursAndInclusionsTotal.toFixed(2)} | per person\n`;
+    breakdownText += `Total - ${toursAndInclusionsTotal} | per person\n`;
     
     return breakdownText;
   };
 
-  // Copy formatted text
+  // Copy formatted text with proper table formatting - copies exactly as visible
   const copyFormattedText = () => {
     if (!generatedQuote?.formattedText) return;
     
+    // Copy the rendered HTML content as formatted text
     const quotePreview = document.querySelector('[data-quote-preview]');
     if (quotePreview) {
       const range = document.createRange();
@@ -750,37 +636,57 @@ const QuoteTool = () => {
     try {
       const firstHotel = generatedQuote.hotelOptions[0];
       const dblOption = firstHotel?.occupancyOptions?.find((opt: any) => opt.occupancyType === 'DBL') || firstHotel?.occupancyOptions?.[0];
-      
-      const quoteDataJSON = JSON.stringify({
-        hotelOptions: generatedQuote.hotelOptions,
+      const quoteData = {
+        ticketReference: referenceNumber || editingQuote?.reference_number || `QT-${Date.now()}`,
+        customerName,
+        travelDates: {
+          startDate: checkInDate,
+          endDate: checkOutDate
+        },
+        paxDetails: { adults, infants, cnb, cwb },
         selectedHotels,
         selectedTours,
-        selectedInclusions,
-        occupancies: selectedOccupancies,
-        editableRates
-      });
-      
-      const dataToSave = {
-        reference_number: editingQuote?.reference_number || `QT-${Date.now()}`,
-        client_name: customerName,
-        ticket_reference: referenceNumber,
-        travel_dates_from: checkInDate,
-        travel_dates_to: checkOutDate,
-        adults,
-        infants,
-        cnb,
-        cwb,
-        total_amount: dblOption ? dblOption.totalCostAED : 0,
-        currency: 'AED',
-        status: 'draft',
-        formatted_quote: generatedQuote.formattedText,
-        notes: `${generatedQuote.breakdown}\n\n---QUOTE_DATA---\n${quoteDataJSON}`
+        calculations: {
+          totalCostAED: dblOption ? dblOption.totalCostAED : 0,
+          totalCostUSD: dblOption ? dblOption.totalCostUSD : 0,
+          exchangeRate: generatedQuote.exchangeRate || 3.67
+        },
+        status: 'draft' as const,
+        createdBy: 'system'
       };
 
       if (editingQuote) {
+        // Save structured quote data as JSON
+        const quoteDataJSON = JSON.stringify({
+          hotelOptions: generatedQuote.hotelOptions,
+          selectedHotels,
+          selectedTours,
+          selectedInclusions,
+          occupancies: selectedOccupancies,
+          editableRates
+        });
+        
+        // Use database field names directly
+        const updateData = {
+          reference_number: editingQuote.reference_number,
+          client_name: customerName,
+          ticket_reference: referenceNumber,
+          travel_dates_from: checkInDate,
+          travel_dates_to: checkOutDate,
+          adults,
+          infants,
+          cnb,
+          cwb,
+          total_amount: dblOption ? dblOption.totalCostAED : 0,
+          currency: 'AED',
+          status: 'draft',
+          formatted_quote: generatedQuote.formattedText,
+          notes: `${generatedQuote.breakdown}\n\n---QUOTE_DATA---\n${quoteDataJSON}`
+        };
+        
         const { error } = await supabase
           .from('quotes')
-          .update(dataToSave)
+          .update(updateData)
           .eq('id', editingQuote.id);
           
         if (error) throw error;
@@ -789,9 +695,37 @@ const QuoteTool = () => {
           description: "Quote has been updated successfully"
         });
       } else {
+        // Save structured quote data as JSON
+        const quoteDataJSON = JSON.stringify({
+          hotelOptions: generatedQuote.hotelOptions,
+          selectedHotels,
+          selectedTours,
+          selectedInclusions,
+          occupancies: selectedOccupancies,
+          editableRates
+        });
+        
+        // Use database field names directly  
+        const insertData = {
+          reference_number: `QT-${Date.now()}`,
+          client_name: customerName,
+          ticket_reference: referenceNumber,
+          travel_dates_from: checkInDate,
+          travel_dates_to: checkOutDate,
+          adults,
+          infants,
+          cnb,
+          cwb,
+          total_amount: dblOption ? dblOption.totalCostAED : 0,
+          currency: 'AED',
+          status: 'draft',
+          formatted_quote: generatedQuote.formattedText,
+          notes: `${generatedQuote.breakdown}\n\n---QUOTE_DATA---\n${quoteDataJSON}`
+        };
+        
         const { error } = await supabase
           .from('quotes')
-          .insert([dataToSave]);
+          .insert([insertData]);
           
         if (error) throw error;
         toast({
@@ -800,9 +734,9 @@ const QuoteTool = () => {
         });
       }
 
+      // Navigate to quotes management
       navigate('/quotes');
     } catch (error) {
-      console.error('Save error:', error);
       toast({
         title: "Error Saving Quote",
         description: "Failed to save quote. Please try again.",
@@ -994,232 +928,166 @@ const QuoteTool = () => {
                   </div>
                 </div>
               </div>
+            </TabsContent>
 
+            {/* Tab 2: Accommodation */}
+            <TabsContent value="accommodation" className="space-y-4 mt-4">
               {/* Occupancy Selection */}
               <div className="space-y-2">
-                <Label className="text-xs font-medium">Room Occupancy Types *</Label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                  {occupancyTypes.map((occ) => (
-                    <div
-                      key={occ.id}
-                      className={cn(
-                        "flex items-center space-x-2 border rounded-md p-2 cursor-pointer transition-colors",
-                        selectedOccupancies.includes(occ.id) 
-                          ? "bg-primary/10 border-primary" 
-                          : "hover:bg-muted"
-                      )}
-                      onClick={() => {
-                        if (selectedOccupancies.includes(occ.id)) {
-                          setSelectedOccupancies(selectedOccupancies.filter(o => o !== occ.id));
-                        } else {
-                          setSelectedOccupancies([...selectedOccupancies, occ.id]);
-                        }
-                      }}
-                    >
-                      <Checkbox
-                        checked={selectedOccupancies.includes(occ.id)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedOccupancies([...selectedOccupancies, occ.id]);
-                          } else {
-                            setSelectedOccupancies(selectedOccupancies.filter(o => o !== occ.id));
-                          }
-                        }}
-                      />
-                      <div className="flex-1">
-                        <div className="text-xs font-semibold">{occ.label}</div>
-                        <div className="text-[10px] text-muted-foreground">{occ.description}</div>
-                      </div>
+                <Label className="text-xs font-medium">Select Occupancy Types *</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {occupancyTypes.map(occupancy => (
+                  <div 
+                    key={occupancy.id}
+                    className="flex items-center space-x-2 p-2 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => {
+                      if (selectedOccupancies.includes(occupancy.id)) {
+                        setSelectedOccupancies(selectedOccupancies.filter(o => o !== occupancy.id));
+                      } else {
+                        setSelectedOccupancies([...selectedOccupancies, occupancy.id]);
+                      }
+                    }}
+                  >
+                    <Checkbox 
+                      checked={selectedOccupancies.includes(occupancy.id)}
+                      onCheckedChange={() => {}}
+                    />
+                    <div>
+                      <p className="font-medium text-xs">{occupancy.label}</p>
+                      <p className="text-[10px] text-muted-foreground">{occupancy.description}</p>
                     </div>
+                  </div>
                   ))}
                 </div>
               </div>
-            </TabsContent>
 
-            {/* Tab 2: Accommodation Selection */}
-            <TabsContent value="accommodation" className="space-y-4 mt-4">
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Hotel className="h-4 w-4 text-primary" />
-                  <Label className="text-sm font-medium">Search Hotels & Apartments</Label>
-                </div>
-                
+              {/* Hotel Search */}
+              <div className="space-y-2">
+                <Label htmlFor="hotelSearch" className="text-xs font-medium">Search Hotels *</Label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-2.5 h-3 w-3 text-muted-foreground" />
                   <Input
+                    id="hotelSearch"
+                    placeholder="Search hotels..."
                     value={hotelSearch}
                     onChange={(e) => setHotelSearch(e.target.value)}
-                    placeholder="Type to search hotels or apartments..."
-                    className="pl-10 h-9"
+                    className="pl-9 h-9 text-sm"
                   />
                 </div>
-
-                {/* Search Results */}
-                {filteredHotels.length > 0 && (
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {filteredHotels.map((hotel) => (
-                      <div
-                        key={hotel.id}
-                        onClick={() => {
-                          addHotel(hotel);
-                          setHotelSearch('');
-                        }}
-                        className="flex items-center justify-between p-3 border rounded-md hover:bg-muted cursor-pointer transition-colors"
-                      >
-                        <div className="flex-1">
-                          <div className="font-medium text-sm">
-                            {hotel.name} 
-                            {hotel.category === 'apartment' ? (
-                              <Badge variant="secondary" className="ml-2 text-[10px]">Apartment</Badge>
-                            ) : (
-                              <span className="text-muted-foreground ml-2 text-xs">({hotel.starRating}⭐)</span>
-                            )}
-                          </div>
-                          <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                            <MapPin className="h-3 w-3" />
-                            {hotel.location}
-                          </div>
-                          <div className="text-xs text-primary mt-1">
-                            AED {hotel.baseRate}/night
-                          </div>
-                        </div>
-                        <Plus className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Selected Hotels List Format */}
+                
+                {/* Selected Hotels - List Format */}
                 {selectedHotels.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Selected Hotels ({selectedHotels.length})</Label>
-                    <div className="space-y-2">
-                      {selectedHotels.map((hotel) => (
-                        <div key={hotel.id} className="border rounded-md p-3 bg-muted/30">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-sm flex items-center gap-2">
-                                {hotel.name}
-                                {hotel.category === 'apartment' ? (
-                                  <Badge variant="secondary" className="text-[10px]">Apartment</Badge>
-                                ) : (
-                                  <span className="text-xs text-muted-foreground">({hotel.starRating}⭐)</span>
-                                )}
-                              </div>
-                              <div className="text-xs text-muted-foreground mt-1">{hotel.location}</div>
-                              
-                              {/* Editable Rate */}
-                              <div className="grid grid-cols-2 gap-2 mt-2">
-                                <div className="space-y-1">
-                                  <Label className="text-[10px] font-medium">Room Rate (AED/night)</Label>
-                                  <Input
-                                    type="number"
-                                    value={editableRates[`hotel_${hotel.id}`] ?? hotel.baseRate}
-                                    onChange={(e) => setEditableRates(prev => ({
-                                      ...prev,
-                                      [`hotel_${hotel.id}`]: Number(e.target.value)
-                                    }))}
-                                    className="h-8 text-xs"
-                                  />
-                                </div>
-                                
-                                {/* Show Extra Bed Rate if CWB or Triple Occupancy selected */}
-                                {(cwb > 0 || selectedOccupancies.includes('TPL')) && (
-                                  <div className="space-y-1">
-                                    <Label className="text-[10px] font-medium">Extra Bed (AED/night)</Label>
-                                    <Input
-                                      type="number"
-                                      value={editableRates[`hotel_${hotel.id}_extrabed`] ?? hotel.extraBedRate}
-                                      onChange={(e) => setEditableRates(prev => ({
-                                        ...prev,
-                                        [`hotel_${hotel.id}_extrabed`]: Number(e.target.value)
-                                      }))}
-                                      className="h-8 text-xs"
-                                    />
-                                  </div>
-                                )}
+                  <div className="mt-4 space-y-2">
+                    <p className="text-sm font-semibold mb-3">Selected Hotels (sorted by price):</p>
+                    <div className="border rounded-lg divide-y">
+                      {selectedHotels.map((hotel, index) => (
+                        <div key={hotel.id} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
+                          <div className="flex items-center gap-4 flex-1">
+                            <span className="text-sm font-medium text-muted-foreground w-6">#{index + 1}</span>
+                            <div className="flex-1">
+                              <p className="font-semibold text-base">{hotel.name}</p>
+                              <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                                <MapPin className="h-3 w-3" />
+                                {hotel.location}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-2">
+                                <Label className="text-xs text-muted-foreground whitespace-nowrap">Rate:</Label>
+                                <Input
+                                  type="number"
+                                  value={editableRates[`hotel_${hotel.id}`] ?? hotel.baseRate}
+                                  onChange={(e) => setEditableRates(prev => ({
+                                    ...prev,
+                                    [`hotel_${hotel.id}`]: Number(e.target.value)
+                                  }))}
+                                  className="w-24 h-9"
+                                />
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">AED/night</span>
                               </div>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeHotel(hotel.id)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
                           </div>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => removeHotel(hotel.id)}
+                            className="ml-3"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
+                
+                {/* Available Hotels - List Format */}
+                {hotelSearch && (
+                  <div className="mt-4 border rounded-lg divide-y max-h-80 overflow-y-auto">
+                    {filteredHotels.map(hotel => (
+                      <div 
+                        key={hotel.id} 
+                        className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => addHotel(hotel)}
+                      >
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-base">{hotel.name}</h4>
+                          <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                            <MapPin className="h-3 w-3" />
+                            {hotel.location}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-base font-bold text-primary">AED {hotel.baseRate}</p>
+                          <p className="text-xs text-muted-foreground">per night</p>
+                        </div>
+                      </div>
+                    ))}
+                    {filteredHotels.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-8">
+                        No results found
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </TabsContent>
 
-            {/* Tab 3: Tours Selection */}
+            {/* Tab 3: Tours */}
             <TabsContent value="tours" className="space-y-4 mt-4">
-              <div className="space-y-4">
-                <Label className="text-sm font-medium">Search Tours</Label>
-                
+              <div className="space-y-2">
+                <Label htmlFor="tourSearch" className="text-xs font-medium">Search Tours & Activities</Label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-2.5 h-3 w-3 text-muted-foreground" />
                   <Input
+                    id="tourSearch"
+                    placeholder="Search tours..."
                     value={tourSearch}
                     onChange={(e) => setTourSearch(e.target.value)}
-                    placeholder="Type to search tours..."
-                    className="pl-10 h-9"
+                    className="pl-9 h-9 text-sm"
                   />
                 </div>
-
-                {/* Search Results */}
-                {filteredTours.length > 0 && (
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {filteredTours.map((tour) => (
-                      <div
-                        key={tour.id}
-                        onClick={() => {
-                          addTour(tour);
-                          setTourSearch('');
-                        }}
-                        className="flex items-center justify-between p-3 border rounded-md hover:bg-muted cursor-pointer transition-colors"
-                      >
-                        <div className="flex-1">
-                          <div className="font-medium text-sm flex items-center gap-2">
-                            {tour.name}
-                            <Badge variant={tour.type === 'private' ? 'default' : 'secondary'} className="text-[10px]">
-                              {tour.type === 'private' ? 'Private' : 'Sharing'}
-                            </Badge>
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-1">{tour.duration}</div>
-                          <div className="text-xs text-primary mt-1">
-                            AED {tour.costPerPerson}/person
-                          </div>
-                        </div>
-                        <Plus className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Selected Tours List Format - Grouped by Type */}
+                
+                {/* Selected Tours - List Format with Categories */}
                 {selectedTours.length > 0 && (
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">Selected Tours ({selectedTours.length})</Label>
+                  <div className="mt-3 space-y-3">
+                    <p className="text-xs font-semibold">Selected Tours:</p>
                     
                     {/* Sharing Tours */}
                     {selectedTours.filter(t => t.type === 'group').length > 0 && (
-                      <div className="space-y-2">
-                        <div className="text-xs font-semibold text-muted-foreground">SHARING TOURS</div>
-                        {selectedTours.filter(t => t.type === 'group').map((tour) => (
-                          <div key={tour.id} className="border rounded-md p-3 bg-muted/30">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium text-sm">{tour.name}</div>
-                                <div className="text-xs text-muted-foreground mt-1">{tour.duration}</div>
-                                
-                                <div className="mt-2 space-y-1">
-                                  <Label className="text-[10px] font-medium">Ticket Price (AED/person)</Label>
+                      <div className="border rounded-lg overflow-hidden">
+                        <div className="bg-muted/50 px-3 py-1.5 border-b">
+                          <p className="text-xs font-semibold">Sharing Tours</p>
+                        </div>
+                        <div className="divide-y">
+                          {selectedTours.filter(t => t.type === 'group').map((tour) => (
+                            <div key={tour.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
+                              <div className="flex-1">
+                                <p className="font-semibold text-sm">{tour.name}</p>
+                                <p className="text-[10px] text-muted-foreground mt-0.5">{tour.duration}</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1">
                                   <Input
                                     type="number"
                                     value={editableRates[`tour_${tour.id}`] ?? tour.costPerPerson}
@@ -1227,43 +1095,47 @@ const QuoteTool = () => {
                                       ...prev,
                                       [`tour_${tour.id}`]: Number(e.target.value)
                                     }))}
-                                    className="h-8 text-xs"
+                                    className="w-20 h-8 text-sm"
                                   />
+                                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">AED</span>
                                 </div>
+                                <Button variant="ghost" size="sm" onClick={() => removeTour(tour.id)} className="h-7 w-7 p-0">
+                                  <X className="h-3 w-3" />
+                                </Button>
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeTour(tour.id)}
-                                className="h-8 w-8 p-0"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                     )}
-
+                    
                     {/* Private Tours */}
                     {selectedTours.filter(t => t.type === 'private').length > 0 && (
-                      <div className="space-y-2">
-                        <div className="text-xs font-semibold text-muted-foreground">PRIVATE TOURS</div>
-                        {selectedTours.filter(t => t.type === 'private').map((tour) => {
-                          const transferCost = getPrivateTransferCost(tour, totalPax);
-                          const ticketPrice = editableRates[`tour_${tour.id}`] ?? tour.costPerPerson;
-                          const perPersonTransfer = transferCost / totalPax;
-                          
-                          return (
-                            <div key={tour.id} className="border rounded-md p-3 bg-muted/30">
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium text-sm">{tour.name}</div>
-                                  <div className="text-xs text-muted-foreground mt-1">{tour.duration}</div>
-                                  
-                                  <div className="mt-2 space-y-2">
-                                    <div className="space-y-1">
-                                      <Label className="text-[10px] font-medium">Ticket Price (AED/person)</Label>
+                      <div className="border rounded-lg overflow-hidden">
+                        <div className="bg-muted/50 px-3 py-1.5 border-b">
+                          <p className="text-xs font-semibold">Private Tours</p>
+                        </div>
+                        <div className="divide-y">
+                          {selectedTours.filter(t => t.type === 'private').map((tour) => {
+                            const transferCost = getPrivateTransferCost(tour, totalPax);
+                            const ticketPrice = editableRates[`tour_${tour.id}`] ?? tour.costPerPerson;
+                            const perPersonTotal = ticketPrice + (transferCost / totalPax);
+                            
+                            return (
+                              <div key={tour.id} className="p-3 hover:bg-muted/30 transition-colors">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex-1">
+                                    <p className="font-semibold text-sm">{tour.name}</p>
+                                    <p className="text-[10px] text-muted-foreground mt-0.5">{tour.duration}</p>
+                                  </div>
+                                  <Button variant="ghost" size="sm" onClick={() => removeTour(tour.id)} className="h-7 w-7 p-0">
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 text-xs">
+                                  <div className="flex flex-col gap-0.5">
+                                    <Label className="text-[10px] text-muted-foreground">Ticket Price</Label>
+                                    <div className="flex items-center gap-1">
                                       <Input
                                         type="number"
                                         value={ticketPrice}
@@ -1271,112 +1143,108 @@ const QuoteTool = () => {
                                           ...prev,
                                           [`tour_${tour.id}`]: Number(e.target.value)
                                         }))}
-                                        className="h-8 text-xs"
+                                        className="w-full h-8 text-xs"
                                       />
+                                      <span className="text-[10px] whitespace-nowrap">AED</span>
                                     </div>
-                                    
-                                    <div className="text-xs space-y-1">
-                                      <div className="text-muted-foreground">Transfer: AED {transferCost.toFixed(2)} ÷ {totalPax} pax = AED {perPersonTransfer.toFixed(2)}/person</div>
-                                      <div className="font-semibold text-primary">
-                                        Total: AED {(ticketPrice + perPersonTransfer).toFixed(2)}/person
-                                      </div>
+                                  </div>
+                                  <div className="flex flex-col gap-0.5">
+                                    <Label className="text-[10px] text-muted-foreground">Transfer ({totalPax} PAX)</Label>
+                                    <div className="h-8 px-2 flex items-center bg-muted rounded-md">
+                                      <span className="font-semibold text-xs">AED {transferCost}</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col gap-0.5">
+                                    <Label className="text-[10px] text-muted-foreground">Per Person Total</Label>
+                                    <div className="h-8 px-2 flex items-center bg-primary/10 rounded-md border border-primary/20">
+                                      <span className="font-bold text-primary text-xs">AED {Math.ceil(perPersonTotal)}</span>
                                     </div>
                                   </div>
                                 </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeTour(tour.id)}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Available Tours - List Format */}
+                {tourSearch && (
+                  <div className="mt-3 border rounded-lg divide-y max-h-60 overflow-y-auto">
+                    {filteredTours.map(tour => (
+                      <div 
+                        key={tour.id} 
+                        className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => addTour(tour)}
+                      >
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-sm">{tour.name}</h4>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <Badge variant={tour.type === 'private' ? 'default' : 'secondary'} className="text-[10px] h-4 px-1.5">
+                              {tour.type === 'private' ? 'Private' : 'Sharing'}
+                            </Badge>
+                            <p className="text-[10px] text-muted-foreground">{tour.duration}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-primary">AED {tour.costPerPerson}</p>
+                          <p className="text-[10px] text-muted-foreground">per person</p>
+                        </div>
+                      </div>
+                    ))}
+                    {filteredTours.length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-6">
+                        No results found
+                      </p>
                     )}
                   </div>
                 )}
               </div>
             </TabsContent>
 
-            {/* Tab 4: Services/Inclusions Selection */}
+            {/* Tab 4: Additional Services */}
             <TabsContent value="services" className="space-y-4 mt-4">
-              <div className="space-y-4">
-                <Label className="text-sm font-medium">Search Services & Inclusions</Label>
-                
+              <div className="space-y-2">
+                <Label htmlFor="inclusionSearch" className="text-xs font-medium">Search Additional Services</Label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-2.5 h-3 w-3 text-muted-foreground" />
                   <Input
+                    id="inclusionSearch"
+                    placeholder="Search services..."
                     value={inclusionSearch}
                     onChange={(e) => setInclusionSearch(e.target.value)}
-                    placeholder="Type to search services..."
-                    className="pl-10 h-9"
+                    className="pl-9 h-9 text-sm"
                   />
                 </div>
-
-                {/* Search Results */}
-                {filteredInclusions.length > 0 && (
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {filteredInclusions.map((inclusion) => (
-                      <div
-                        key={inclusion.id}
-                        onClick={() => {
-                          toggleInclusion(inclusion);
-                          setInclusionSearch('');
-                        }}
-                        className="flex items-center justify-between p-3 border rounded-md hover:bg-muted cursor-pointer transition-colors"
-                      >
-                        <div className="flex-1">
-                          <div className="font-medium text-sm">{inclusion.name}</div>
-                          <div className="text-xs text-muted-foreground mt-1">{inclusion.description}</div>
-                          <div className="text-xs text-primary mt-1">
-                            AED {inclusion.cost}/person
-                          </div>
-                        </div>
-                        <Plus className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Selected Inclusions List Format */}
+                
+                {/* Selected Services - List Format */}
                 {selectedInclusions.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Selected Services ({selectedInclusions.length})</Label>
-                    <div className="space-y-2">
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs font-semibold">Selected Services:</p>
+                    <div className="border rounded-lg divide-y">
                       {selectedInclusions.map((inclusion) => (
-                        <div key={inclusion.id} className="border rounded-md p-3 bg-muted/30">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-sm">{inclusion.name}</div>
-                              <div className="text-xs text-muted-foreground mt-1">{inclusion.description}</div>
-                              
-                              <div className="mt-2 space-y-1">
-                                <Label className="text-[10px] font-medium">Price (AED/person)</Label>
-                                <Input
-                                  type="number"
-                                  value={editableRates[`inclusion_${inclusion.id}`] ?? inclusion.cost}
-                                  onChange={(e) => setEditableRates(prev => ({
-                                    ...prev,
-                                    [`inclusion_${inclusion.id}`]: Number(e.target.value)
-                                  }))}
-                                  className="h-8 text-xs"
-                                />
-                                <div className="text-[10px] text-muted-foreground mt-1">
-                                  Note: Create separate entries for Adult and Child pricing if needed (e.g., "Adult Visa" and "Child Visa")
-                                </div>
-                              </div>
+                        <div key={inclusion.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
+                          <div className="flex-1">
+                            <p className="font-semibold text-sm">{inclusion.name}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5 capitalize">{inclusion.type}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1">
+                              <Input
+                                type="number"
+                                value={editableRates[`inclusion_${inclusion.id}`] ?? inclusion.cost}
+                                onChange={(e) => setEditableRates(prev => ({
+                                  ...prev,
+                                  [`inclusion_${inclusion.id}`]: Number(e.target.value)
+                                }))}
+                                className="w-20 h-8 text-sm"
+                              />
+                              <span className="text-[10px] text-muted-foreground whitespace-nowrap">AED</span>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => toggleInclusion(inclusion)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <X className="h-4 w-4" />
+                            <Button variant="ghost" size="sm" onClick={() => toggleInclusion(inclusion)} className="h-7 w-7 p-0">
+                              <X className="h-3 w-3" />
                             </Button>
                           </div>
                         </div>
@@ -1384,74 +1252,176 @@ const QuoteTool = () => {
                     </div>
                   </div>
                 )}
+                
+                {/* Available Services - List Format */}
+                {inclusionSearch && (
+                  <div className="mt-3 border rounded-lg divide-y max-h-60 overflow-y-auto">
+                    {filteredInclusions.map(inclusion => (
+                      <div 
+                        key={inclusion.id} 
+                        className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => toggleInclusion(inclusion)}
+                      >
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-sm">{inclusion.name}</h4>
+                          <p className="text-[10px] text-muted-foreground mt-0.5 capitalize">{inclusion.type}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-primary">AED {inclusion.cost}</p>
+                          <p className="text-[10px] text-muted-foreground">per person</p>
+                        </div>
+                      </div>
+                    ))}
+                    {filteredInclusions.length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-6">
+                        No results found
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </TabsContent>
           </Tabs>
 
-          {/* Generate Quote Button */}
-          <div className="flex justify-center pt-4 border-t">
-            <Button
-              onClick={calculateQuote}
-              size="lg"
-              className="w-full md:w-auto"
-              disabled={!customerName || !checkInDate || !checkOutDate || selectedHotels.length === 0}
-            >
-              <Calculator className="mr-2 h-5 w-5" />
-              Generate Quote
-            </Button>
-          </div>
+              {/* Generate Button */}
+              <div className="flex justify-center mt-6 pt-4 border-t">
+                <Button 
+                  onClick={calculateQuote}
+                  size="default"
+                  className="shadow-card hover:shadow-hover transition-shadow"
+                >
+                  <Calculator className="mr-2 h-4 w-4" />
+                  Generate Quote
+                </Button>
+              </div>
         </CardContent>
       </Card>
 
-      {/* Generated Quote Preview */}
-      {generatedQuote && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Quote Preview */}
-          <Card className="shadow-card">
-            <CardHeader className="p-4 border-b">
-              <CardTitle className="text-lg">Quote Preview</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              <div
-                data-quote-preview
-                dangerouslySetInnerHTML={{ __html: generatedQuote.formattedText }}
-                className="prose prose-sm max-w-none"
-              />
-              <div className="flex gap-2 mt-4">
-                <Button onClick={copyFormattedText} variant="outline" size="sm" className="flex-1">
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy Quote
-                </Button>
-                <Button onClick={downloadPDF} variant="outline" size="sm" className="flex-1">
-                  <Download className="mr-2 h-4 w-4" />
-                  Download PDF
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Breakdown */}
-          <Card className="shadow-card">
-            <CardHeader className="p-4 border-b">
-              <CardTitle className="text-lg">Cost Breakdown</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-4 rounded-md">
-                {generatedQuote.breakdown}
-              </pre>
-              <div className="flex gap-2 mt-4">
-                <Button onClick={copyBreakdown} variant="outline" size="sm" className="flex-1">
-                  <Copy className="mr-2 h-4 w-4" />
+      {/* Quote Preview with HTML rendering */}
+      {generatedQuote && generatedQuote.formattedText && (
+        <Card className="dubai-card">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center">
+                <FileText className="mr-2 h-5 w-5 text-dubai-gold" />
+                Generated Quote Preview
+              </span>
+              <div className="flex gap-2">
+                 <Button variant="outline" size="sm" onClick={copyFormattedText}>
+                   <Copy className="h-4 w-4 mr-2" />
+                   Copy Quote
+                 </Button>
+                <Button variant="outline" size="sm" onClick={copyBreakdown}>
+                  <Copy className="h-4 w-4 mr-2" />
                   Copy Breakdown
                 </Button>
-                <Button onClick={saveQuote} variant="default" size="sm" className="flex-1">
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Quote
+                <Button variant="outline" size="sm" onClick={downloadPDF}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download PDF
+                </Button>
+                <Button onClick={saveQuote} className="dubai-button-primary">
+                  <Save className="h-4 w-4 mr-2" />
+                  {editingQuote ? 'Update Quote' : 'Save Quote'}
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* HTML Preview with proper borders and copy functionality */}
+            <div className="bg-white p-6 rounded-lg border-2 border-gray-200 shadow-sm mb-6">
+              <style dangerouslySetInnerHTML={{
+                __html: `
+                  [data-quote-preview] table {
+                    border-collapse: collapse;
+                    width: 100%;
+                    margin: 10px 0;
+                  }
+                  [data-quote-preview] table, 
+                  [data-quote-preview] th, 
+                  [data-quote-preview] td {
+                    border: 1px solid #000 !important;
+                  }
+                  [data-quote-preview] th, 
+                  [data-quote-preview] td {
+                    padding: 8px;
+                    text-align: left;
+                  }
+                  [data-quote-preview] th {
+                    background-color: #f5f5f5;
+                    font-weight: bold;
+                  }
+                `
+              }} />
+              <div 
+                data-quote-preview
+                dangerouslySetInnerHTML={{ __html: generatedQuote.formattedText || '' }}
+                className="prose max-w-none"
+                style={{ 
+                  fontFamily: 'Arial, sans-serif',
+                  lineHeight: '1.3',
+                  fontSize: '13px'
+                }}
+              />
+            </div>
+            
+            {/* Breakdown Preview */}
+            {generatedQuote.breakdown && (
+              <div className="bg-gray-50 p-6 rounded-lg border mb-6">
+                <h3 className="text-lg font-semibold mb-4">Cost Breakdown</h3>
+                <pre className="whitespace-pre-line font-mono text-sm">
+                  {generatedQuote.breakdown}
+                </pre>
+              </div>
+            )}
+
+            {/* Detailed Pricing Table for Reference */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold mb-4 text-gray-900">Detailed Pricing (All Hotels & Occupancy Types)</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-gray-300 text-sm">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="border border-gray-300 px-3 py-2 text-left">Hotel</th>
+                      <th className="border border-gray-300 px-3 py-2 text-left">Occupancy</th>
+                      <th className="border border-gray-300 px-3 py-2 text-center">Rooms</th>
+                      {cwb > 0 && <th className="border border-gray-300 px-3 py-2 text-center">Extra Beds</th>}
+                      <th className="border border-gray-300 px-3 py-2 text-right">Hotel Cost (AED)</th>
+                      <th className="border border-gray-300 px-3 py-2 text-right">Total AED</th>
+                      <th className="border border-gray-300 px-3 py-2 text-right">Total USD</th>
+                      <th className="border border-gray-300 px-3 py-2 text-right font-semibold">Per Person USD</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {generatedQuote?.hotelOptions?.map((hotelOption: any, hotelIndex: number) => 
+                      hotelOption.occupancyOptions?.map((option: any, optionIndex: number) => (
+                        <tr key={`${hotelIndex}-${optionIndex}`} className={option.occupancyType === 'DBL' ? 'bg-blue-50' : 'bg-white'}>
+                          <td className="border border-gray-300 px-3 py-2 font-medium">
+                            {hotelOption.hotel?.name || 'Hotel'}
+                          </td>
+                          <td className="border border-gray-300 px-3 py-2 font-medium">
+                            {option.occupancyType} 
+                            {option.occupancyType === 'DBL' && ' (Recommended)'}
+                          </td>
+                          <td className="border border-gray-300 px-3 py-2 text-center">{option.roomsNeeded}</td>
+                          {cwb > 0 && <td className="border border-gray-300 px-3 py-2 text-center">{option.extraBeds}</td>}
+                          <td className="border border-gray-300 px-3 py-2 text-right">AED {option.hotelCost?.toLocaleString() || '0'}</td>
+                          <td className="border border-gray-300 px-3 py-2 text-right">AED {option.totalCostAED?.toLocaleString() || '0'}</td>
+                          <td className="border border-gray-300 px-3 py-2 text-right">USD {Math.round(option.totalCostUSD || 0).toLocaleString()}</td>
+                          <td className="border border-gray-300 px-3 py-2 text-right font-bold text-blue-600">
+                            USD {Math.round(option.perPersonUSD || 0)}
+                          </td>
+                        </tr>
+                      )) || []
+                    ) || []}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-xs text-gray-600 mt-3">
+                * Double occupancy (DBL) is highlighted as the most commonly selected option
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
