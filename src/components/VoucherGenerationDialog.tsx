@@ -32,7 +32,6 @@ export const VoucherGenerationDialog: React.FC<VoucherGenerationDialogProps> = (
   // Airport transfer details
   const [pickupFlight, setPickupFlight] = useState('');
   const [pickupTime, setPickupTime] = useState('');
-  const [pickupLocation, setPickupLocation] = useState('');
   const [pickupDate, setPickupDate] = useState('');
   const [dropoffFlight, setDropoffFlight] = useState('');
   const [dropoffTime, setDropoffTime] = useState('');
@@ -367,7 +366,6 @@ export const VoucherGenerationDialog: React.FC<VoucherGenerationDialogProps> = (
                       <th>Type</th>
                       <th>Flight</th>
                       <th>Time</th>
-                      <th>Pick-up</th>
                       <th>Date</th>
                     </tr>
                   </thead>
@@ -377,7 +375,6 @@ export const VoucherGenerationDialog: React.FC<VoucherGenerationDialogProps> = (
                       <td>Private</td>
                       <td>${pickupFlight || 'TBA'}</td>
                       <td>${pickupTime || 'TBA'}</td>
-                      <td>${pickupLocation || 'TBA'}</td>
                       <td>${pickupDate || 'TBA'}</td>
                     </tr>
                     <tr>
@@ -468,7 +465,6 @@ export const VoucherGenerationDialog: React.FC<VoucherGenerationDialogProps> = (
     setHotelConfirmationNumber('');
     setPickupFlight('');
     setPickupTime('');
-    setPickupLocation('');
     setPickupDate('');
     setDropoffFlight('');
     setDropoffTime('');
@@ -486,7 +482,6 @@ export const VoucherGenerationDialog: React.FC<VoucherGenerationDialogProps> = (
         setHotelConfirmationNumber('');
         setPickupFlight('');
         setPickupTime('');
-        setPickupLocation('');
         setPickupDate('');
         setDropoffFlight('');
         setDropoffTime('');
@@ -561,15 +556,6 @@ export const VoucherGenerationDialog: React.FC<VoucherGenerationDialogProps> = (
                       value={pickupTime}
                       onChange={(e) => setPickupTime(e.target.value)}
                       placeholder="e.g., 14:30"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="pickupLocation">Pickup Location</Label>
-                    <Input
-                      id="pickupLocation"
-                      value={pickupLocation}
-                      onChange={(e) => setPickupLocation(e.target.value)}
-                      placeholder="e.g., Terminal 3"
                     />
                   </div>
                   <div className="space-y-2">
