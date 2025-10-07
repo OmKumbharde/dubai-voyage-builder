@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { z } from 'zod';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -30,6 +31,21 @@ import { useSupabaseData } from '../hooks/useSupabaseData';
 import { supabase } from '../integrations/supabase/client';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+
+// Input validation schema
+const quoteFormSchema = z.object({
+  customerName: z.string()
+    .trim()
+    .min(2, { message: "Customer name must be at least 2 characters" })
+    .max(100, { message: "Customer name must be less than 100 characters" }),
+  referenceNumber: z.string()
+    .trim()
+    .max(50, { message: "Reference number must be less than 50 characters" })
+    .optional()
+    .or(z.literal('')),
+  checkInDate: z.string().min(1, { message: "Check-in date is required" }),
+  checkOutDate: z.string().min(1, { message: "Check-out date is required" }),
+});
 
 const QuoteTool = () => {
   const navigate = useNavigate();
@@ -261,6 +277,35 @@ const QuoteTool = () => {
 
   // Calculate quote function with multiple occupancy options
   const calculateQuote = () => {
+    // Validate form inputs
+    try {
+      quoteFormSchema.parse({
+        customerName,
+        referenceNumber,
+        checkInDate,
+        checkOutDate
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Validation Error",
+          description: error.errors[0].message,
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
+    // Validate dates
+    if (new Date(checkOutDate) <= new Date(checkInDate)) {
+      toast({
+        title: "Invalid Dates",
+        description: "Check-out date must be after check-in date",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (selectedHotels.length === 0 || !checkInDate || !checkOutDate) {
       toast({
         title: "Missing Information",
@@ -668,9 +713,9 @@ const QuoteTool = () => {
         
         // Use database field names directly
         const updateData = {
-          reference_number: editingQuote.reference_number,
+          reference_number: referenceNumber || editingQuote.reference_number,
           client_name: customerName,
-          ticket_reference: referenceNumber,
+          ticket_reference: referenceNumber || editingQuote.reference_number,
           travel_dates_from: checkInDate,
           travel_dates_to: checkOutDate,
           adults,
@@ -707,9 +752,9 @@ const QuoteTool = () => {
         
         // Use database field names directly  
         const insertData = {
-          reference_number: `QT-${Date.now()}`,
+          reference_number: referenceNumber || `TKT-${Date.now()}`,
           client_name: customerName,
-          ticket_reference: referenceNumber,
+          ticket_reference: referenceNumber || `TKT-${Date.now()}`,
           travel_dates_from: checkInDate,
           travel_dates_to: checkOutDate,
           adults,

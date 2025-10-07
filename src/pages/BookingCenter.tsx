@@ -42,7 +42,7 @@ const BookingCenter = () => {
     
     return {
       id: quote.id,
-      ticketReference: (quote as any).reference_number || `QT-${quote.id}`,
+      ticketReference: (quote as any).reference_number || `TKT-${quote.id.substring(0, 8)}`,
       customerName: (quote as any).client_name || quote.customerName || 'N/A',
       customerEmail: (quote as any).client_email || quote.customerEmail,
       checkIn: checkInDate,
@@ -610,7 +610,7 @@ const BookingCenter = () => {
                             {booking.customerName}
                           </h3>
                           <p className="text-sm text-muted-foreground">
-                            Booking #{booking.ticketReference}
+                            TKT {booking.ticketReference}
                           </p>
                         </div>
                         <Badge className={getStatusColor(booking.status)}>

@@ -410,7 +410,7 @@ const QuoteManagement = () => {
                               {quote.customerName}
                             </h3>
                             <p className="text-sm text-muted-foreground">
-                              Quote #{quote.ticketReference}
+                              TKT {quote.ticketReference}
                             </p>
                           </div>
                           <Badge className={getStatusColor(quote.status)}>
