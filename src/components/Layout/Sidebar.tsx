@@ -97,8 +97,14 @@ const Sidebar = () => {
       {/* Logo and Brand */}
       <div className="flex h-16 items-center justify-center border-b border-white/10">
         <div className="text-center">
-          <h1 className="text-xl font-bold text-white">Dubai Quote</h1>
-          <p className="text-xs text-white/80">Premium Travel Platform</p>
+    <div className="text-left mt-10 mb-10">
+  <img 
+    src="/logo.svg" 
+    alt="Dubai Quote Tool Logo" 
+    className="w-36 h-42"
+  />
+</div>
+
         </div>
       </div>
 

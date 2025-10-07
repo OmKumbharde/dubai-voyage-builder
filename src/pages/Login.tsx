@@ -37,24 +37,34 @@ const Login = () => {
     setIsLoading(true);
     setError('');
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      setError(error.message);
+      if (error) {
+        setError(error.message);
+        toast({
+          title: "Sign In Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Welcome back!",
+          description: "You have successfully signed in.",
+        });
+        navigate('/');
+      }
+    } catch (error) {
+      console.error('Unexpected error during sign in:', error);
+      setError('An unexpected error occurred. Please try again.');
       toast({
         title: "Sign In Failed",
-        description: error.message,
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Welcome back!",
-        description: "You have successfully signed in.",
-      });
-      navigate('/');
     }
     setIsLoading(false);
   };
@@ -64,28 +74,38 @@ const Login = () => {
     setIsLoading(true);
     setError('');
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/`,
-        data: {
-          name: name,
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            name: name,
+          },
         },
-      },
-    });
+      });
 
-    if (error) {
-      setError(error.message);
+      if (error) {
+        setError(error.message);
+        toast({
+          title: "Sign Up Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Account Created!",
+          description: "Please check your email to confirm your account.",
+        });
+      }
+    } catch (error) {
+      console.error('Unexpected error during sign up:', error);
+      setError('An unexpected error occurred. Please try again.');
       toast({
         title: "Sign Up Failed",
-        description: error.message,
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Account Created!",
-        description: "Please check your email to confirm your account.",
       });
     }
     setIsLoading(false);
@@ -96,24 +116,34 @@ const Login = () => {
     setIsLoading(true);
     setError('');
 
-    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-      redirectTo: `${window.location.origin}/`,
-    });
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/`,
+      });
 
-    if (error) {
-      setError(error.message);
+      if (error) {
+        setError(error.message);
+        toast({
+          title: "Password Reset Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Check Your Email",
+          description: "We've sent you a password reset link.",
+        });
+        setShowForgotPassword(false);
+        setResetEmail('');
+      }
+    } catch (error) {
+      console.error('Unexpected error during password reset:', error);
+      setError('An unexpected error occurred. Please try again.');
       toast({
         title: "Password Reset Failed",
-        description: error.message,
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Check Your Email",
-        description: "We've sent you a password reset link.",
-      });
-      setShowForgotPassword(false);
-      setResetEmail('');
     }
     setIsLoading(false);
   };
@@ -125,7 +155,13 @@ const Login = () => {
         {/* Left side - Brand info */}
         <div className="hidden lg:flex flex-1 flex-col space-y-8 text-white">
           <div>
-            <h1 className="text-4xl font-bold mb-4">Dubai Quote Tool</h1>
+           <img 
+  src="/logo.svg" 
+  alt="Dubai Quote Tool Logo" 
+  className="w-72 h-72 -mb-12"
+/>
+
+            <h1 className="text-4xl font-bold mb-4">Travomate - Built by a DMC, for DMCs.</h1>
             <p className="text-xl opacity-90 mb-8">
               Professional travel quotation system for Dubai's finest experiences
             </p>

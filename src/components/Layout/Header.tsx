@@ -48,7 +48,7 @@ const Header = () => {
     <header className="h-16 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/95 px-6 flex items-center justify-between shadow-sm">
       <div className="flex items-center gap-4">
         <div>
-          <h1 className="text-lg font-semibold text-dubai-navy">Dubai Quote Tool</h1>
+          <h1 className="text-2xl font-semibold text-dubai-navy">Travomate</h1>
           <p className="text-sm text-muted-foreground">Professional Travel Management</p>
         </div>
       </div>

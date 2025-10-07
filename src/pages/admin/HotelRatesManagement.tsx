@@ -222,8 +222,8 @@ const HotelRatesManagement = () => {
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <Label htmlFor="hotel">Hotel</Label>
+            <div className='flex items-center space-x-4'>
+              <Label htmlFor="hotel">Hotel </Label>
               <select
                 id="hotel"
                 value={selectedHotel}
@@ -239,8 +239,9 @@ const HotelRatesManagement = () => {
               </select>
             </div>
             <div>
-              <Label>Month & Year</Label>
+              
               <div className="flex items-center space-x-4">
+                <Label>Month & Year</Label>
                 <input
                   type="month"
                   value={format(selectedDate, 'yyyy-MM')}
