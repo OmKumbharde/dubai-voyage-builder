@@ -88,10 +88,11 @@ const Sidebar = () => {
       <div className="border-b border-white/10 p-4">
         <div className="flex items-center space-x-3">
           <div className="h-10 w-10 rounded-full bg-dubai-gold flex items-center justify-center">
-            <span className="text-sm font-semibold text-dubai-navy">{user?.name?.charAt(0).toUpperCase() || "U"}</span>
+            <span className="text-sm font-semibold text-dubai-navy">{user?.email?.charAt(0).toUpperCase() || "U"}</span>
           </div>
           <div>
-            <p className="text-sm font-medium text-white">{user?.name?.split("@")[0]}</p>
+            <p className="text-sm font-medium text-white">{user?.email?.split("@")[0]}</p>
+            <p className="text-xs text-white/70">Team Member</p>
           </div>
         </div>
       </div>
