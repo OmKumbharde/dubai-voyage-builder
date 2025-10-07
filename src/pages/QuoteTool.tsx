@@ -927,23 +927,6 @@ const QuoteTool = () => {
                 </div>
               </div>
 
-              {/* Tourism Dirham Toggle */}
-              <div className="space-y-2 p-3 bg-muted/50 rounded-lg border">
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="tourismDirham"
-                    checked={includeTourismDirham}
-                    onCheckedChange={(checked) => setIncludeTourismDirham(checked as boolean)}
-                  />
-                  <Label htmlFor="tourismDirham" className="text-xs font-medium cursor-pointer">
-                    Include Tourism Dirham in quote
-                  </Label>
-                </div>
-                <p className="text-[10px] text-muted-foreground ml-6">
-                  When enabled, Tourism Dirham charges will be automatically added to hotel rates (3★: AED 10/night, 4★: AED 15/night, 5★: AED 20/night) and included in the package inclusions
-                </p>
-              </div>
-
               {/* Pax Details */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2 text-xs font-medium">
@@ -1053,6 +1036,18 @@ const QuoteTool = () => {
 
             {/* Tab 2: Accommodation */}
             <TabsContent value="accommodation" className="space-y-4 mt-4">
+              {/* Tourism Dirham Toggle - Compact */}
+              <div className="flex items-center space-x-2 p-2 bg-muted/30 rounded border">
+                <Checkbox 
+                  id="tourismDirham"
+                  checked={includeTourismDirham}
+                  onCheckedChange={(checked) => setIncludeTourismDirham(checked as boolean)}
+                />
+                <Label htmlFor="tourismDirham" className="text-xs cursor-pointer">
+                  Include Tourism Dirham (3★: 10 | 4★: 15 | 5★: 20 AED/night)
+                </Label>
+              </div>
+
               {/* Occupancy Selection */}
               <div className="space-y-2">
                 <Label className="text-xs font-medium">Select Occupancy Types *</Label>
