@@ -69,6 +69,9 @@ const QuoteTool = () => {
     { id: 'TPL', label: 'Triple Occupancy', description: 'Three people per room' },
   ];
   
+  // Tourism Dirham state
+  const [includeTourismDirham, setIncludeTourismDirham] = useState(false);
+  
   // Selection states
   const [selectedHotels, setSelectedHotels] = useState<any[]>([]);
   const [selectedTours, setSelectedTours] = useState<any[]>([]);
@@ -274,6 +277,15 @@ const QuoteTool = () => {
     return 0;
   };
 
+  // Helper function to get Tourism Dirham cost per night based on star rating
+  const getTourismDirhamCost = (starRating: number): number => {
+    if (!includeTourismDirham) return 0;
+    if (starRating === 3) return 10;
+    if (starRating === 4) return 15;
+    if (starRating === 5) return 20;
+    return 15; // Default for other ratings
+  };
+
   // Calculate quote function with multiple occupancy options
   const calculateQuote = () => {
     // Validate form inputs
@@ -338,6 +350,11 @@ const QuoteTool = () => {
         // Use editable rate for hotel if available
         const hotelRateKey = `hotel_${hotel.id}`;
         hotelRate = editableRates[hotelRateKey] ?? hotel.baseRate ?? 0;
+        
+        // Add Tourism Dirham to hotel rate per night if included
+        const tdCostPerNight = getTourismDirhamCost(hotel.starRating || 5);
+        const hotelRateWithTD = hotelRate + tdCostPerNight;
+        
         if (occupancyType === 'SGL') {
           roomsNeeded = adults;
           extraBeds = cwb > 0 ? cwb : 0; // Extra bed only for CWB
@@ -349,7 +366,7 @@ const QuoteTool = () => {
           extraBeds = cwb > 0 ? cwb : 0; // Extra bed only for CWB
         }
 
-        const hotelCost = (roomsNeeded * hotelRate + extraBeds * extraBedRate) * nights;
+        const hotelCost = (roomsNeeded * hotelRateWithTD + extraBeds * extraBedRate) * nights;
         
         // Tours and inclusions cost using editable rates
         const toursCost = selectedTours.reduce((total, tour) => {
@@ -524,7 +541,14 @@ const QuoteTool = () => {
     
     // Standard inclusions
     quoteHTML += `<li>All transfers on a SIC basis</li>`;
-    quoteHTML += `<li>All taxes except Tourism Dirham</li>`;
+    
+    // Tourism Dirham inclusion
+    if (includeTourismDirham) {
+      quoteHTML += `<li>Tourism Dirham charges included</li>`;
+      quoteHTML += `<li>All taxes</li>`;
+    } else {
+      quoteHTML += `<li>All taxes except Tourism Dirham</li>`;
+    }
     quoteHTML += `</ul><br /><br />`;
     
     // Note: Removed the "Optional Cost" section as requested - all services are now part of inclusions
@@ -707,7 +731,8 @@ const QuoteTool = () => {
           selectedTours,
           selectedInclusions,
           occupancies: selectedOccupancies,
-          editableRates
+          editableRates,
+          includeTourismDirham
         });
         
         // Use database field names directly
@@ -746,7 +771,8 @@ const QuoteTool = () => {
           selectedTours,
           selectedInclusions,
           occupancies: selectedOccupancies,
-          editableRates
+          editableRates,
+          includeTourismDirham
         });
         
         // Use database field names directly  
@@ -868,6 +894,23 @@ const QuoteTool = () => {
                     className="h-9"
                   />
                 </div>
+              </div>
+
+              {/* Tourism Dirham Toggle */}
+              <div className="space-y-2 p-3 bg-muted/50 rounded-lg border">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="tourismDirham"
+                    checked={includeTourismDirham}
+                    onCheckedChange={(checked) => setIncludeTourismDirham(checked as boolean)}
+                  />
+                  <Label htmlFor="tourismDirham" className="text-xs font-medium cursor-pointer">
+                    Include Tourism Dirham in quote
+                  </Label>
+                </div>
+                <p className="text-[10px] text-muted-foreground ml-6">
+                  When enabled, Tourism Dirham charges will be automatically added to hotel rates (3★: AED 10/night, 4★: AED 15/night, 5★: AED 20/night) and included in the package inclusions
+                </p>
               </div>
 
               {/* Pax Details */}

@@ -23,11 +23,26 @@ export const VoucherGenerationDialog: React.FC<VoucherGenerationDialogProps> = (
   onClose,
   quote
 }) => {
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [leadPaxName, setLeadPaxName] = useState('');
   const [hotelConfirmationNumber, setHotelConfirmationNumber] = useState('');
   const [tourismDirhamPaid, setTourismDirhamPaid] = useState(false);
   const [emergencyContact, setEmergencyContact] = useState('+971 52 939 6210');
+  
+  // Airport transfer details
+  const [pickupFlight, setPickupFlight] = useState('');
+  const [pickupTime, setPickupTime] = useState('');
+  const [pickupLocation, setPickupLocation] = useState('');
+  const [pickupDate, setPickupDate] = useState('');
+  const [dropoffFlight, setDropoffFlight] = useState('');
+  const [dropoffTime, setDropoffTime] = useState('');
+  const [dropoffLocation, setDropoffLocation] = useState('');
+  const [dropoffDate, setDropoffDate] = useState('');
+  
+  // Confirmation checkboxes
+  const [servicesBooked, setServicesBooked] = useState(false);
+  const [confirmationsReceived, setConfirmationsReceived] = useState(false);
+  
   const [itineraryItems, setItineraryItems] = useState<any[]>([]);
   const { tours } = useSupabaseData();
 
@@ -66,11 +81,23 @@ export const VoucherGenerationDialog: React.FC<VoucherGenerationDialogProps> = (
     setStep(2);
   };
 
-  const generateVoucherPDF = () => {
+  const handleStepTwoNext = () => {
     if (!hotelConfirmationNumber.trim()) {
       toast({
         title: "Missing Information",
         description: "Please enter the hotel confirmation number",
+        variant: "destructive"
+      });
+      return;
+    }
+    setStep(3);
+  };
+
+  const generateVoucherPDF = () => {
+    if (!servicesBooked || !confirmationsReceived) {
+      toast({
+        title: "Confirmation Required",
+        description: "Please confirm that all services are booked and confirmations received",
         variant: "destructive"
       });
       return;
@@ -348,18 +375,18 @@ export const VoucherGenerationDialog: React.FC<VoucherGenerationDialogProps> = (
                     <tr>
                       <td style="font-weight: 600;">Airport Pick-up</td>
                       <td>Private</td>
-                      <td>TBA</td>
-                      <td>TBA</td>
-                      <td>TBA</td>
-                      <td>TBA</td>
+                      <td>${pickupFlight || 'TBA'}</td>
+                      <td>${pickupTime || 'TBA'}</td>
+                      <td>${pickupLocation || 'TBA'}</td>
+                      <td>${pickupDate || 'TBA'}</td>
                     </tr>
                     <tr>
                       <td style="font-weight: 600;">Airport Drop-off</td>
                       <td>Private</td>
-                      <td>TBA</td>
-                      <td>TBA</td>
-                      <td>TBA</td>
-                      <td>TBA</td>
+                      <td>${dropoffFlight || 'TBA'}</td>
+                      <td>${dropoffTime || 'TBA'}</td>
+                      <td>${dropoffLocation || 'TBA'}</td>
+                      <td>${dropoffDate || 'TBA'}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -439,6 +466,16 @@ export const VoucherGenerationDialog: React.FC<VoucherGenerationDialogProps> = (
     setStep(1);
     setLeadPaxName('');
     setHotelConfirmationNumber('');
+    setPickupFlight('');
+    setPickupTime('');
+    setPickupLocation('');
+    setPickupDate('');
+    setDropoffFlight('');
+    setDropoffTime('');
+    setDropoffLocation('');
+    setDropoffDate('');
+    setServicesBooked(false);
+    setConfirmationsReceived(false);
   };
 
   return (
@@ -447,6 +484,16 @@ export const VoucherGenerationDialog: React.FC<VoucherGenerationDialogProps> = (
         setStep(1);
         setLeadPaxName('');
         setHotelConfirmationNumber('');
+        setPickupFlight('');
+        setPickupTime('');
+        setPickupLocation('');
+        setPickupDate('');
+        setDropoffFlight('');
+        setDropoffTime('');
+        setDropoffLocation('');
+        setDropoffDate('');
+        setServicesBooked(false);
+        setConfirmationsReceived(false);
       }
       onClose();
     }}>
@@ -454,7 +501,7 @@ export const VoucherGenerationDialog: React.FC<VoucherGenerationDialogProps> = (
         <DialogHeader>
           <DialogTitle>
             Generate Voucher - {((quote as any).ticket_reference) ? `TKT ${(quote as any).ticket_reference}` : `Ref ${(quote as any).reference_number}`}
-            <span className="text-sm font-normal text-muted-foreground ml-2">(Step {step} of 2)</span>
+            <span className="text-sm font-normal text-muted-foreground ml-2">(Step {step} of 3)</span>
           </DialogTitle>
         </DialogHeader>
 
@@ -465,8 +512,8 @@ export const VoucherGenerationDialog: React.FC<VoucherGenerationDialogProps> = (
                 <div className="flex items-start space-x-2">
                   <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
                   <div className="text-sm text-blue-900">
-                    <p className="font-medium mb-1">Step 1: Guest Information</p>
-                    <p>Please provide the lead passenger name and emergency contact details.</p>
+                    <p className="font-medium mb-1">Step 1: Guest & Airport Transfer Details</p>
+                    <p>Please provide guest information and airport transfer details.</p>
                   </div>
                 </div>
               </CardContent>
@@ -494,9 +541,93 @@ export const VoucherGenerationDialog: React.FC<VoucherGenerationDialogProps> = (
                   className="dubai-input"
                 />
               </div>
+
+              <div className="space-y-3 pt-4 border-t">
+                <h3 className="font-semibold text-sm">Airport Pickup Details</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="pickupFlight">Flight Number</Label>
+                    <Input
+                      id="pickupFlight"
+                      value={pickupFlight}
+                      onChange={(e) => setPickupFlight(e.target.value)}
+                      placeholder="e.g., EK501"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="pickupTime">Time</Label>
+                    <Input
+                      id="pickupTime"
+                      value={pickupTime}
+                      onChange={(e) => setPickupTime(e.target.value)}
+                      placeholder="e.g., 14:30"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="pickupLocation">Pickup Location</Label>
+                    <Input
+                      id="pickupLocation"
+                      value={pickupLocation}
+                      onChange={(e) => setPickupLocation(e.target.value)}
+                      placeholder="e.g., Terminal 3"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="pickupDate">Date</Label>
+                    <Input
+                      id="pickupDate"
+                      type="date"
+                      value={pickupDate}
+                      onChange={(e) => setPickupDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-4 border-t">
+                <h3 className="font-semibold text-sm">Airport Drop-off Details</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="dropoffFlight">Flight Number</Label>
+                    <Input
+                      id="dropoffFlight"
+                      value={dropoffFlight}
+                      onChange={(e) => setDropoffFlight(e.target.value)}
+                      placeholder="e.g., EK502"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dropoffTime">Time</Label>
+                    <Input
+                      id="dropoffTime"
+                      value={dropoffTime}
+                      onChange={(e) => setDropoffTime(e.target.value)}
+                      placeholder="e.g., 18:00"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dropoffLocation">Pickup Location</Label>
+                    <Input
+                      id="dropoffLocation"
+                      value={dropoffLocation}
+                      onChange={(e) => setDropoffLocation(e.target.value)}
+                      placeholder="e.g., Hotel Lobby"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dropoffDate">Date</Label>
+                    <Input
+                      id="dropoffDate"
+                      type="date"
+                      value={dropoffDate}
+                      onChange={(e) => setDropoffDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        ) : (
+        ) : step === 2 ? (
           <div className="space-y-6">
             <Card className="bg-green-50 border-green-200">
               <CardContent className="pt-4">
@@ -547,6 +678,94 @@ export const VoucherGenerationDialog: React.FC<VoucherGenerationDialogProps> = (
                   </div>
                 </CardContent>
               </Card>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <Card className="bg-amber-50 border-amber-200">
+              <CardContent className="pt-4">
+                <div className="flex items-start space-x-2">
+                  <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+                  <div className="text-sm text-amber-900">
+                    <p className="font-medium mb-1">Step 3: Final Confirmation</p>
+                    <p>Please confirm that all services are booked and confirmations received before generating the voucher.</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="space-y-4">
+              <Card className="border-2">
+                <CardContent className="pt-4 space-y-4">
+                  <div className="flex items-start space-x-3">
+                    <Checkbox
+                      id="servicesBooked"
+                      checked={servicesBooked}
+                      onCheckedChange={(checked) => setServicesBooked(checked as boolean)}
+                    />
+                    <div className="flex-1">
+                      <Label htmlFor="servicesBooked" className="cursor-pointer font-medium">
+                        Have you booked all the services included in the package?
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Confirm that hotels, tours, transfers, and all other services have been booked
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <Checkbox
+                      id="confirmationsReceived"
+                      checked={confirmationsReceived}
+                      onCheckedChange={(checked) => setConfirmationsReceived(checked as boolean)}
+                    />
+                    <div className="flex-1">
+                      <Label htmlFor="confirmationsReceived" className="cursor-pointer font-medium">
+                        Have you received booking confirmation for the services booked?
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Confirm that you have received confirmation emails/numbers from all service providers
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="pt-4">
+                  <p className="text-sm font-medium mb-3">Voucher Summary:</p>
+                  <div className="space-y-2 text-sm">
+                    <div className="grid grid-cols-2 gap-2">
+                      <span className="text-muted-foreground">Guest Name:</span>
+                      <span className="font-medium">{leadPaxName}</span>
+                      
+                      <span className="text-muted-foreground">Hotel Confirmation:</span>
+                      <span className="font-medium">{hotelConfirmationNumber}</span>
+                      
+                      <span className="text-muted-foreground">Pickup Flight:</span>
+                      <span>{pickupFlight || 'TBA'}</span>
+                      
+                      <span className="text-muted-foreground">Dropoff Flight:</span>
+                      <span>{dropoffFlight || 'TBA'}</span>
+                      
+                      <span className="text-muted-foreground">Tourism Dirham:</span>
+                      <span className={tourismDirhamPaid ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+                        {tourismDirhamPaid ? 'PAID' : 'NOT PAID'}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {(!servicesBooked || !confirmationsReceived) && (
+                <Card className="bg-red-50 border-red-200">
+                  <CardContent className="pt-4">
+                    <p className="text-sm text-red-900">
+                      ⚠️ Please confirm both checkboxes above to proceed with voucher generation
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         )}
