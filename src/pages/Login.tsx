@@ -96,7 +96,7 @@ const Login = () => {
       } else {
         toast({
           title: "Account Created!",
-          description: "Please check your email to confirm your account.",
+          description: "Please click on sign in to access your account.",
         });
       }
     } catch (error) {
