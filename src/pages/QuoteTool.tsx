@@ -269,29 +269,24 @@ const QuoteTool = () => {
   }, [editableRates]);
 
   // Update hotel rates when Tourism Dirham is toggled
-  const prevTDRef = React.useRef(includeTourismDirham);
-  
   useEffect(() => {
-    // Only update if TD checkbox state actually changed
-    if (prevTDRef.current !== includeTourismDirham && selectedHotels.length > 0) {
+    if (selectedHotels.length > 0) {
       setEditableRates(prevRates => {
         const newRates = { ...prevRates };
         selectedHotels.forEach(hotel => {
           const rateKey = `hotel_${hotel.id}`;
-          const currentRate = newRates[rateKey] ?? hotel.baseRate ?? 0;
+          const baseRate = hotel.baseRate ?? 0;
           const tdCost = getTourismDirhamCost(hotel.starRating || 5);
           
+          // Always recalculate based on base rate and current TD state
           if (includeTourismDirham) {
-            // TD was just enabled, add TD cost
-            newRates[rateKey] = currentRate + tdCost;
+            newRates[rateKey] = baseRate + tdCost;
           } else {
-            // TD was just disabled, subtract TD cost
-            newRates[rateKey] = Math.max(0, currentRate - tdCost);
+            newRates[rateKey] = baseRate;
           }
         });
         return newRates;
       });
-      prevTDRef.current = includeTourismDirham;
     }
   }, [includeTourismDirham, selectedHotels]);
 
@@ -857,7 +852,7 @@ const QuoteTool = () => {
         </p>
       </div>
 
-      {/* Input Form */}
+      {/* Input Form - Single Screen Layout */}
       <Card className="shadow-card">
         <CardHeader className="p-4">
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -865,551 +860,395 @@ const QuoteTool = () => {
             Package Configuration
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-4">
-          <Tabs defaultValue="details" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="details">Details</TabsTrigger>
-              <TabsTrigger value="accommodation">Accommodation</TabsTrigger>
-              <TabsTrigger value="tours">Tours</TabsTrigger>
-              <TabsTrigger value="services">Services</TabsTrigger>
-            </TabsList>
+        <CardContent className="p-4 space-y-6">
+          {/* Row 1: Customer & Reference */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="customerName" className="text-xs font-medium">Customer Name *</Label>
+              <Input
+                id="customerName"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder="Enter customer name"
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="referenceNumber" className="text-xs font-medium">TKT Reference *</Label>
+              <Input
+                id="referenceNumber"
+                value={referenceNumber}
+                onChange={(e) => setReferenceNumber(e.target.value)}
+                placeholder="Enter TKT reference"
+                className="h-9"
+                maxLength={50}
+              />
+            </div>
+          </div>
 
-            {/* Tab 1: Basic Details */}
-            <TabsContent value="details" className="space-y-4 mt-4">
-              {/* Customer Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label htmlFor="customerName" className="text-xs font-medium">Customer Name *</Label>
-                  <Input
-                    id="customerName"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Enter customer name"
-                    className="h-9"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="referenceNumber" className="text-xs font-medium">TKT Reference Number *</Label>
-                  <Input
-                    id="referenceNumber"
-                    value={referenceNumber}
-                    onChange={(e) => setReferenceNumber(e.target.value)}
-                    placeholder="Enter TKT reference number"
-                    className="h-9"
-                    maxLength={50}
-                    required
-                  />
-                  <p className="text-[10px] text-muted-foreground">Mandatory ticket reference for tracking and searching</p>
-                </div>
-              </div>
-
-              {/* Dates */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label htmlFor="checkin" className="text-xs font-medium">Check-in Date *</Label>
-                  <Input
-                    id="checkin"
-                    type="date"
-                    value={checkInDate}
-                    onChange={(e) => setCheckInDate(e.target.value)}
-                    className="h-9"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="checkout" className="text-xs font-medium">Check-out Date *</Label>
-                  <Input
-                    id="checkout"
-                    type="date"
-                    value={checkOutDate}
-                    onChange={(e) => setCheckOutDate(e.target.value)}
-                    className="h-9"
-                  />
-                </div>
-              </div>
-
-              {/* Pax Details */}
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2 text-xs font-medium">
-                  <Users className="h-3 w-3" />
-                  Passenger Details
-                </Label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-[10px] font-medium">Adults</Label>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setAdults(Math.max(1, adults - 1))}
-                        className="h-7 w-7 p-0"
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <span className="w-8 text-center text-sm font-semibold">{adults}</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setAdults(adults + 1)}
-                        className="h-7 w-7 p-0"
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[10px] font-medium">CWB</Label>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCwb(Math.max(0, cwb - 1))}
-                        className="h-7 w-7 p-0"
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <span className="w-8 text-center text-sm font-semibold">{cwb}</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCwb(cwb + 1)}
-                        className="h-7 w-7 p-0"
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[10px] font-medium">CNB</Label>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCnb(Math.max(0, cnb - 1))}
-                        className="h-7 w-7 p-0"
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <span className="w-8 text-center text-sm font-semibold">{cnb}</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCnb(cnb + 1)}
-                        className="h-7 w-7 p-0"
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[10px] font-medium">Infants</Label>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setInfants(Math.max(0, infants - 1))}
-                        className="h-7 w-7 p-0"
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <span className="w-8 text-center text-sm font-semibold">{infants}</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setInfants(infants + 1)}
-                        className="h-7 w-7 p-0"
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </TabsContent>
-
-            {/* Tab 2: Accommodation */}
-            <TabsContent value="accommodation" className="space-y-4 mt-4">
-              {/* Tourism Dirham Toggle - Compact */}
-              <div className="flex items-center space-x-2 p-2 bg-muted/30 rounded border">
-                <Checkbox 
-                  id="tourismDirham"
-                  checked={includeTourismDirham}
-                  onCheckedChange={(checked) => setIncludeTourismDirham(checked as boolean)}
-                />
-                <Label htmlFor="tourismDirham" className="text-xs cursor-pointer">
-                  Include Tourism Dirham (3★: 10 | 4★: 15 | 5★: 20 AED/night)
-                </Label>
-              </div>
-
-              {/* Occupancy Selection */}
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">Select Occupancy Types *</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {occupancyTypes.map(occupancy => (
-                  <div 
-                    key={occupancy.id}
-                    className="flex items-center space-x-2 p-2 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => {
-                      if (selectedOccupancies.includes(occupancy.id)) {
-                        setSelectedOccupancies(selectedOccupancies.filter(o => o !== occupancy.id));
-                      } else {
-                        setSelectedOccupancies([...selectedOccupancies, occupancy.id]);
-                      }
-                    }}
+          {/* Row 2: Dates & Pax */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="checkin" className="text-xs font-medium">Check-in *</Label>
+              <Input
+                id="checkin"
+                type="date"
+                value={checkInDate}
+                onChange={(e) => setCheckInDate(e.target.value)}
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="checkout" className="text-xs font-medium">Check-out *</Label>
+              <Input
+                id="checkout"
+                type="date"
+                value={checkOutDate}
+                onChange={(e) => setCheckOutDate(e.target.value)}
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs font-medium">Passengers</Label>
+              <div className="flex items-center gap-2 h-9">
+                <div className="flex items-center gap-1">
+                  <Label className="text-[10px]">Adults</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAdults(Math.max(1, adults - 1))}
+                    className="h-7 w-7 p-0"
                   >
-                    <Checkbox 
-                      checked={selectedOccupancies.includes(occupancy.id)}
-                      onCheckedChange={() => {}}
-                    />
-                    <div>
-                      <p className="font-medium text-xs">{occupancy.label}</p>
-                      <p className="text-[10px] text-muted-foreground">{occupancy.description}</p>
+                    <Minus className="h-3 w-3" />
+                  </Button>
+                  <span className="w-6 text-center text-xs font-semibold">{adults}</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAdults(adults + 1)}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Label className="text-[10px]">CWB</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCwb(Math.max(0, cwb - 1))}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Minus className="h-3 w-3" />
+                  </Button>
+                  <span className="w-6 text-center text-xs font-semibold">{cwb}</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCwb(cwb + 1)}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Label className="text-[10px]">CNB</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCnb(Math.max(0, cnb - 1))}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Minus className="h-3 w-3" />
+                  </Button>
+                  <span className="w-6 text-center text-xs font-semibold">{cnb}</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCnb(cnb + 1)}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Label className="text-[10px]">Inf</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setInfants(Math.max(0, infants - 1))}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Minus className="h-3 w-3" />
+                  </Button>
+                  <span className="w-6 text-center text-xs font-semibold">{infants}</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setInfants(infants + 1)}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t pt-4">
+            {/* Row 3: Occupancy & TD Toggle */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-medium">Occupancy Types *</Label>
+                <div className="flex gap-2">
+                  {occupancyTypes.map(occupancy => (
+                    <div 
+                      key={occupancy.id}
+                      className="flex items-center space-x-2 p-2 border rounded cursor-pointer hover:bg-muted/50"
+                      onClick={() => {
+                        if (selectedOccupancies.includes(occupancy.id)) {
+                          setSelectedOccupancies(selectedOccupancies.filter(o => o !== occupancy.id));
+                        } else {
+                          setSelectedOccupancies([...selectedOccupancies, occupancy.id]);
+                        }
+                      }}
+                    >
+                      <Checkbox 
+                        checked={selectedOccupancies.includes(occupancy.id)}
+                        onCheckedChange={() => {}}
+                      />
+                      <Label className="text-xs cursor-pointer">{occupancy.id}</Label>
                     </div>
-                  </div>
                   ))}
                 </div>
               </div>
-
-              {/* Hotel Search */}
+              
               <div className="space-y-2">
-                <Label htmlFor="hotelSearch" className="text-xs font-medium">Search Hotels *</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-2.5 h-3 w-3 text-muted-foreground" />
-                  <Input
-                    id="hotelSearch"
-                    placeholder="Search hotels..."
-                    value={hotelSearch}
-                    onChange={(e) => setHotelSearch(e.target.value)}
-                    className="pl-9 h-9 text-sm"
+                <Label className="text-xs font-medium">Options</Label>
+                <div className="flex items-center space-x-2 p-2 bg-muted/30 rounded border">
+                  <Checkbox 
+                    id="tourismDirham"
+                    checked={includeTourismDirham}
+                    onCheckedChange={(checked) => setIncludeTourismDirham(checked as boolean)}
                   />
+                  <Label htmlFor="tourismDirham" className="text-xs cursor-pointer">
+                    Tourism Dirham (3★:10 | 4★:15 | 5★:20 AED/night)
+                  </Label>
                 </div>
-                
-                {/* Selected Hotels - List Format */}
-                {selectedHotels.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    <p className="text-sm font-semibold mb-3">Selected Hotels (sorted by price):</p>
-                    <div className="border rounded-lg divide-y">
-                      {selectedHotels.map((hotel, index) => (
-                        <div key={hotel.id} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
-                          <div className="flex items-center gap-4 flex-1">
-                            <span className="text-sm font-medium text-muted-foreground w-6">#{index + 1}</span>
-                            <div className="flex-1">
-                              <p className="font-semibold text-base">{hotel.name}</p>
-                              <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                                <MapPin className="h-3 w-3" />
-                                {hotel.location}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center gap-2">
-                                <Label className="text-xs text-muted-foreground whitespace-nowrap">Rate:</Label>
-                                <Input
-                                  type="number"
-                                  value={editableRates[`hotel_${hotel.id}`] ?? hotel.baseRate}
-                                  onChange={(e) => setEditableRates(prev => ({
-                                    ...prev,
-                                    [`hotel_${hotel.id}`]: Number(e.target.value)
-                                  }))}
-                                  className="w-24 h-9"
-                                />
-                                <span className="text-xs text-muted-foreground whitespace-nowrap">AED/night</span>
-                              </div>
-                            </div>
-                          </div>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => removeHotel(hotel.id)}
-                            className="ml-3"
-                          >
-                            <X className="h-4 w-4" />
+              </div>
+            </div>
+
+            {/* Row 4: Hotels */}
+            <div className="space-y-2 mb-4">
+              <Label htmlFor="hotelSearch" className="text-xs font-medium flex items-center gap-1">
+                <Hotel className="h-3 w-3" />
+                Hotels *
+              </Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-3 w-3 text-muted-foreground" />
+                <Input
+                  id="hotelSearch"
+                  placeholder="Search hotels..."
+                  value={hotelSearch}
+                  onChange={(e) => setHotelSearch(e.target.value)}
+                  className="pl-9 h-9 text-sm"
+                />
+              </div>
+              
+              {selectedHotels.length > 0 && (
+                <div className="border rounded divide-y max-h-40 overflow-y-auto">
+                  {selectedHotels.map((hotel) => (
+                    <div key={hotel.id} className="flex items-center justify-between p-2 hover:bg-muted/30">
+                      <div className="flex-1">
+                        <p className="font-semibold text-xs">{hotel.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{hotel.location}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          value={editableRates[`hotel_${hotel.id}`] ?? hotel.baseRate}
+                          onChange={(e) => setEditableRates(prev => ({
+                            ...prev,
+                            [`hotel_${hotel.id}`]: Number(e.target.value)
+                          }))}
+                          className="w-20 h-7 text-xs"
+                        />
+                        <span className="text-[10px] text-muted-foreground">AED</span>
+                        <Button variant="ghost" size="sm" onClick={() => removeHotel(hotel.id)} className="h-6 w-6 p-0">
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {hotelSearch && filteredHotels.length > 0 && (
+                <div className="border rounded divide-y max-h-32 overflow-y-auto">
+                  {filteredHotels.map(hotel => (
+                    <div 
+                      key={hotel.id} 
+                      className="flex items-center justify-between p-2 cursor-pointer hover:bg-muted/50"
+                      onClick={() => addHotel(hotel)}
+                    >
+                      <div className="flex-1">
+                        <p className="font-semibold text-xs">{hotel.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{hotel.location}</p>
+                      </div>
+                      <p className="text-xs font-bold text-primary">AED {hotel.baseRate}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Row 5: Tours */}
+            <div className="space-y-2 mb-4">
+              <Label htmlFor="tourSearch" className="text-xs font-medium">Tours & Activities</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-3 w-3 text-muted-foreground" />
+                <Input
+                  id="tourSearch"
+                  placeholder="Search tours..."
+                  value={tourSearch}
+                  onChange={(e) => setTourSearch(e.target.value)}
+                  className="pl-9 h-9 text-sm"
+                />
+              </div>
+              
+              {selectedTours.length > 0 && (
+                <div className="border rounded divide-y max-h-40 overflow-y-auto">
+                  {selectedTours.map((tour) => (
+                    <div key={tour.id} className="p-2 hover:bg-muted/30">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <p className="font-semibold text-xs">{tour.name}</p>
+                          <Badge variant={tour.type === 'private' ? 'default' : 'secondary'} className="text-[9px] h-4 px-1 mt-0.5">
+                            {tour.type === 'private' ? 'Private' : 'Sharing'}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            value={editableRates[`tour_${tour.id}`] ?? tour.costPerPerson}
+                            onChange={(e) => setEditableRates(prev => ({
+                              ...prev,
+                              [`tour_${tour.id}`]: Number(e.target.value)
+                            }))}
+                            className="w-20 h-7 text-xs"
+                          />
+                          <span className="text-[10px] text-muted-foreground">AED</span>
+                          <Button variant="ghost" size="sm" onClick={() => removeTour(tour.id)} className="h-6 w-6 p-0">
+                            <X className="h-3 w-3" />
                           </Button>
                         </div>
-                      ))}
+                      </div>
+                      {tour.type === 'private' && (
+                        <p className="text-[9px] text-muted-foreground mt-1">
+                          Transfer: AED {getPrivateTransferCost(tour, totalPax)} for {totalPax} PAX
+                        </p>
+                      )}
                     </div>
-                  </div>
-                )}
-                
-                {/* Available Hotels - List Format */}
-                {hotelSearch && (
-                  <div className="mt-4 border rounded-lg divide-y max-h-80 overflow-y-auto">
-                    {filteredHotels.map(hotel => (
-                      <div 
-                        key={hotel.id} 
-                        className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => addHotel(hotel)}
-                      >
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-base">{hotel.name}</h4>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                            <MapPin className="h-3 w-3" />
-                            {hotel.location}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-base font-bold text-primary">AED {hotel.baseRate}</p>
-                          <p className="text-xs text-muted-foreground">per night</p>
-                        </div>
-                      </div>
-                    ))}
-                    {filteredHotels.length === 0 && (
-                      <p className="text-sm text-muted-foreground text-center py-8">
-                        No results found
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-
-            {/* Tab 3: Tours */}
-            <TabsContent value="tours" className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="tourSearch" className="text-xs font-medium">Search Tours & Activities</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-2.5 h-3 w-3 text-muted-foreground" />
-                  <Input
-                    id="tourSearch"
-                    placeholder="Search tours..."
-                    value={tourSearch}
-                    onChange={(e) => setTourSearch(e.target.value)}
-                    className="pl-9 h-9 text-sm"
-                  />
+                  ))}
                 </div>
-                
-                {/* Selected Tours - List Format with Categories */}
-                {selectedTours.length > 0 && (
-                  <div className="mt-3 space-y-3">
-                    <p className="text-xs font-semibold">Selected Tours:</p>
-                    
-                    {/* Sharing Tours */}
-                    {selectedTours.filter(t => t.type === 'group').length > 0 && (
-                      <div className="border rounded-lg overflow-hidden">
-                        <div className="bg-muted/50 px-3 py-1.5 border-b">
-                          <p className="text-xs font-semibold">Sharing Tours</p>
-                        </div>
-                        <div className="divide-y">
-                          {selectedTours.filter(t => t.type === 'group').map((tour) => (
-                            <div key={tour.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
-                              <div className="flex-1">
-                                <p className="font-semibold text-sm">{tour.name}</p>
-                                <p className="text-[10px] text-muted-foreground mt-0.5">{tour.duration}</p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-1">
-                                  <Input
-                                    type="number"
-                                    value={editableRates[`tour_${tour.id}`] ?? tour.costPerPerson}
-                                    onChange={(e) => setEditableRates(prev => ({
-                                      ...prev,
-                                      [`tour_${tour.id}`]: Number(e.target.value)
-                                    }))}
-                                    className="w-20 h-8 text-sm"
-                                  />
-                                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">AED</span>
-                                </div>
-                                <Button variant="ghost" size="sm" onClick={() => removeTour(tour.id)} className="h-7 w-7 p-0">
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+              )}
+              
+              {tourSearch && filteredTours.length > 0 && (
+                <div className="border rounded divide-y max-h-32 overflow-y-auto">
+                  {filteredTours.map(tour => (
+                    <div 
+                      key={tour.id} 
+                      className="flex items-center justify-between p-2 cursor-pointer hover:bg-muted/50"
+                      onClick={() => addTour(tour)}
+                    >
+                      <div className="flex-1">
+                        <p className="font-semibold text-xs">{tour.name}</p>
+                        <Badge variant={tour.type === 'private' ? 'default' : 'secondary'} className="text-[9px] h-4 px-1">
+                          {tour.type === 'private' ? 'Private' : 'Sharing'}
+                        </Badge>
                       </div>
-                    )}
-                    
-                    {/* Private Tours */}
-                    {selectedTours.filter(t => t.type === 'private').length > 0 && (
-                      <div className="border rounded-lg overflow-hidden">
-                        <div className="bg-muted/50 px-3 py-1.5 border-b">
-                          <p className="text-xs font-semibold">Private Tours</p>
-                        </div>
-                        <div className="divide-y">
-                          {selectedTours.filter(t => t.type === 'private').map((tour) => {
-                            const transferCost = getPrivateTransferCost(tour, totalPax);
-                            const ticketPrice = editableRates[`tour_${tour.id}`] ?? tour.costPerPerson;
-                            const perPersonTotal = ticketPrice + (transferCost / totalPax);
-                            
-                            return (
-                              <div key={tour.id} className="p-3 hover:bg-muted/30 transition-colors">
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex-1">
-                                    <p className="font-semibold text-sm">{tour.name}</p>
-                                    <p className="text-[10px] text-muted-foreground mt-0.5">{tour.duration}</p>
-                                  </div>
-                                  <Button variant="ghost" size="sm" onClick={() => removeTour(tour.id)} className="h-7 w-7 p-0">
-                                    <X className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                                <div className="grid grid-cols-3 gap-2 text-xs">
-                                  <div className="flex flex-col gap-0.5">
-                                    <Label className="text-[10px] text-muted-foreground">Ticket Price</Label>
-                                    <div className="flex items-center gap-1">
-                                      <Input
-                                        type="number"
-                                        value={ticketPrice}
-                                        onChange={(e) => setEditableRates(prev => ({
-                                          ...prev,
-                                          [`tour_${tour.id}`]: Number(e.target.value)
-                                        }))}
-                                        className="w-full h-8 text-xs"
-                                      />
-                                      <span className="text-[10px] whitespace-nowrap">AED</span>
-                                    </div>
-                                  </div>
-                                  <div className="flex flex-col gap-0.5">
-                                    <Label className="text-[10px] text-muted-foreground">Transfer ({totalPax} PAX)</Label>
-                                    <div className="h-8 px-2 flex items-center bg-muted rounded-md">
-                                      <span className="font-semibold text-xs">AED {transferCost}</span>
-                                    </div>
-                                  </div>
-                                  <div className="flex flex-col gap-0.5">
-                                    <Label className="text-[10px] text-muted-foreground">Per Person Total</Label>
-                                    <div className="h-8 px-2 flex items-center bg-primary/10 rounded-md border border-primary/20">
-                                      <span className="font-bold text-primary text-xs">AED {Math.ceil(perPersonTotal)}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                {/* Available Tours - List Format */}
-                {tourSearch && (
-                  <div className="mt-3 border rounded-lg divide-y max-h-60 overflow-y-auto">
-                    {filteredTours.map(tour => (
-                      <div 
-                        key={tour.id} 
-                        className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => addTour(tour)}
-                      >
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-sm">{tour.name}</h4>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <Badge variant={tour.type === 'private' ? 'default' : 'secondary'} className="text-[10px] h-4 px-1.5">
-                              {tour.type === 'private' ? 'Private' : 'Sharing'}
-                            </Badge>
-                            <p className="text-[10px] text-muted-foreground">{tour.duration}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-bold text-primary">AED {tour.costPerPerson}</p>
-                          <p className="text-[10px] text-muted-foreground">per person</p>
-                        </div>
-                      </div>
-                    ))}
-                    {filteredTours.length === 0 && (
-                      <p className="text-xs text-muted-foreground text-center py-6">
-                        No results found
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-
-            {/* Tab 4: Additional Services */}
-            <TabsContent value="services" className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="inclusionSearch" className="text-xs font-medium">Search Additional Services</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-2.5 h-3 w-3 text-muted-foreground" />
-                  <Input
-                    id="inclusionSearch"
-                    placeholder="Search services..."
-                    value={inclusionSearch}
-                    onChange={(e) => setInclusionSearch(e.target.value)}
-                    className="pl-9 h-9 text-sm"
-                  />
-                </div>
-                
-                {/* Selected Services - List Format */}
-                {selectedInclusions.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    <p className="text-xs font-semibold">Selected Services:</p>
-                    <div className="border rounded-lg divide-y">
-                      {selectedInclusions.map((inclusion) => (
-                        <div key={inclusion.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
-                          <div className="flex-1">
-                            <p className="font-semibold text-sm">{inclusion.name}</p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5 capitalize">{inclusion.type}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-1">
-                              <Input
-                                type="number"
-                                value={editableRates[`inclusion_${inclusion.id}`] ?? inclusion.cost}
-                                onChange={(e) => setEditableRates(prev => ({
-                                  ...prev,
-                                  [`inclusion_${inclusion.id}`]: Number(e.target.value)
-                                }))}
-                                className="w-20 h-8 text-sm"
-                              />
-                              <span className="text-[10px] text-muted-foreground whitespace-nowrap">AED</span>
-                            </div>
-                            <Button variant="ghost" size="sm" onClick={() => toggleInclusion(inclusion)} className="h-7 w-7 p-0">
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
+                      <p className="text-xs font-bold text-primary">AED {tour.costPerPerson}</p>
                     </div>
-                  </div>
-                )}
-                
-                {/* Available Services - List Format */}
-                {inclusionSearch && (
-                  <div className="mt-3 border rounded-lg divide-y max-h-60 overflow-y-auto">
-                    {filteredInclusions.map(inclusion => (
-                      <div 
-                        key={inclusion.id} 
-                        className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => toggleInclusion(inclusion)}
-                      >
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-sm">{inclusion.name}</h4>
-                          <p className="text-[10px] text-muted-foreground mt-0.5 capitalize">{inclusion.type}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-bold text-primary">AED {inclusion.cost}</p>
-                          <p className="text-[10px] text-muted-foreground">per person</p>
-                        </div>
-                      </div>
-                    ))}
-                    {filteredInclusions.length === 0 && (
-                      <p className="text-xs text-muted-foreground text-center py-6">
-                        No results found
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
+                  ))}
+                </div>
+              )}
+            </div>
 
-              {/* Generate Button */}
-              <div className="flex justify-center mt-6 pt-4 border-t">
-                <Button 
-                  onClick={calculateQuote}
-                  size="default"
-                  className="shadow-card hover:shadow-hover transition-shadow"
-                >
-                  <Calculator className="mr-2 h-4 w-4" />
-                  Generate Quote
-                </Button>
+            {/* Row 6: Services */}
+            <div className="space-y-2">
+              <Label htmlFor="inclusionSearch" className="text-xs font-medium">Additional Services</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-3 w-3 text-muted-foreground" />
+                <Input
+                  id="inclusionSearch"
+                  placeholder="Search services..."
+                  value={inclusionSearch}
+                  onChange={(e) => setInclusionSearch(e.target.value)}
+                  className="pl-9 h-9 text-sm"
+                />
               </div>
+              
+              {selectedInclusions.length > 0 && (
+                <div className="border rounded divide-y max-h-32 overflow-y-auto">
+                  {selectedInclusions.map((inclusion) => (
+                    <div key={inclusion.id} className="flex items-center justify-between p-2 hover:bg-muted/30">
+                      <p className="font-semibold text-xs flex-1">{inclusion.name}</p>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          value={editableRates[`inclusion_${inclusion.id}`] ?? inclusion.cost}
+                          onChange={(e) => setEditableRates(prev => ({
+                            ...prev,
+                            [`inclusion_${inclusion.id}`]: Number(e.target.value)
+                          }))}
+                          className="w-20 h-7 text-xs"
+                        />
+                        <span className="text-[10px] text-muted-foreground">AED</span>
+                        <Button variant="ghost" size="sm" onClick={() => toggleInclusion(inclusion)} className="h-6 w-6 p-0">
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {inclusionSearch && filteredInclusions.length > 0 && (
+                <div className="border rounded divide-y max-h-32 overflow-y-auto">
+                  {filteredInclusions.map(inclusion => (
+                    <div 
+                      key={inclusion.id} 
+                      className="flex items-center justify-between p-2 cursor-pointer hover:bg-muted/50"
+                      onClick={() => toggleInclusion(inclusion)}
+                    >
+                      <p className="font-semibold text-xs flex-1">{inclusion.name}</p>
+                      <p className="text-xs font-bold text-primary">AED {inclusion.cost}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Generate Button */}
+          <div className="flex justify-center pt-4 border-t">
+            <Button 
+              onClick={calculateQuote}
+              size="default"
+              className="shadow-card hover:shadow-hover transition-shadow"
+            >
+              <Calculator className="mr-2 h-4 w-4" />
+              Generate Quote
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
