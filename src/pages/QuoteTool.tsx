@@ -842,177 +842,193 @@ const QuoteTool = () => {
   };
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-foreground mb-2">
-          {editingQuote ? 'Edit Quote' : 'Quote Generator'}
-        </h1>
-        <p className="text-muted-foreground">
-          {editingQuote ? 'Modify existing quote details' : 'Create professional tour package quotes'}
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4 md:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            {editingQuote ? 'Edit Quote' : 'Quote Generator'}
+          </h1>
+          <p className="text-sm md:text-base text-muted-foreground">
+            {editingQuote ? 'Modify existing quote details' : 'Create professional tour package quotes'}
+          </p>
+        </div>
 
       {/* Input Form - Single Screen Layout */}
-      <Card className="shadow-card">
-        <CardHeader className="p-4">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Calculator className="h-4 w-4 text-primary" />
+      <Card className="border-2 shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+        <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4 border-b">
+          <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Calculator className="h-5 w-5 text-primary" />
+            </div>
             Package Configuration
           </CardTitle>
-        </CardHeader>
-        <CardContent className="p-4 space-y-6">
+        </div>
+        <CardContent className="p-4 md:p-6 space-y-6">
           {/* Row 1: Customer & Reference */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label htmlFor="customerName" className="text-xs font-medium">Customer Name *</Label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2 group">
+              <Label htmlFor="customerName" className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <Users className="h-3.5 w-3.5 text-primary" />
+                Customer Name *
+              </Label>
               <Input
                 id="customerName"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
                 placeholder="Enter customer name"
-                className="h-9"
+                className="h-10 border-2 focus:border-primary transition-all duration-200 hover:border-muted-foreground/50"
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="referenceNumber" className="text-xs font-medium">TKT Reference *</Label>
+            <div className="space-y-2 group">
+              <Label htmlFor="referenceNumber" className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <FileText className="h-3.5 w-3.5 text-primary" />
+                TKT Reference *
+              </Label>
               <Input
                 id="referenceNumber"
                 value={referenceNumber}
                 onChange={(e) => setReferenceNumber(e.target.value)}
                 placeholder="Enter TKT reference"
-                className="h-9"
+                className="h-10 border-2 focus:border-primary transition-all duration-200 hover:border-muted-foreground/50"
                 maxLength={50}
               />
             </div>
           </div>
 
           {/* Row 2: Dates & Pax */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="space-y-1">
-              <Label htmlFor="checkin" className="text-xs font-medium">Check-in *</Label>
-              <Input
-                id="checkin"
-                type="date"
-                value={checkInDate}
-                onChange={(e) => setCheckInDate(e.target.value)}
-                className="h-9"
-              />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="checkin" className="text-xs font-semibold text-foreground">Check-in *</Label>
+                <Input
+                  id="checkin"
+                  type="date"
+                  value={checkInDate}
+                  onChange={(e) => setCheckInDate(e.target.value)}
+                  className="h-10 border-2 focus:border-primary transition-all duration-200"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="checkout" className="text-xs font-semibold text-foreground">Check-out *</Label>
+                <Input
+                  id="checkout"
+                  type="date"
+                  value={checkOutDate}
+                  onChange={(e) => setCheckOutDate(e.target.value)}
+                  className="h-10 border-2 focus:border-primary transition-all duration-200"
+                />
+              </div>
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="checkout" className="text-xs font-medium">Check-out *</Label>
-              <Input
-                id="checkout"
-                type="date"
-                value={checkOutDate}
-                onChange={(e) => setCheckOutDate(e.target.value)}
-                className="h-9"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs font-medium">Passengers</Label>
-              <div className="flex items-center gap-2 h-9">
-                <div className="flex items-center gap-1">
-                  <Label className="text-[10px]">Adults</Label>
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold text-foreground">Passengers</Label>
+              <div className="flex items-center gap-3 flex-wrap bg-muted/30 p-3 rounded-lg border-2">
+                <div className="flex items-center gap-1.5">
+                  <Label className="text-[10px] font-semibold text-muted-foreground">Adults</Label>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => setAdults(Math.max(1, adults - 1))}
-                    className="h-7 w-7 p-0"
+                    className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground transition-colors"
                   >
-                    <Minus className="h-3 w-3" />
+                    <Minus className="h-3.5 w-3.5" />
                   </Button>
-                  <span className="w-6 text-center text-xs font-semibold">{adults}</span>
+                  <span className="w-8 text-center text-sm font-bold bg-background rounded px-2 py-1 border">{adults}</span>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => setAdults(adults + 1)}
-                    className="h-7 w-7 p-0"
+                    className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground transition-colors"
                   >
-                    <Plus className="h-3 w-3" />
+                    <Plus className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Label className="text-[10px]">CWB</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label className="text-[10px] font-semibold text-muted-foreground">CWB</Label>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => setCwb(Math.max(0, cwb - 1))}
-                    className="h-7 w-7 p-0"
+                    className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground transition-colors"
                   >
-                    <Minus className="h-3 w-3" />
+                    <Minus className="h-3.5 w-3.5" />
                   </Button>
-                  <span className="w-6 text-center text-xs font-semibold">{cwb}</span>
+                  <span className="w-8 text-center text-sm font-bold bg-background rounded px-2 py-1 border">{cwb}</span>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => setCwb(cwb + 1)}
-                    className="h-7 w-7 p-0"
+                    className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground transition-colors"
                   >
-                    <Plus className="h-3 w-3" />
+                    <Plus className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Label className="text-[10px]">CNB</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label className="text-[10px] font-semibold text-muted-foreground">CNB</Label>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => setCnb(Math.max(0, cnb - 1))}
-                    className="h-7 w-7 p-0"
+                    className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground transition-colors"
                   >
-                    <Minus className="h-3 w-3" />
+                    <Minus className="h-3.5 w-3.5" />
                   </Button>
-                  <span className="w-6 text-center text-xs font-semibold">{cnb}</span>
+                  <span className="w-8 text-center text-sm font-bold bg-background rounded px-2 py-1 border">{cnb}</span>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => setCnb(cnb + 1)}
-                    className="h-7 w-7 p-0"
+                    className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground transition-colors"
                   >
-                    <Plus className="h-3 w-3" />
+                    <Plus className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Label className="text-[10px]">Inf</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label className="text-[10px] font-semibold text-muted-foreground">Inf</Label>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => setInfants(Math.max(0, infants - 1))}
-                    className="h-7 w-7 p-0"
+                    className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground transition-colors"
                   >
-                    <Minus className="h-3 w-3" />
+                    <Minus className="h-3.5 w-3.5" />
                   </Button>
-                  <span className="w-6 text-center text-xs font-semibold">{infants}</span>
+                  <span className="w-8 text-center text-sm font-bold bg-background rounded px-2 py-1 border">{infants}</span>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => setInfants(infants + 1)}
-                    className="h-7 w-7 p-0"
+                    className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground transition-colors"
                   >
-                    <Plus className="h-3 w-3" />
+                    <Plus className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="border-t pt-4">
+          <div className="border-t-2 border-dashed pt-6">
             {/* Row 3: Occupancy & TD Toggle */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">Occupancy Types *</Label>
-                <div className="flex gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div className="space-y-3">
+                <Label className="text-sm font-semibold text-foreground">Occupancy Types *</Label>
+                <div className="flex gap-2 flex-wrap">
                   {occupancyTypes.map(occupancy => (
                     <div 
                       key={occupancy.id}
-                      className="flex items-center space-x-2 p-2 border rounded cursor-pointer hover:bg-muted/50"
+                      className={cn(
+                        "flex items-center space-x-2 px-4 py-2.5 border-2 rounded-lg cursor-pointer transition-all duration-200",
+                        selectedOccupancies.includes(occupancy.id)
+                          ? "bg-primary/10 border-primary shadow-sm"
+                          : "hover:bg-muted/50 hover:border-muted-foreground/30"
+                      )}
                       onClick={() => {
                         if (selectedOccupancies.includes(occupancy.id)) {
                           setSelectedOccupancies(selectedOccupancies.filter(o => o !== occupancy.id));
@@ -1025,21 +1041,29 @@ const QuoteTool = () => {
                         checked={selectedOccupancies.includes(occupancy.id)}
                         onCheckedChange={() => {}}
                       />
-                      <Label className="text-xs cursor-pointer">{occupancy.id}</Label>
+                      <Label className="text-sm font-medium cursor-pointer">{occupancy.id}</Label>
                     </div>
                   ))}
                 </div>
               </div>
               
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">Options</Label>
-                <div className="flex items-center space-x-2 p-2 bg-muted/30 rounded border">
+              <div className="space-y-3">
+                <Label className="text-sm font-semibold text-foreground">Additional Options</Label>
+                <div 
+                  className={cn(
+                    "flex items-center space-x-3 p-3 rounded-lg border-2 cursor-pointer transition-all duration-200",
+                    includeTourismDirham 
+                      ? "bg-primary/10 border-primary shadow-sm" 
+                      : "bg-muted/30 hover:bg-muted/50 hover:border-muted-foreground/30"
+                  )}
+                  onClick={() => setIncludeTourismDirham(!includeTourismDirham)}
+                >
                   <Checkbox 
                     id="tourismDirham"
                     checked={includeTourismDirham}
                     onCheckedChange={(checked) => setIncludeTourismDirham(checked as boolean)}
                   />
-                  <Label htmlFor="tourismDirham" className="text-xs cursor-pointer">
+                  <Label htmlFor="tourismDirham" className="text-sm font-medium cursor-pointer">
                     Tourism Dirham (3★:10 | 4★:15 | 5★:20 AED/night)
                   </Label>
                 </div>
@@ -1047,63 +1071,87 @@ const QuoteTool = () => {
             </div>
 
             {/* Row 4: Hotels */}
-            <div className="space-y-2 mb-4">
-              <Label htmlFor="hotelSearch" className="text-xs font-medium flex items-center gap-1">
-                <Hotel className="h-3 w-3" />
+            <div className="space-y-3 mb-6 p-4 bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl border-2">
+              <Label htmlFor="hotelSearch" className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <div className="p-1.5 bg-primary/10 rounded">
+                  <Hotel className="h-4 w-4 text-primary" />
+                </div>
                 Hotels *
               </Label>
               <div className="relative">
-                <Search className="absolute left-3 top-2.5 h-3 w-3 text-muted-foreground" />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="hotelSearch"
-                  placeholder="Search hotels..."
+                  placeholder="Search hotels by name or location..."
                   value={hotelSearch}
                   onChange={(e) => setHotelSearch(e.target.value)}
-                  className="pl-9 h-9 text-sm"
+                  className="pl-10 h-11 text-sm border-2 focus:border-primary"
                 />
               </div>
               
               {selectedHotels.length > 0 && (
-                <div className="border rounded divide-y max-h-40 overflow-y-auto">
-                  {selectedHotels.map((hotel) => (
-                    <div key={hotel.id} className="flex items-center justify-between p-2 hover:bg-muted/30">
-                      <div className="flex-1">
-                        <p className="font-semibold text-xs">{hotel.name}</p>
-                        <p className="text-[10px] text-muted-foreground">{hotel.location}</p>
+                <div className="mt-4 space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground px-1">Selected Hotels ({selectedHotels.length})</p>
+                  <div className="border-2 rounded-lg divide-y max-h-48 overflow-y-auto bg-background shadow-sm">
+                    {selectedHotels.map((hotel, index) => (
+                      <div key={hotel.id} className="flex items-center justify-between p-3 hover:bg-accent/50 transition-colors group">
+                        <div className="flex items-center gap-3 flex-1">
+                          <Badge variant="outline" className="font-bold">{index + 1}</Badge>
+                          <div className="flex-1">
+                            <p className="font-semibold text-sm">{hotel.name}</p>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                              <MapPin className="h-3 w-3" />
+                              {hotel.location}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg px-2 py-1.5">
+                            <Input
+                              type="number"
+                              value={editableRates[`hotel_${hotel.id}`] ?? hotel.baseRate}
+                              onChange={(e) => setEditableRates(prev => ({
+                                ...prev,
+                                [`hotel_${hotel.id}`]: Number(e.target.value)
+                              }))}
+                              className="w-20 h-8 text-sm border-2"
+                            />
+                            <span className="text-xs font-semibold text-muted-foreground">AED</span>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => removeHotel(hotel.id)} 
+                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="number"
-                          value={editableRates[`hotel_${hotel.id}`] ?? hotel.baseRate}
-                          onChange={(e) => setEditableRates(prev => ({
-                            ...prev,
-                            [`hotel_${hotel.id}`]: Number(e.target.value)
-                          }))}
-                          className="w-20 h-7 text-xs"
-                        />
-                        <span className="text-[10px] text-muted-foreground">AED</span>
-                        <Button variant="ghost" size="sm" onClick={() => removeHotel(hotel.id)} className="h-6 w-6 p-0">
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
               
               {hotelSearch && filteredHotels.length > 0 && (
-                <div className="border rounded divide-y max-h-32 overflow-y-auto">
+                <div className="mt-3 border-2 rounded-lg divide-y max-h-40 overflow-y-auto bg-background shadow-sm">
                   {filteredHotels.map(hotel => (
                     <div 
                       key={hotel.id} 
-                      className="flex items-center justify-between p-2 cursor-pointer hover:bg-muted/50"
+                      className="flex items-center justify-between p-3 cursor-pointer hover:bg-primary/5 hover:border-l-4 hover:border-l-primary transition-all group"
                       onClick={() => addHotel(hotel)}
                     >
                       <div className="flex-1">
-                        <p className="font-semibold text-xs">{hotel.name}</p>
-                        <p className="text-[10px] text-muted-foreground">{hotel.location}</p>
+                        <p className="font-semibold text-sm group-hover:text-primary transition-colors">{hotel.name}</p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <MapPin className="h-3 w-3" />
+                          {hotel.location}
+                        </p>
                       </div>
-                      <p className="text-xs font-bold text-primary">AED {hotel.baseRate}</p>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-primary">AED {hotel.baseRate}</p>
+                        <p className="text-xs text-muted-foreground">per night</p>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1111,71 +1159,91 @@ const QuoteTool = () => {
             </div>
 
             {/* Row 5: Tours */}
-            <div className="space-y-2 mb-4">
-              <Label htmlFor="tourSearch" className="text-xs font-medium">Tours & Activities</Label>
+            <div className="space-y-3 mb-6 p-4 bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl border-2">
+              <Label htmlFor="tourSearch" className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <div className="p-1.5 bg-primary/10 rounded">
+                  <MapPin className="h-4 w-4 text-primary" />
+                </div>
+                Tours & Activities
+              </Label>
               <div className="relative">
-                <Search className="absolute left-3 top-2.5 h-3 w-3 text-muted-foreground" />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="tourSearch"
-                  placeholder="Search tours..."
+                  placeholder="Search tours and activities..."
                   value={tourSearch}
                   onChange={(e) => setTourSearch(e.target.value)}
-                  className="pl-9 h-9 text-sm"
+                  className="pl-10 h-11 text-sm border-2 focus:border-primary"
                 />
               </div>
               
               {selectedTours.length > 0 && (
-                <div className="border rounded divide-y max-h-40 overflow-y-auto">
-                  {selectedTours.map((tour) => (
-                    <div key={tour.id} className="p-2 hover:bg-muted/30">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <p className="font-semibold text-xs">{tour.name}</p>
-                          <Badge variant={tour.type === 'private' ? 'default' : 'secondary'} className="text-[9px] h-4 px-1 mt-0.5">
-                            {tour.type === 'private' ? 'Private' : 'Sharing'}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="number"
-                            value={editableRates[`tour_${tour.id}`] ?? tour.costPerPerson}
-                            onChange={(e) => setEditableRates(prev => ({
-                              ...prev,
-                              [`tour_${tour.id}`]: Number(e.target.value)
-                            }))}
-                            className="w-20 h-7 text-xs"
-                          />
-                          <span className="text-[10px] text-muted-foreground">AED</span>
-                          <Button variant="ghost" size="sm" onClick={() => removeTour(tour.id)} className="h-6 w-6 p-0">
-                            <X className="h-3 w-3" />
+                <div className="mt-4 space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground px-1">Selected Tours ({selectedTours.length})</p>
+                  <div className="border-2 rounded-lg divide-y max-h-48 overflow-y-auto bg-background shadow-sm">
+                    {selectedTours.map((tour) => (
+                      <div key={tour.id} className="p-3 hover:bg-accent/50 transition-colors group">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex-1">
+                            <p className="font-semibold text-sm">{tour.name}</p>
+                            <Badge variant={tour.type === 'private' ? 'default' : 'secondary'} className="text-[10px] h-5 px-2 mt-1">
+                              {tour.type === 'private' ? 'Private' : 'Sharing'}
+                            </Badge>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => removeTour(tour.id)} 
+                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
+                          >
+                            <X className="h-4 w-4" />
                           </Button>
                         </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg px-2 py-1.5">
+                            <Input
+                              type="number"
+                              value={editableRates[`tour_${tour.id}`] ?? tour.costPerPerson}
+                              onChange={(e) => setEditableRates(prev => ({
+                                ...prev,
+                                [`tour_${tour.id}`]: Number(e.target.value)
+                              }))}
+                              className="w-20 h-8 text-sm border-2"
+                            />
+                            <span className="text-xs font-semibold text-muted-foreground">AED</span>
+                          </div>
+                          {tour.type === 'private' && (
+                            <p className="text-xs text-muted-foreground">
+                              + Transfer: AED {getPrivateTransferCost(tour, totalPax)} ({totalPax} PAX)
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      {tour.type === 'private' && (
-                        <p className="text-[9px] text-muted-foreground mt-1">
-                          Transfer: AED {getPrivateTransferCost(tour, totalPax)} for {totalPax} PAX
-                        </p>
-                      )}
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
               
               {tourSearch && filteredTours.length > 0 && (
-                <div className="border rounded divide-y max-h-32 overflow-y-auto">
+                <div className="mt-3 border-2 rounded-lg divide-y max-h-40 overflow-y-auto bg-background shadow-sm">
                   {filteredTours.map(tour => (
                     <div 
                       key={tour.id} 
-                      className="flex items-center justify-between p-2 cursor-pointer hover:bg-muted/50"
+                      className="flex items-center justify-between p-3 cursor-pointer hover:bg-primary/5 hover:border-l-4 hover:border-l-primary transition-all group"
                       onClick={() => addTour(tour)}
                     >
                       <div className="flex-1">
-                        <p className="font-semibold text-xs">{tour.name}</p>
-                        <Badge variant={tour.type === 'private' ? 'default' : 'secondary'} className="text-[9px] h-4 px-1">
-                          {tour.type === 'private' ? 'Private' : 'Sharing'}
-                        </Badge>
+                        <p className="font-semibold text-sm group-hover:text-primary transition-colors">{tour.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant={tour.type === 'private' ? 'default' : 'secondary'} className="text-[10px] h-5 px-2">
+                            {tour.type === 'private' ? 'Private' : 'Sharing'}
+                          </Badge>
+                        </div>
                       </div>
-                      <p className="text-xs font-bold text-primary">AED {tour.costPerPerson}</p>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-primary">AED {tour.costPerPerson}</p>
+                        <p className="text-xs text-muted-foreground">per person</p>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1183,54 +1251,72 @@ const QuoteTool = () => {
             </div>
 
             {/* Row 6: Services */}
-            <div className="space-y-2">
-              <Label htmlFor="inclusionSearch" className="text-xs font-medium">Additional Services</Label>
+            <div className="space-y-3 p-4 bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl border-2">
+              <Label htmlFor="inclusionSearch" className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <div className="p-1.5 bg-primary/10 rounded">
+                  <Building2 className="h-4 w-4 text-primary" />
+                </div>
+                Additional Services
+              </Label>
               <div className="relative">
-                <Search className="absolute left-3 top-2.5 h-3 w-3 text-muted-foreground" />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="inclusionSearch"
-                  placeholder="Search services..."
+                  placeholder="Search additional services..."
                   value={inclusionSearch}
                   onChange={(e) => setInclusionSearch(e.target.value)}
-                  className="pl-9 h-9 text-sm"
+                  className="pl-10 h-11 text-sm border-2 focus:border-primary"
                 />
               </div>
               
               {selectedInclusions.length > 0 && (
-                <div className="border rounded divide-y max-h-32 overflow-y-auto">
-                  {selectedInclusions.map((inclusion) => (
-                    <div key={inclusion.id} className="flex items-center justify-between p-2 hover:bg-muted/30">
-                      <p className="font-semibold text-xs flex-1">{inclusion.name}</p>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="number"
-                          value={editableRates[`inclusion_${inclusion.id}`] ?? inclusion.cost}
-                          onChange={(e) => setEditableRates(prev => ({
-                            ...prev,
-                            [`inclusion_${inclusion.id}`]: Number(e.target.value)
-                          }))}
-                          className="w-20 h-7 text-xs"
-                        />
-                        <span className="text-[10px] text-muted-foreground">AED</span>
-                        <Button variant="ghost" size="sm" onClick={() => toggleInclusion(inclusion)} className="h-6 w-6 p-0">
-                          <X className="h-3 w-3" />
-                        </Button>
+                <div className="mt-4 space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground px-1">Selected Services ({selectedInclusions.length})</p>
+                  <div className="border-2 rounded-lg divide-y max-h-40 overflow-y-auto bg-background shadow-sm">
+                    {selectedInclusions.map((inclusion) => (
+                      <div key={inclusion.id} className="flex items-center justify-between p-3 hover:bg-accent/50 transition-colors group">
+                        <p className="font-semibold text-sm flex-1">{inclusion.name}</p>
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg px-2 py-1.5">
+                            <Input
+                              type="number"
+                              value={editableRates[`inclusion_${inclusion.id}`] ?? inclusion.cost}
+                              onChange={(e) => setEditableRates(prev => ({
+                                ...prev,
+                                [`inclusion_${inclusion.id}`]: Number(e.target.value)
+                              }))}
+                              className="w-20 h-8 text-sm border-2"
+                            />
+                            <span className="text-xs font-semibold text-muted-foreground">AED</span>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => toggleInclusion(inclusion)} 
+                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
               
               {inclusionSearch && filteredInclusions.length > 0 && (
-                <div className="border rounded divide-y max-h-32 overflow-y-auto">
+                <div className="mt-3 border-2 rounded-lg divide-y max-h-40 overflow-y-auto bg-background shadow-sm">
                   {filteredInclusions.map(inclusion => (
                     <div 
                       key={inclusion.id} 
-                      className="flex items-center justify-between p-2 cursor-pointer hover:bg-muted/50"
+                      className="flex items-center justify-between p-3 cursor-pointer hover:bg-primary/5 hover:border-l-4 hover:border-l-primary transition-all group"
                       onClick={() => toggleInclusion(inclusion)}
                     >
-                      <p className="font-semibold text-xs flex-1">{inclusion.name}</p>
-                      <p className="text-xs font-bold text-primary">AED {inclusion.cost}</p>
+                      <p className="font-semibold text-sm flex-1 group-hover:text-primary transition-colors">{inclusion.name}</p>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-primary">AED {inclusion.cost}</p>
+                        <p className="text-xs text-muted-foreground">per person</p>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1239,13 +1325,13 @@ const QuoteTool = () => {
           </div>
 
           {/* Generate Button */}
-          <div className="flex justify-center pt-4 border-t">
+          <div className="flex justify-center pt-6 border-t-2 border-dashed">
             <Button 
               onClick={calculateQuote}
-              size="default"
-              className="shadow-card hover:shadow-hover transition-shadow"
+              size="lg"
+              className="shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 bg-gradient-to-r from-primary to-primary/80 text-lg px-8 py-6"
             >
-              <Calculator className="mr-2 h-4 w-4" />
+              <Calculator className="mr-2 h-5 w-5" />
               Generate Quote
             </Button>
           </div>
@@ -1378,6 +1464,7 @@ const QuoteTool = () => {
           </CardContent>
         </Card>
       )}
+      </div>
     </div>
   );
 };
